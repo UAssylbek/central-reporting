@@ -1,0 +1,15 @@
+/* src/pages/Dashboard/Dashboard.css */
+.dashboard {
+  padding: 2rem;
+}
+
+.cards {
+  display: flex;
+  gap: 1rem;
+}
+
+.card {
+  background: #f0f0f0;
+  padding: 1rem;
+  border-radius: 8px;
+}

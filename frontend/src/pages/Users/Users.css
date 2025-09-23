@@ -1,0 +1,18 @@
+/* src/pages/Users/Users.css */
+.users {
+  padding: 2rem;
+}
+
+.users table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users th, .users td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+}
+
+.error {
+  color: red;
+}
