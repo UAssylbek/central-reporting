@@ -28,30 +28,38 @@ const Users: React.FC = () => {
       const data = await getUsers();
       setUsers(data);
     } catch (err) {
-      setError("Failed to load users");
+      setError("Не удалось загрузить пользователей");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreate = async (data: UserFormData) => {
-    await createUser(data);
+  const handleCreate = async (data: Partial<UserFormData>) => {
+    await createUser(data as UserFormData); // при создании всё равно нужны все поля
     fetchUsers();
   };
 
-  const handleUpdate = async (data: UserFormData) => {
+  const handleUpdate = async (data: Partial<UserFormData>) => {
     if (!editingUser) return;
-    await updateUser(editingUser.id, data);
+
+    // формируем полный объект, подставляя старые значения
+    const payload: UserFormData = {
+      username: data.username ?? editingUser.username,
+      password: data.password ?? "", // пароль можно оставить пустым, если не меняем
+      role: data.role ?? editingUser.role,
+    };
+
+    await updateUser(editingUser.id, payload);
     fetchUsers();
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
+    if (window.confirm("Вы уверены, что хотите удалить этого пользователя?")) {
       try {
         await deleteUser(id);
         fetchUsers();
       } catch (err) {
-        setError("Failed to delete user");
+        setError("Не удалось удалить пользователя");
       }
     }
   };
@@ -71,35 +79,39 @@ const Users: React.FC = () => {
     setEditingUser(null);
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p>Загрузка...</p>;
   if (error) return <p className="error">{error}</p>;
 
   return (
     <div className="users">
-      <h1>Users Management</h1>
-      <button onClick={openCreateModal}>Create User</button>
+      <h1>Управление пользователями</h1>
+      <button onClick={openCreateModal}>Создать пользователя</button>
       <table>
         <thead>
           <tr>
             <th>ID</th>
-            <th>Login</th>
-            <th>Role</th>
-            <th>Created At</th>
-            <th>Updated At</th>
-            <th>Actions</th>
+            <th>Логин</th>
+            <th>Роль</th>
+            <th>Создан</th>
+            <th>Обновлён</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
           {users.map((user) => (
             <tr key={user.id}>
               <td>{user.id}</td>
-              <td>{user.login}</td>
-              <td>{user.role}</td>
-              <td>{user.created_at}</td>
-              <td>{user.updated_at}</td>
+              <td>{user.username}</td>
               <td>
-                <button onClick={() => openEditModal(user)}>Edit</button>
-                <button onClick={() => handleDelete(user.id)}>Delete</button>
+                {user.role === "admin" ? "Администратор" : "Пользователь"}
+              </td>
+              <td>{new Date(user.created_at).toLocaleString("ru-RU")}</td>
+              <td>{new Date(user.updated_at).toLocaleString("ru-RU")}</td>
+              <td>
+                <button onClick={() => openEditModal(user)}>
+                  Редактировать
+                </button>
+                <button onClick={() => handleDelete(user.id)}>Удалить</button>
               </td>
             </tr>
           ))}

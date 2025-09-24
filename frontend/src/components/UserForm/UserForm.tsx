@@ -1,57 +1,99 @@
 // src/components/UserForm/UserForm.tsx
-import React, { useState, FormEvent } from 'react';
-import { UserFormData, User } from '../../types';
-import './UserForm.css';
+import React, { useState, FormEvent } from "react";
+import { UserFormData, User } from "../../types";
+import "./UserForm.css";
 
 interface UserFormProps {
-  onSubmit: (data: UserFormData) => Promise<void>;
+  onSubmit: (data: Partial<UserFormData>) => Promise<void>; // ← мягкий тип
   onClose: () => void;
-  initialData?: Partial<User>;
+  initialData?: Partial<User>; // ← тоже мягкий
 }
 
-const UserForm: React.FC<UserFormProps> = ({ onSubmit, onClose, initialData = {} }) => {
-  const [login, setLogin] = useState(initialData.login || '');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'user'>(initialData.role || 'user');
+const UserForm: React.FC<UserFormProps> = ({
+  onSubmit,
+  onClose,
+  initialData = {},
+}) => {
+  // если поля не пришли – ставим пустую строку
+  const [username, setUsername] = useState(initialData.username ?? "");
+  const [password, setPassword] = useState(""); // пароль НЕ показываем
+  const [role, setRole] = useState<"admin" | "user">(
+    initialData.role ?? "user"
+  );
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!login || !password) {
-      setError('Login and password are required');
+    setError(null);
+
+    // собираем ТОЛЬКО то, что поменялось
+    const changes: Partial<UserFormData> = {};
+    if (username !== (initialData.username ?? "")) changes.username = username;
+    if (password) changes.password = password; // новый пароль
+    if (role !== initialData.role) changes.role = role;
+
+    if (!Object.keys(changes).length) {
+      setError("Изменений нет");
       return;
     }
+
     try {
-      await onSubmit({ login, password, role });
+      await onSubmit(changes); // отправляем только дельту
       onClose();
-    } catch (err) {
-      setError('Failed to submit form');
+    } catch (err: any) {
+      setError(err.message || "Ошибка сохранения");
     }
   };
 
   return (
-    <div className="modal">
-      <div className="modal-content">
-        <h2>{initialData.id ? 'Edit User' : 'Create User'}</h2>
+    <div className="modal" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <h2>
+          {initialData.id
+            ? "Редактировать пользователя"
+            : "Создать пользователя"}
+        </h2>
+
         <form onSubmit={handleSubmit}>
           <label>
-            Login:
-            <input type="text" value={login} onChange={(e) => setLogin(e.target.value)} />
+            Имя пользователя
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Оставьте пустым, если не меняем"
+            />
           </label>
+
           <label>
-            Password:
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            Новый пароль
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Только если хотите сменить"
+            />
           </label>
+
           <label>
-            Role:
-            <select value={role} onChange={(e) => setRole(e.target.value as 'admin' | 'user')}>
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
+            Роль
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as "admin" | "user")}
+            >
+              <option value="user">Пользователь</option>
+              <option value="admin">Администратор</option>
             </select>
           </label>
+
           {error && <p className="error">{error}</p>}
-          <button type="submit">Submit</button>
-          <button type="button" onClick={onClose}>Cancel</button>
+
+          <div className="modal-actions">
+            <button type="button" onClick={onClose}>
+              Отмена
+            </button>
+            <button type="submit">Сохранить</button>
+          </div>
         </form>
       </div>
     </div>

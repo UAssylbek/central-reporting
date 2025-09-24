@@ -1,18 +1,102 @@
 /* src/pages/Users/Users.css */
+
 .users {
-  padding: 2rem;
+  padding: 2.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.users h1 {
+  font-size: 2rem;
+  margin: 0 0 1.25rem;
+  color: #111827;
+}
+
+.users button {
+  margin-bottom: 1.25rem;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.users button:hover {
+  background: #4338ca;
 }
 
 .users table {
   width: 100%;
   border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-.users th, .users td {
-  border: 1px solid #ddd;
-  padding: 0.5rem;
+.users th,
+.users td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.users th {
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 600;
+}
+
+.users tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.users tr:hover {
+  background: #eef2ff;
+}
+
+.users td button {
+  margin: 0 0.25rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.users td button:first-of-type {
+  background: #2563eb;
+}
+
+.users td button:first-of-type:hover {
+  background: #1d4ed8;
+}
+
+.users td button:last-of-type {
+  background: #ef4444;
+}
+
+.users td button:last-of-type:hover {
+  background: #dc2626;
 }
 
 .error {
-  color: red;
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin: 0 0 1rem;
+}
+
+/* Адаптив */
+@media (max-width: 768px) {
+  .users {
+    padding: 1.5rem 1rem;
+  }
+  .users table {
+    font-size: 0.875rem;
+  }
+  .users th,
+  .users td {
+    padding: 0.5rem;
+  }
 }

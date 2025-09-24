@@ -1,4 +1,32 @@
 /* src/pages/Reports/Reports.css */
+
 .reports {
-  padding: 2rem;
+  padding: 2.5rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.reports h1 {
+  font-size: 2rem;
+  margin: 0 0 0.75rem;
+  color: #111827;
+}
+
+.reports > p {
+  font-size: 1.05rem;
+  color: #6b7280;
+  margin: 0;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-left: 4px solid #4f46e5;
+}
+
+/* Адаптив */
+@media (max-width: 600px) {
+  .reports {
+    padding: 1.5rem 1rem;
+  }
 }

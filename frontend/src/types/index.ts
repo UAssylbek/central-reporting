@@ -1,8 +1,8 @@
 // src/types/index.ts
 export interface User {
   id: number;
-  login: string;
-  role: 'admin' | 'user';
+  username: string;
+  role: "admin" | "user";
   created_at: string;
   updated_at: string;
 }
@@ -13,12 +13,12 @@ export interface AuthResponse {
 }
 
 export interface LoginCredentials {
-  login: string;
+  username: string;
   password: string;
 }
 
 export interface UserFormData {
-  login: string;
+  username: string;
   password: string;
-  role: 'admin' | 'user';
+  role: "admin" | "user";
 }
