@@ -53,14 +53,20 @@ func main() {
 	protected := r.Group("/api")
 	protected.Use(auth.JWTMiddleware(cfg.JWTSecret))
 	{
+		// Auth routes
 		protected.GET("/auth/me", authHandler.Me)
 		protected.POST("/auth/logout", authHandler.Logout)
+		protected.POST("/auth/change-password", authHandler.ChangePassword) // Новый маршрут
+
+		// User routes (доступны всем авторизованным пользователям)
+		protected.GET("/users/organizations", userHandler.GetOrganizations) // Список организаций
 
 		// Admin only routes
 		adminOnly := protected.Group("/")
 		adminOnly.Use(auth.AdminMiddleware())
 		{
 			adminOnly.GET("/users", userHandler.GetUsers)
+			adminOnly.GET("/users/:id", userHandler.GetUser) // Новый маршрут
 			adminOnly.POST("/users", userHandler.CreateUser)
 			adminOnly.PUT("/users/:id", userHandler.UpdateUser)
 			adminOnly.DELETE("/users/:id", userHandler.DeleteUser)

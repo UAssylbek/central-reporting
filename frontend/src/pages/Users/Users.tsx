@@ -18,6 +18,9 @@ const Users: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<"all" | "admin" | "user">("all");
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "active" | "inactive"
+  >("all");
   const [sortField, setSortField] = useState<keyof User>("id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,20 +50,13 @@ const Users: React.FC = () => {
 
   const handleUpdate = async (data: Partial<UserFormData>) => {
     if (!editingUser) return;
-
-    const payload: UserFormData = {
-      username: data.username ?? editingUser.username,
-      password: data.password ?? "",
-      role: data.role ?? editingUser.role,
-    };
-
-    await updateUser(editingUser.id, payload);
+    await updateUser(editingUser.id, data);
     fetchUsers();
   };
 
   const handleDelete = async (id: number) => {
     const user = users.find((u) => u.id === id);
-    const confirmMessage = `Вы действительно хотите удалить пользователя "${user?.username}"?\n\nЭто действие нельзя отменить.`;
+    const confirmMessage = `Вы действительно хотите удалить пользователя "${user?.full_name}" (${user?.username})?\n\nЭто действие нельзя отменить.`;
 
     if (window.confirm(confirmMessage)) {
       try {
@@ -100,7 +96,7 @@ const Users: React.FC = () => {
     if (field !== sortField) {
       return (
         <svg
-          className="sort-icon neutral"
+          className="users-page-sort-icon users-page-sort-neutral"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -117,7 +113,7 @@ const Users: React.FC = () => {
 
     return sortDirection === "asc" ? (
       <svg
-        className="sort-icon asc"
+        className="users-page-sort-icon users-page-sort-asc"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -131,7 +127,7 @@ const Users: React.FC = () => {
       </svg>
     ) : (
       <svg
-        className="sort-icon desc"
+        className="users-page-sort-icon users-page-sort-desc"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -148,11 +144,19 @@ const Users: React.FC = () => {
 
   // Фильтрация и сортировка
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.username
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+
     const matchesRole = filterRole === "all" || user.role === filterRole;
-    return matchesSearch && matchesRole;
+
+    const matchesStatus =
+      filterStatus === "all" ||
+      (filterStatus === "active" && user.show_in_selection) ||
+      (filterStatus === "inactive" && !user.show_in_selection);
+
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
@@ -202,11 +206,43 @@ const Users: React.FC = () => {
     return pages;
   };
 
+  const getStatusBadge = (user: User) => {
+    if (!user.show_in_selection) {
+      return (
+        <span className="users-page-status-badge users-page-status-inactive">
+          Скрыт
+        </span>
+      );
+    }
+    if (user.is_first_login && user.require_password_change) {
+      return (
+        <span className="users-page-status-badge users-page-status-pending">
+          Ожидает пароль
+        </span>
+      );
+    }
+    return (
+      <span className="users-page-status-badge users-page-status-active">
+        Активен
+      </span>
+    );
+  };
+
+  const getOrganizationsText = (organizations: number[]) => {
+    if (!organizations || organizations.length === 0) {
+      return "Нет доступа";
+    }
+    if (organizations.length === 1) {
+      return "1 организация";
+    }
+    return `${organizations.length} организаций`;
+  };
+
   if (loading) {
     return (
       <div className="users-page">
-        <div className="loading-container">
-          <div className="loading-spinner large"></div>
+        <div className="users-page-loading-container">
+          <div className="users-page-loading-spinner users-page-large-spinner"></div>
           <p>Загрузка пользователей...</p>
         </div>
       </div>
@@ -216,11 +252,11 @@ const Users: React.FC = () => {
   if (error) {
     return (
       <div className="users-page">
-        <div className="error-container">
-          <div className="error-icon">⚠️</div>
+        <div className="users-page-error-container">
+          <div className="users-page-error-icon">⚠️</div>
           <h2>Ошибка загрузки</h2>
-          <p className="error-message">{error}</p>
-          <button onClick={fetchUsers} className="retry-button">
+          <p className="users-page-error-message">{error}</p>
+          <button onClick={fetchUsers} className="users-page-retry-button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path
                 strokeLinecap="round"
@@ -239,21 +275,24 @@ const Users: React.FC = () => {
   return (
     <div className="users-page">
       {/* Header */}
-      <div className="page-header">
-        <div className="header-content">
-          <div className="title-section">
-            <h1 className="page-title">
-              <span className="title-icon">👥</span>
+      <div className="users-page-header">
+        <div className="users-page-header-content">
+          <div className="users-page-title-section">
+            <h1 className="users-page-title">
+              <span className="users-page-title-icon">👥</span>
               Управление пользователями
             </h1>
-            <p className="page-subtitle">
-              Добавление, редактирование и управление доступом пользователей
+            <p className="users-page-subtitle">
+              Создание, редактирование и управление доступом пользователей
               системы
             </p>
           </div>
-          <button onClick={openCreateModal} className="create-button">
+          <button
+            onClick={openCreateModal}
+            className="users-page-create-button"
+          >
             <svg
-              className="button-icon"
+              className="users-page-button-icon"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -268,12 +307,12 @@ const Users: React.FC = () => {
       </div>
 
       {/* Filters and Search */}
-      <div className="controls-section">
-        <div className="controls-container">
-          <div className="search-controls">
-            <div className="search-wrapper">
+      <div className="users-page-controls-section">
+        <div className="users-page-controls-container">
+          <div className="users-page-search-controls">
+            <div className="users-page-search-wrapper">
               <svg
-                className="search-icon"
+                className="users-page-search-icon"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -283,15 +322,15 @@ const Users: React.FC = () => {
               </svg>
               <input
                 type="text"
-                placeholder="Поиск по имени пользователя..."
+                placeholder="Поиск по имени, логину или email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
+                className="users-page-search-input"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="clear-search"
+                  className="users-page-clear-search"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -301,8 +340,8 @@ const Users: React.FC = () => {
               )}
             </div>
 
-            <div className="filter-wrapper">
-              <label htmlFor="roleFilter" className="filter-label">
+            <div className="users-page-filter-wrapper">
+              <label htmlFor="roleFilter" className="users-page-filter-label">
                 Роль:
               </label>
               <select
@@ -311,17 +350,37 @@ const Users: React.FC = () => {
                 onChange={(e) =>
                   setFilterRole(e.target.value as "all" | "admin" | "user")
                 }
-                className="filter-select"
+                className="users-page-filter-select"
               >
                 <option value="all">Все роли</option>
                 <option value="admin">Администраторы</option>
                 <option value="user">Пользователи</option>
               </select>
             </div>
+
+            <div className="users-page-filter-wrapper">
+              <label htmlFor="statusFilter" className="users-page-filter-label">
+                Статус:
+              </label>
+              <select
+                id="statusFilter"
+                value={filterStatus}
+                onChange={(e) =>
+                  setFilterStatus(
+                    e.target.value as "all" | "active" | "inactive"
+                  )
+                }
+                className="users-page-filter-select"
+              >
+                <option value="all">Все статусы</option>
+                <option value="active">Активные</option>
+                <option value="inactive">Скрытые</option>
+              </select>
+            </div>
           </div>
 
-          <div className="stats-info">
-            <span className="stats-text">
+          <div className="users-page-stats-info">
+            <span className="users-page-stats-text">
               Показано: {paginatedUsers.length} из {filteredUsers.length}
               {filteredUsers.length !== users.length &&
                 ` (всего: ${users.length})`}
@@ -331,98 +390,200 @@ const Users: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="table-section">
+      <div className="users-page-table-section">
         {filteredUsers.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🔍</div>
+          <div className="users-page-empty-state">
+            <div className="users-page-empty-icon">🔍</div>
             <h3>Пользователи не найдены</h3>
             <p>
-              {searchQuery || filterRole !== "all"
+              {searchQuery || filterRole !== "all" || filterStatus !== "all"
                 ? "Попробуйте изменить параметры поиска или фильтрации"
                 : "В системе пока нет пользователей. Создайте первого пользователя."}
             </p>
-            {!searchQuery && filterRole === "all" && (
-              <button onClick={openCreateModal} className="empty-action-button">
+            {!searchQuery && filterRole === "all" && filterStatus === "all" && (
+              <button
+                onClick={openCreateModal}
+                className="users-page-empty-action-button"
+              >
                 Создать первого пользователя
               </button>
             )}
           </div>
         ) : (
           <>
-            <div className="table-container">
-              <table className="users-table">
+            <div className="users-page-table-container">
+              <table className="users-page-table">
                 <thead>
                   <tr>
-                    <th onClick={() => handleSort("id")} className="sortable">
-                      <div className="th-content">
+                    <th
+                      onClick={() => handleSort("id")}
+                      className="users-page-th-sortable"
+                    >
+                      <div className="users-page-th-content">
                         <span>ID</span>
                         {getSortIcon("id")}
                       </div>
                     </th>
                     <th
-                      onClick={() => handleSort("username")}
-                      className="sortable"
+                      onClick={() => handleSort("full_name")}
+                      className="users-page-th-sortable"
                     >
-                      <div className="th-content">
-                        <span>Имя пользователя</span>
-                        {getSortIcon("username")}
+                      <div className="users-page-th-content">
+                        <span>Пользователь</span>
+                        {getSortIcon("full_name")}
                       </div>
                     </th>
-                    <th onClick={() => handleSort("role")} className="sortable">
-                      <div className="th-content">
+                    <th
+                      onClick={() => handleSort("role")}
+                      className="users-page-th-sortable"
+                    >
+                      <div className="users-page-th-content">
                         <span>Роль</span>
                         {getSortIcon("role")}
                       </div>
                     </th>
                     <th
-                      onClick={() => handleSort("created_at")}
-                      className="sortable"
+                      onClick={() => handleSort("email")}
+                      className="users-page-th-sortable"
                     >
-                      <div className="th-content">
+                      <div className="users-page-th-content">
+                        <span>Контакты</span>
+                        {getSortIcon("email")}
+                      </div>
+                    </th>
+                    <th className="users-page-th-non-sortable">
+                      <div className="users-page-th-content">
+                        <span>Организации</span>
+                      </div>
+                    </th>
+                    <th className="users-page-th-non-sortable">
+                      <div className="users-page-th-content">
+                        <span>Статус</span>
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleSort("created_at")}
+                      className="users-page-th-sortable"
+                    >
+                      <div className="users-page-th-content">
                         <span>Создан</span>
                         {getSortIcon("created_at")}
                       </div>
                     </th>
-                    <th
-                      onClick={() => handleSort("updated_at")}
-                      className="sortable"
-                    >
-                      <div className="th-content">
-                        <span>Обновлён</span>
-                        {getSortIcon("updated_at")}
-                      </div>
-                    </th>
-                    <th className="actions-header">Действия</th>
+                    <th className="users-page-actions-header">Действия</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedUsers.map((user) => (
-                    <tr key={user.id} className="user-row">
-                      <td className="id-cell">#{user.id}</td>
-                      <td className="username-cell">
-                        <div className="user-info">
-                          <div className="user-avatar">
-                            {user.username.charAt(0).toUpperCase()}
+                    <tr key={user.id} className="users-page-table-row">
+                      <td className="users-page-id-cell">#{user.id}</td>
+
+                      <td className="users-page-user-cell">
+                        <div className="users-page-user-info">
+                          <div className="users-page-user-avatar">
+                            {user.full_name.charAt(0).toUpperCase()}
                           </div>
-                          <span>{user.username}</span>
+                          <div className="users-page-user-details">
+                            <div className="users-page-user-full-name">
+                              {user.full_name}
+                            </div>
+                            <div className="users-page-user-username">
+                              @{user.username}
+                            </div>
+                          </div>
                         </div>
                       </td>
-                      <td className="role-cell">
-                        <span className={`role-badge ${user.role}`}>
+
+                      <td className="users-page-role-cell">
+                        <span
+                          className={`users-page-role-badge users-page-role-${user.role}`}
+                        >
                           {user.role === "admin" ? (
                             <>
-                              <span className="role-icon">⚡</span>
+                              <span className="users-page-role-icon">⚡</span>
                               Администратор
                             </>
                           ) : (
                             <>
-                              <span className="role-icon">👤</span>
+                              <span className="users-page-role-icon">👤</span>
                               Пользователь
                             </>
                           )}
                         </span>
                       </td>
-                      <td className="date-cell">
+
+                      <td className="users-page-contacts-cell">
+                        <div className="users-page-contact-info">
+                          {user.email && (
+                            <div className="users-page-contact-item users-page-contact-email">
+                              <svg
+                                className="users-page-contact-icon"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                                />
+                              </svg>
+                              <span title={user.email}>{user.email}</span>
+                            </div>
+                          )}
+                          {user.phone && (
+                            <div className="users-page-contact-item users-page-contact-phone">
+                              <svg
+                                className="users-page-contact-icon"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                                />
+                              </svg>
+                              <span>{user.phone}</span>
+                            </div>
+                          )}
+                          {!user.email && !user.phone && (
+                            <span className="users-page-no-contacts">
+                              Не указаны
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="users-page-organizations-cell">
+                        <div className="users-page-organizations-info">
+                          <svg
+                            className="users-page-org-icon"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                            />
+                          </svg>
+                          <span>
+                            {getOrganizationsText(user.available_organizations)}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="users-page-status-cell">
+                        {getStatusBadge(user)}
+                      </td>
+
+                      <td className="users-page-date-cell">
                         {new Date(user.created_at).toLocaleString("ru-RU", {
                           year: "numeric",
                           month: "short",
@@ -431,20 +592,12 @@ const Users: React.FC = () => {
                           minute: "2-digit",
                         })}
                       </td>
-                      <td className="date-cell">
-                        {new Date(user.updated_at).toLocaleString("ru-RU", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </td>
-                      <td className="actions-cell">
-                        <div className="action-buttons">
+
+                      <td className="users-page-actions-cell">
+                        <div className="users-page-action-buttons">
                           <button
                             onClick={() => openEditModal(user)}
-                            className="edit-button"
+                            className="users-page-edit-button"
                             title="Редактировать пользователя"
                           >
                             <svg
@@ -462,7 +615,7 @@ const Users: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleDelete(user.id)}
-                            className="delete-button"
+                            className="users-page-delete-button"
                             title="Удалить пользователя"
                           >
                             <svg
@@ -484,8 +637,8 @@ const Users: React.FC = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="pagination-section">
-                <div className="pagination-info">
+              <div className="users-page-pagination-section">
+                <div className="users-page-pagination-info">
                   <span>
                     Показано {startIndex + 1}-
                     {Math.min(startIndex + itemsPerPage, filteredUsers.length)}{" "}
@@ -493,11 +646,11 @@ const Users: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="pagination-controls">
+                <div className="users-page-pagination-controls">
                   <button
                     onClick={() => setCurrentPage(1)}
                     disabled={currentPage === 1}
-                    className="pagination-button first"
+                    className="users-page-pagination-button users-page-pagination-first"
                     title="Первая страница"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -509,7 +662,7 @@ const Users: React.FC = () => {
                   <button
                     onClick={() => setCurrentPage(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="pagination-button prev"
+                    className="users-page-pagination-button users-page-pagination-prev"
                     title="Предыдущая страница"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -517,13 +670,13 @@ const Users: React.FC = () => {
                     </svg>
                   </button>
 
-                  <div className="page-numbers">
+                  <div className="users-page-page-numbers">
                     {generatePageNumbers().map((page) => (
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`page-number ${
-                          currentPage === page ? "active" : ""
+                        className={`users-page-page-number ${
+                          currentPage === page ? "users-page-page-active" : ""
                         }`}
                       >
                         {page}
@@ -534,7 +687,7 @@ const Users: React.FC = () => {
                   <button
                     onClick={() => setCurrentPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="pagination-button next"
+                    className="users-page-pagination-button users-page-pagination-next"
                     title="Следующая страница"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -545,7 +698,7 @@ const Users: React.FC = () => {
                   <button
                     onClick={() => setCurrentPage(totalPages)}
                     disabled={currentPage === totalPages}
-                    className="pagination-button last"
+                    className="users-page-pagination-button users-page-pagination-last"
                     title="Последняя страница"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">

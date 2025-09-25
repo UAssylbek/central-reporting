@@ -11,8 +11,13 @@ export const getUser = (): User | null => {
   return userStr ? JSON.parse(userStr) : null;
 };
 
-export const setUser = (user: User): void =>
-  localStorage.setItem("user", JSON.stringify(user));
+export const setUser = (user: User | null): void => {
+  if (user) {
+    localStorage.setItem("user", JSON.stringify(user));
+  } else {
+    localStorage.removeItem("user");
+  }
+};
 
 export const isAuthenticated = (): boolean => !!getToken();
 

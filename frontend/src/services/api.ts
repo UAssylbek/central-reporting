@@ -1,6 +1,13 @@
 // src/services/api.ts
 import { getToken } from "../utils/auth";
-import { User, AuthResponse, LoginCredentials, UserFormData } from "../types";
+import {
+  User,
+  AuthResponse,
+  LoginCredentials,
+  UserFormData,
+  ChangePasswordRequest,
+  Organization,
+} from "../types";
 
 const API_BASE = "/api";
 
@@ -23,6 +30,20 @@ export const login = async (
   return response.json();
 };
 
+export const changePassword = async (
+  data: ChangePasswordRequest
+): Promise<void> => {
+  const response = await fetch(`${API_BASE}/auth/change-password`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Не удалось изменить пароль");
+  }
+};
+
 export const getUsers = async (): Promise<User[]> => {
   const response = await fetch(`${API_BASE}/users`, {
     method: "GET",
@@ -35,6 +56,18 @@ export const getUsers = async (): Promise<User[]> => {
   return data.users;
 };
 
+export const getUser = async (id: number): Promise<User> => {
+  const response = await fetch(`${API_BASE}/users/${id}`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error("Не удалось загрузить пользователя");
+  }
+  const data = await response.json();
+  return data.user;
+};
+
 export const createUser = async (data: UserFormData): Promise<User> => {
   const response = await fetch(`${API_BASE}/users`, {
     method: "POST",
@@ -42,14 +75,16 @@ export const createUser = async (data: UserFormData): Promise<User> => {
     body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Не удалось создать пользователя");
+    const error = await response.json();
+    throw new Error(error.error || "Не удалось создать пользователя");
   }
-  return response.json();
+  const result = await response.json();
+  return result.user;
 };
 
 export const updateUser = async (
   id: number,
-  data: UserFormData
+  data: Partial<UserFormData>
 ): Promise<User> => {
   const response = await fetch(`${API_BASE}/users/${id}`, {
     method: "PUT",
@@ -57,9 +92,11 @@ export const updateUser = async (
     body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Не удалось обновить пользователя");
+    const error = await response.json();
+    throw new Error(error.error || "Не удалось обновить пользователя");
   }
-  return response.json();
+  const result = await response.json();
+  return result.user;
 };
 
 export const deleteUser = async (id: number): Promise<void> => {
@@ -68,6 +105,19 @@ export const deleteUser = async (id: number): Promise<void> => {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
-    throw new Error("Не удалось удалить пользователя");
+    const error = await response.json();
+    throw new Error(error.error || "Не удалось удалить пользователя");
   }
+};
+
+export const getOrganizations = async (): Promise<Organization[]> => {
+  const response = await fetch(`${API_BASE}/users/organizations`, {
+    method: "GET",
+    headers: getAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error("Не удалось загрузить организации");
+  }
+  const data = await response.json();
+  return data.organizations;
 };

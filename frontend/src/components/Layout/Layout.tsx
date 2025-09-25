@@ -169,6 +169,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             label: "Тарификация сотрудников по форме 04-111",
             path: "/payroll/tariff-04-111",
           },
+        ],
+      },
+      {
+        title: "\u00A0",
+        items: [
           {
             label: "Сводный отчет о начислениях и удержаниях",
             path: "/payroll/consolidated-accrual-deduction",
@@ -320,23 +325,33 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       ]
     : baseNavigationTabs;
 
+  // Функция для определения, нужно ли показывать дропдаун слева
+  const shouldShowDropdownLeft = (tabPath: string) => {
+    const tabIndex = navigationTabs.findIndex((tab) => tab.path === tabPath);
+    const totalTabs = navigationTabs.length;
+    // Показывать слева для последних 3 табов (с учетом админских табов)
+    return tabIndex >= totalTabs - 3;
+  };
+
   return (
-    <div className="layout">
-      <header className="header">
+    <div className="main-layout-container">
+      <header className="main-layout-header">
         <nav>
-          <div className="nav-tabs">
+          <div className="main-layout-nav-tabs">
             {navigationTabs.map((tab) => (
               <div
                 key={tab.path}
-                className="nav-tab-wrapper"
+                className="main-layout-nav-tab-wrapper"
                 onMouseEnter={() => setHoveredTab(tab.path)}
                 onMouseLeave={() => setHoveredTab(null)}
               >
                 <Link
                   to={tab.path}
-                  className={`nav-tab ${
-                    location.pathname === tab.path ? "active" : ""
-                  } ${tab.isIcon ? "nav-tab-icon" : ""}`}
+                  className={`main-layout-nav-tab ${
+                    location.pathname === tab.path
+                      ? "main-layout-nav-tab-active"
+                      : ""
+                  } ${tab.isIcon ? "main-layout-nav-tab-icon" : ""}`}
                   title={tab.isIcon ? "Начальная страница" : undefined}
                 >
                   {tab.label}
@@ -346,11 +361,24 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {hoveredTab === tab.path &&
                   dropdownMenus[tab.path] &&
                   !tab.isIcon && (
-                    <div className="dropdown-menu">
+                    <div
+                      className={`main-layout-dropdown-menu ${
+                        shouldShowDropdownLeft(tab.path)
+                          ? "main-layout-dropdown-menu-left"
+                          : ""
+                      } ${
+                        tab.path === "/payroll"
+                          ? "main-layout-dropdown-menu-three-columns"
+                          : ""
+                      }`}
+                    >
                       {dropdownMenus[tab.path].map((group, groupIndex) => (
-                        <div key={groupIndex} className="dropdown-group">
+                        <div
+                          key={groupIndex}
+                          className="main-layout-dropdown-group"
+                        >
                           {group.title && (
-                            <div className="dropdown-group-title">
+                            <div className="main-layout-dropdown-group-title">
                               {group.title}
                             </div>
                           )}
@@ -358,7 +386,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                             <Link
                               key={itemIndex}
                               to={item.path || "#"}
-                              className="dropdown-item"
+                              className="main-layout-dropdown-item"
                               onClick={item.action}
                             >
                               {item.label}
@@ -372,15 +400,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             ))}
 
             {/* Поиск */}
-            <div className="nav-search">
+            <div className="main-layout-nav-search">
               <input
                 type="text"
                 placeholder="Поиск..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-navbar"
+                className="main-layout-search-navbar"
               />
-              <button className="search-button" type="button">
+              <button className="main-layout-search-button" type="button">
                 <svg
                   width="16"
                   height="16"
@@ -393,8 +421,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
 
             {/* Кнопка выхода */}
-            <div className="nav-actions">
-              <button onClick={logout} className="logout-btn">
+            <div className="main-layout-nav-actions">
+              <button onClick={logout} className="main-layout-logout-btn">
                 Выйти
               </button>
             </div>

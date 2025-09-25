@@ -2,6 +2,7 @@ import React, { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../../services/api";
 import { setToken, setUser } from "../../utils/auth";
+import ChangePasswordModal from "../../components/ChangePasswordModal/ChangePasswordModal";
 import "./Login.css";
 
 const Login: React.FC = () => {
@@ -10,22 +11,44 @@ const Login: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
     try {
-      const { token, user } = await login({ username, password });
-      setToken(token);
-      setUser(user);
-      navigate("/home");
+      const response = await login({ username, password });
+      setToken(response.token);
+      setUser(response.user);
+
+      // Проверяем нужно ли менять пароль
+      if (response.require_password_change) {
+        setShowChangePasswordModal(true);
+      } else {
+        navigate("/home");
+      }
     } catch (err) {
       setError("Неверные учётные данные");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePasswordChangeSuccess = () => {
+    setShowChangePasswordModal(false);
+    navigate("/home");
+  };
+
+  const handlePasswordChangeClose = () => {
+    // При первом входе нельзя закрыть модальное окно смены пароля
+    // Пользователь должен либо сменить пароль, либо выйти из системы
+    setShowChangePasswordModal(false);
+    setToken("");
+    setUser(null);
+    setError("Необходимо установить пароль для продолжения работы");
   };
 
   return (
@@ -91,8 +114,7 @@ const Login: React.FC = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       disabled={loading}
-                      placeholder="Введите пароль"
-                      required
+                      placeholder="Введите пароль (или оставьте пустым)"
                     />
                     <button
                       type="button"
@@ -135,6 +157,9 @@ const Login: React.FC = () => {
                       )}
                     </button>
                   </div>
+                  <span className="field-hint">
+                    Для некоторых пользователей пароль может быть необязательным
+                  </span>
                 </div>
 
                 {error && (
@@ -159,7 +184,7 @@ const Login: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={loading || !username.trim() || !password.trim()}
+                  disabled={loading || !username.trim()}
                   className="submit-button"
                 >
                   {loading ? (
@@ -201,6 +226,15 @@ const Login: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal
+          onSuccess={handlePasswordChangeSuccess}
+          onClose={handlePasswordChangeClose}
+          isFirstLogin={true}
+        />
+      )}
 
       {/* Footer */}
       <footer className="login-footer">

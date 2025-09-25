@@ -1,6 +1,8 @@
 package repositories
 
 import (
+	"fmt"
+	"log"
 	"strings"
 
 	"github.com/UAssylbek/central-reporting/internal/models"
@@ -18,14 +20,25 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 
 func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
-	query := "SELECT id, username, role, created_at, updated_at FROM users ORDER BY created_at DESC"
+	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, email, phone, additional_email, 
+	          comment, role, is_first_login, created_at, updated_at 
+	          FROM users ORDER BY created_at DESC`
+
+	log.Printf("Executing query: %s", query) // Добавьте эту строку
 	err := r.db.Select(&users, query)
+	if err != nil {
+		log.Printf("Database error in GetAll: %v", err) // И эту строку
+	}
 	return users, err
 }
 
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	var user models.User
-	query := "SELECT id, username, role, created_at, updated_at FROM users WHERE id = $1"
+	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, email, phone, additional_email, 
+	          comment, role, is_first_login, created_at, updated_at 
+	          FROM users WHERE id = $1`
 	err := r.db.Get(&user, query, id)
 	if err != nil {
 		return nil, err
@@ -35,7 +48,10 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 
 func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
-	query := "SELECT id, username, password, role, created_at, updated_at FROM users WHERE username = $1"
+	query := `SELECT id, full_name, username, password, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, email, phone, additional_email, 
+	          comment, role, is_first_login, created_at, updated_at 
+	          FROM users WHERE username = $1`
 	err := r.db.Get(&user, query, username)
 	if err != nil {
 		return nil, err
@@ -44,17 +60,45 @@ func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 }
 
 func (r *UserRepository) Create(user *models.User) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
+	var hashedPassword *string
+
+	// Хешируем пароль только если он задан
+	if user.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		hashStr := string(hash)
+		hashedPassword = &hashStr
+	}
+
+	// Подготавливаем nullable поля
+	var email, phone, additionalEmail, comment interface{}
+
+	if user.Email.Valid && user.Email.String != "" {
+		email = user.Email.String
+	}
+	if user.Phone.Valid && user.Phone.String != "" {
+		phone = user.Phone.String
+	}
+	if user.AdditionalEmail.Valid && user.AdditionalEmail.String != "" {
+		additionalEmail = user.AdditionalEmail.String
+	}
+	if user.Comment.Valid && user.Comment.String != "" {
+		comment = user.Comment.String
 	}
 
 	query := `
-        INSERT INTO users (username, password, role) 
-        VALUES ($1, $2, $3) 
+        INSERT INTO users (full_name, username, password, require_password_change, disable_password_change, 
+                          show_in_selection, available_organizations, email, phone, additional_email, 
+                          comment, role, is_first_login) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
         RETURNING id, created_at, updated_at`
 
-	return r.db.QueryRow(query, user.Username, string(hashedPassword), user.Role).
+	return r.db.QueryRow(query,
+		user.FullName, user.Username, hashedPassword, user.RequirePasswordChange, user.DisablePasswordChange,
+		user.ShowInSelection, user.AvailableOrganizations, email, phone, additionalEmail,
+		comment, user.Role, user.IsFirstLogin).
 		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 }
 
@@ -63,8 +107,14 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 	args := []interface{}{}
 	argIndex := 1
 
+	if updates.FullName != "" {
+		setParts = append(setParts, fmt.Sprintf("full_name = $%d", argIndex))
+		args = append(args, updates.FullName)
+		argIndex++
+	}
+
 	if updates.Username != "" {
-		setParts = append(setParts, "username = $"+string(rune(argIndex+48)))
+		setParts = append(setParts, fmt.Sprintf("username = $%d", argIndex))
 		args = append(args, updates.Username)
 		argIndex++
 	}
@@ -74,13 +124,67 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		if err != nil {
 			return err
 		}
-		setParts = append(setParts, "password = $"+string(rune(argIndex+48)))
+		setParts = append(setParts, fmt.Sprintf("password = $%d", argIndex))
 		args = append(args, string(hashedPassword))
+		argIndex++
+
+		// При смене пароля сбрасываем флаг первого входа
+		setParts = append(setParts, fmt.Sprintf("is_first_login = $%d", argIndex))
+		args = append(args, false)
+		argIndex++
+	}
+
+	if updates.RequirePasswordChange != nil {
+		setParts = append(setParts, fmt.Sprintf("require_password_change = $%d", argIndex))
+		args = append(args, *updates.RequirePasswordChange)
+		argIndex++
+	}
+
+	if updates.DisablePasswordChange != nil {
+		setParts = append(setParts, fmt.Sprintf("disable_password_change = $%d", argIndex))
+		args = append(args, *updates.DisablePasswordChange)
+		argIndex++
+	}
+
+	if updates.ShowInSelection != nil {
+		setParts = append(setParts, fmt.Sprintf("show_in_selection = $%d", argIndex))
+		args = append(args, *updates.ShowInSelection)
+		argIndex++
+	}
+
+	if updates.AvailableOrganizations != nil {
+		setParts = append(setParts, fmt.Sprintf("available_organizations = $%d", argIndex))
+		args = append(args, updates.AvailableOrganizations)
+		argIndex++
+	}
+
+	// Обработка строковых полей - проверяем не пустые ли они
+	if updates.Email != "" {
+		setParts = append(setParts, fmt.Sprintf("email = $%d", argIndex))
+		args = append(args, updates.Email)
+		argIndex++
+	}
+
+	if updates.Phone != "" {
+		setParts = append(setParts, fmt.Sprintf("phone = $%d", argIndex))
+		args = append(args, updates.Phone)
+		argIndex++
+	}
+
+	if updates.AdditionalEmail != "" {
+		setParts = append(setParts, fmt.Sprintf("additional_email = $%d", argIndex))
+		args = append(args, updates.AdditionalEmail)
+		argIndex++
+	}
+
+	if updates.Comment != "" {
+		setParts = append(setParts, fmt.Sprintf("comment = $%d", argIndex))
+		args = append(args, updates.Comment)
 		argIndex++
 	}
 
 	if updates.Role != "" {
-		setParts = append(setParts, "role = $"+string(rune(argIndex+48)))
+		setParts = append(setParts, fmt.Sprintf("role = $%d", argIndex))
 		args = append(args, updates.Role)
 		argIndex++
 	}
@@ -89,10 +193,11 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		return nil
 	}
 
-	setParts = append(setParts, "updated_at = NOW()")
+	// Автоматически обновляем updated_at
+	setParts = append(setParts, fmt.Sprintf("updated_at = NOW()"))
 	args = append(args, id)
 
-	query := "UPDATE users SET " + strings.Join(setParts, ", ") + " WHERE id = $" + string(rune(argIndex+48))
+	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d", strings.Join(setParts, ", "), argIndex)
 	_, err := r.db.Exec(query, args...)
 	return err
 }
@@ -104,6 +209,24 @@ func (r *UserRepository) Delete(id int) error {
 }
 
 func (r *UserRepository) CheckPassword(user *models.User, password string) bool {
+	// Если пароль в БД пустой, то любой пароль (включая пустой) проходит
+	if user.Password == "" {
+		return true
+	}
+
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	return err == nil
+}
+
+// Новый метод для смены пароля при первом входе
+func (r *UserRepository) ChangePassword(userID int, newPassword string) error {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	query := `UPDATE users SET password = $1, is_first_login = FALSE, 
+	          require_password_change = FALSE, updated_at = NOW() WHERE id = $2`
+	_, err = r.db.Exec(query, string(hashedPassword), userID)
+	return err
 }
