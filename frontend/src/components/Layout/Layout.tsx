@@ -26,6 +26,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const [hoveredTab, setHoveredTab] = useState<string | null>(null);
   const isAdmin = user?.role === "admin";
+  const [searchQuery, setSearchQuery] = useState("");
 
   const dropdownMenus: Record<string, DropdownGroup[]> = {
     "/dashboard": [
@@ -305,7 +306,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       isIcon: true,
     },
     { path: "/dashboard", label: "Главное" },
-    { path: "/centralization", label: "Централизация" },
     { path: "/long-term-assets", label: "Долгосрочные активы" },
     { path: "/payroll", label: "Зарплата и кадры" },
     { path: "/nomenclature", label: "Номенклатура и склад" },
@@ -315,6 +315,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigationTabs: NavigationTab[] = isAdmin
     ? [
         ...baseNavigationTabs,
+        { path: "/centralization", label: "Централизация" },
         { path: "/administration", label: "Администрирование" },
       ]
     : baseNavigationTabs;
@@ -369,11 +370,34 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   )}
               </div>
             ))}
-          </div>
-          <div className="nav-actions">
-            <button onClick={logout} className="logout-btn">
-              Выйти
-            </button>
+
+            {/* Поиск */}
+            <div className="nav-search">
+              <input
+                type="text"
+                placeholder="Поиск..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-navbar"
+              />
+              <button className="search-button" type="button">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Кнопка выхода */}
+            <div className="nav-actions">
+              <button onClick={logout} className="logout-btn">
+                Выйти
+              </button>
+            </div>
           </div>
         </nav>
       </header>
