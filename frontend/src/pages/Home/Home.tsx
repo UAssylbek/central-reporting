@@ -34,28 +34,30 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="home">
+    <div className="homePageMainWrapper_2k9x7">
       <h1>Начальная страница</h1>
 
-      <div className="home-content">
-        <div className="section">
+      <div className="homeContentLayout_8m4n2">
+        <div className="organizationSection_7p3q1">
           <h2>Доступные организации</h2>
-          <div className="organizations-panel">
-            <p className="empty-state">Организации будут загружены из API</p>
+          <div className="organizationsPanelContainer_9r5w8">
+            <p className="emptyStatePlaceholder_3z6y2">
+              Организации будут загружены из API
+            </p>
           </div>
         </div>
 
-        <div className="section">
+        <div className="reportsSection_4b8k5">
           <h2>Доступные отчеты</h2>
-          <div className="reports-grid">
+          <div className="reportsGridLayout_6n9m1">
             {availableReports.map((report) => (
               <button
                 key={report.id}
-                className="report-button"
+                className="reportButtonElement_5v2l7"
                 onClick={() => openModal(report.id)}
               >
-                <span className="report-icon">📊</span>
-                <span className="report-title">{report.title}</span>
+                <span className="reportIconSymbol_8h4x3">📊</span>
+                <span className="reportTitleText_9j1p6">{report.title}</span>
               </button>
             ))}
           </div>
@@ -63,17 +65,20 @@ const Home: React.FC = () => {
       </div>
 
       {selectedModal && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="modalOverlayBackdrop_7k3m9" onClick={closeModal}>
+          <div
+            className="modalContentDialog_4q8r2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modalHeaderSection_6w5t1">
               <h3>
                 {availableReports.find((r) => r.id === selectedModal)?.title}
               </h3>
-              <button className="close-button" onClick={closeModal}>
+              <button className="modalCloseButton_3s9f4" onClick={closeModal}>
                 ×
               </button>
             </div>
-            <div className="modal-body">
+            <div className="modalBodyContent_8u7y5">
               <p>Модальное окно для отчета будет реализовано позже.</p>
               <p>ID отчета: {selectedModal}</p>
             </div>

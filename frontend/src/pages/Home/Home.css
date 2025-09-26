@@ -1,29 +1,29 @@
-.home {
+.homePageMainWrapper_2k9x7 {
   padding: 2rem;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.home h1 {
+.homePageMainWrapper_2k9x7 h1 {
   font-size: 2rem;
   margin: 0 0 2rem;
   color: #111827;
   text-align: center;
 }
 
-.home-content {
+.homeContentLayout_8m4n2 {
   display: flex;
   flex-direction: column;
   gap: 2rem;
   height: calc(100vh - 200px);
 }
 
-.section {
+.organizationSection_7p3q1 {
   display: flex;
   flex-direction: column;
 }
 
-.section h2 {
+.organizationSection_7p3q1 h2 {
   font-size: 1.25rem;
   margin: 0 0 1rem;
   color: #4a5568;
@@ -31,7 +31,20 @@
   border-bottom: 2px solid #e2e8f0;
 }
 
-.organizations-panel {
+.reportsSection_4b8k5 {
+  display: flex;
+  flex-direction: column;
+}
+
+.reportsSection_4b8k5 h2 {
+  font-size: 1.25rem;
+  margin: 0 0 1rem;
+  color: #4a5568;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.organizationsPanelContainer_9r5w8 {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -40,14 +53,14 @@
   min-height: 150px;
 }
 
-.empty-state {
+.emptyStatePlaceholder_3z6y2 {
   color: #9ca3af;
   font-style: italic;
   text-align: center;
   margin-top: 2rem;
 }
 
-.reports-grid {
+.reportsGridLayout_6n9m1 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
@@ -60,7 +73,7 @@
   align-content: start;
 }
 
-.report-button {
+.reportButtonElement_5v2l7 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -77,25 +90,25 @@
   font-size: 0.85rem;
 }
 
-.report-button:hover {
+.reportButtonElement_5v2l7:hover {
   background: #357abd;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.report-icon {
+.reportIconSymbol_8h4x3 {
   font-size: 1.2rem;
   flex-shrink: 0;
 }
 
-.report-title {
+.reportTitleText_9j1p6 {
   font-size: 0.85rem;
   line-height: 1.2;
   flex: 1;
 }
 
 /* Модальные окна */
-.modal-overlay {
+.modalOverlayBackdrop_7k3m9 {
   position: fixed;
   top: 0;
   left: 0;
@@ -108,7 +121,7 @@
   z-index: 1000;
 }
 
-.modal-content {
+.modalContentDialog_4q8r2 {
   background: white;
   border-radius: 8px;
   width: 90%;
@@ -118,7 +131,7 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.modal-header {
+.modalHeaderSection_6w5t1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -127,13 +140,13 @@
   background: #f8f9fa;
 }
 
-.modal-header h3 {
+.modalHeaderSection_6w5t1 h3 {
   margin: 0;
   color: #111827;
   font-size: 1.25rem;
 }
 
-.close-button {
+.modalCloseButton_3s9f4 {
   background: none;
   border: none;
   font-size: 1.5rem;
@@ -147,32 +160,32 @@
   justify-content: center;
 }
 
-.close-button:hover {
+.modalCloseButton_3s9f4:hover {
   color: #111827;
 }
 
-.modal-body {
+.modalBodyContent_8u7y5 {
   padding: 1.5rem;
 }
 
 /* Адаптив */
 @media (max-width: 1200px) {
-  .reports-grid {
+  .reportsGridLayout_6n9m1 {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .home {
+  .homePageMainWrapper_2k9x7 {
     padding: 1rem;
   }
 
-  .reports-grid {
+  .reportsGridLayout_6n9m1 {
     grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
   }
 
-  .report-button {
+  .reportButtonElement_5v2l7 {
     padding: 0.5rem;
     font-size: 0.8rem;
     min-height: 50px;
@@ -180,7 +193,7 @@
 }
 
 @media (max-width: 480px) {
-  .reports-grid {
+  .reportsGridLayout_6n9m1 {
     grid-template-columns: 1fr;
   }
 }

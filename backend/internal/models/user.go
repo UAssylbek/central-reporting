@@ -98,10 +98,10 @@ type User struct {
 	DisablePasswordChange  bool          `json:"disable_password_change" db:"disable_password_change"`
 	ShowInSelection        bool          `json:"show_in_selection" db:"show_in_selection"`
 	AvailableOrganizations Organizations `json:"available_organizations" db:"available_organizations"`
-	Email                  NullString    `json:"email" db:"email"`                       // Изменено на NullString
-	Phone                  NullString    `json:"phone" db:"phone"`                       // Изменено на NullString
-	AdditionalEmail        NullString    `json:"additional_email" db:"additional_email"` // Изменено на NullString
-	Comment                NullString    `json:"comment" db:"comment"`                   // Изменено на NullString
+	Email                  NullString    `json:"email" db:"email"`                       
+	Phone                  NullString    `json:"phone" db:"phone"`                       
+	AdditionalEmail        NullString    `json:"additional_email" db:"additional_email"` 
+	Comment                NullString    `json:"comment" db:"comment"`                   
 	Role                   UserRole      `json:"role" db:"role"`
 	IsFirstLogin           bool          `json:"is_first_login" db:"is_first_login"`
 	CreatedAt              time.Time     `json:"created_at" db:"created_at"`
@@ -116,10 +116,10 @@ type CreateUserRequest struct {
 	DisablePasswordChange  bool          `json:"disable_password_change"`
 	ShowInSelection        bool          `json:"show_in_selection"`
 	AvailableOrganizations Organizations `json:"available_organizations"`
-	Email                  string        `json:"email,omitempty"`            // Оставляем как string
-	Phone                  string        `json:"phone,omitempty"`            // Оставляем как string
-	AdditionalEmail        string        `json:"additional_email,omitempty"` // Оставляем как string
-	Comment                string        `json:"comment,omitempty"`          // Оставляем как string
+	Email                  string        `json:"email,omitempty"`            
+	Phone                  string        `json:"phone,omitempty"`            
+	AdditionalEmail        string        `json:"additional_email,omitempty"` 
+	Comment                string        `json:"comment,omitempty"`          
 	Role                   UserRole      `json:"role" binding:"required,oneof=admin user"`
 }
 
@@ -131,10 +131,10 @@ type UpdateUserRequest struct {
 	DisablePasswordChange  *bool         `json:"disable_password_change,omitempty"`
 	ShowInSelection        *bool         `json:"show_in_selection,omitempty"`
 	AvailableOrganizations Organizations `json:"available_organizations,omitempty"`
-	Email                  string        `json:"email,omitempty"`            // Оставляем как string
-	Phone                  string        `json:"phone,omitempty"`            // Оставляем как string
-	AdditionalEmail        string        `json:"additional_email,omitempty"` // Оставляем как string
-	Comment                string        `json:"comment,omitempty"`          // Оставляем как string
+	Email                  string        `json:"email,omitempty"`            
+	Phone                  string        `json:"phone,omitempty"`            
+	AdditionalEmail        string        `json:"additional_email,omitempty"` 
+	Comment                string        `json:"comment,omitempty"`          
 	Role                   UserRole      `json:"role,omitempty" binding:"omitempty,oneof=admin user"`
 }
 

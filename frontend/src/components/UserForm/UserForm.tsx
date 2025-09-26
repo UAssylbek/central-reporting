@@ -235,29 +235,33 @@ const UserForm: React.FC<UserFormProps> = ({
   };
 
   return (
-    <div className="user-form-overlay" onClick={onClose}>
+    <div className="userform-overlay-container" onClick={onClose}>
       <div
-        className="user-form-modal expanded"
+        className="userform-modal-wrapper"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="form-header">
-          <div className="form-title-section">
-            <div className="form-icon">{isEditing ? "✏️" : "👤"}</div>
+        <div className="userform-header-section">
+          <div className="userform-title-group">
+            <div className="userform-icon-badge">{isEditing ? "✏️" : "👤"}</div>
             <div>
-              <h2 className="form-title">
+              <h2 className="userform-main-title">
                 {isEditing
                   ? "Редактировать пользователя"
                   : "Создать пользователя"}
               </h2>
-              <p className="form-subtitle">
+              <p className="userform-subtitle-text">
                 {isEditing
                   ? "Измените необходимые данные пользователя"
                   : "Заполните данные для нового пользователя"}
               </p>
             </div>
           </div>
-          <button className="close-button" onClick={onClose} type="button">
+          <button
+            className="userform-close-btn"
+            onClick={onClose}
+            type="button"
+          >
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -270,20 +274,20 @@ const UserForm: React.FC<UserFormProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="user-form">
-          <div className="form-content">
+        <form onSubmit={handleSubmit} className="userform-main-container">
+          <div className="userform-content-area">
             {/* Основная информация */}
-            <div className="form-section">
-              <h3 className="section-title">Основная информация</h3>
+            <div className="userform-section-block">
+              <h3 className="userform-section-header">Основная информация</h3>
 
               {/* Полное имя */}
-              <div className="form-group">
-                <label htmlFor="fullName" className="form-label">
-                  <span className="label-text">Полное имя</span>
-                  <span className="required-mark">*</span>
+              <div className="userform-field-group">
+                <label htmlFor="fullName" className="userform-input-label">
+                  <span className="userform-label-content">Полное имя</span>
+                  <span className="userform-required-asterisk">*</span>
                 </label>
-                <div className="input-wrapper">
-                  <div className="input-icon">
+                <div className="userform-input-container">
+                  <div className="userform-input-svg">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -300,23 +304,25 @@ const UserForm: React.FC<UserFormProps> = ({
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Введите полное имя пользователя"
                     disabled={loading}
-                    className="form-input"
+                    className="userform-text-input"
                     required
                   />
                 </div>
-                <span className="field-hint">
+                <span className="userform-field-hint-text">
                   Полное имя отображается в интерфейсе системы
                 </span>
               </div>
 
               {/* Имя для входа */}
-              <div className="form-group">
-                <label htmlFor="username" className="form-label">
-                  <span className="label-text">Имя для входа</span>
-                  {!isEditing && <span className="required-mark">*</span>}
+              <div className="userform-field-group">
+                <label htmlFor="username" className="userform-input-label">
+                  <span className="userform-label-content">Имя для входа</span>
+                  {!isEditing && (
+                    <span className="userform-required-asterisk">*</span>
+                  )}
                 </label>
-                <div className="input-wrapper">
-                  <div className="input-icon">
+                <div className="userform-input-container">
+                  <div className="userform-input-svg">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -337,22 +343,24 @@ const UserForm: React.FC<UserFormProps> = ({
                         : "Введите имя для входа в систему"
                     }
                     disabled={loading}
-                    className="form-input"
+                    className="userform-text-input"
                   />
                 </div>
-                <span className="field-hint">
+                <span className="userform-field-hint-text">
                   Уникальное имя пользователя для входа в систему
                 </span>
               </div>
 
               {/* Роль */}
-              <div className="form-group">
-                <label htmlFor="role" className="form-label">
-                  <span className="label-text">Роль пользователя</span>
-                  <span className="required-mark">*</span>
+              <div className="userform-field-group">
+                <label htmlFor="role" className="userform-input-label">
+                  <span className="userform-label-content">
+                    Роль пользователя
+                  </span>
+                  <span className="userform-required-asterisk">*</span>
                 </label>
-                <div className="select-wrapper">
-                  <div className="input-icon">
+                <div className="userform-select-container">
+                  <div className="userform-input-svg">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -369,12 +377,12 @@ const UserForm: React.FC<UserFormProps> = ({
                       setRole(e.target.value as "admin" | "user")
                     }
                     disabled={loading}
-                    className="form-select"
+                    className="userform-dropdown-select"
                   >
                     <option value="user">Пользователь</option>
                     <option value="admin">Администратор</option>
                   </select>
-                  <div className="select-arrow">
+                  <div className="userform-select-arrow-icon">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -385,7 +393,7 @@ const UserForm: React.FC<UserFormProps> = ({
                     </svg>
                   </div>
                 </div>
-                <span className="field-hint">
+                <span className="userform-field-hint-text">
                   {role === "admin"
                     ? "Полный доступ ко всем функциям системы"
                     : "Доступ к просмотру и созданию отчётов"}
@@ -394,18 +402,18 @@ const UserForm: React.FC<UserFormProps> = ({
             </div>
 
             {/* Настройки пароля */}
-            <div className="form-section">
-              <h3 className="section-title">Настройки пароля</h3>
+            <div className="userform-section-block">
+              <h3 className="userform-section-header">Настройки пароля</h3>
 
               {/* Пароль */}
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">
-                  <span className="label-text">
+              <div className="userform-field-group">
+                <label htmlFor="password" className="userform-input-label">
+                  <span className="userform-label-content">
                     {isEditing ? "Новый пароль" : "Пароль"}
                   </span>
                 </label>
-                <div className="input-wrapper">
-                  <div className="input-icon">
+                <div className="userform-input-container">
+                  <div className="userform-input-svg">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -422,11 +430,11 @@ const UserForm: React.FC<UserFormProps> = ({
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Оставьте пустым если пароль не нужен"
                     disabled={loading}
-                    className="form-input"
+                    className="userform-text-input"
                   />
                   <button
                     type="button"
-                    className="password-toggle"
+                    className="userform-password-visibility-btn"
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex={-1}
                   >
@@ -465,23 +473,26 @@ const UserForm: React.FC<UserFormProps> = ({
                     )}
                   </button>
                 </div>
-                <span className="field-hint">
+                <span className="userform-field-hint-text">
                   Если пароль не установлен, пользователь может войти без пароля
                 </span>
               </div>
 
               {/* Настройки пароля - чекбоксы */}
-              <div className="checkbox-group">
-                <label className="checkbox-label">
+              <div className="userform-checkbox-group">
+                <label className="userform-checkbox-item-label">
                   <input
                     type="checkbox"
                     checked={requirePasswordChange}
                     onChange={(e) => setRequirePasswordChange(e.target.checked)}
                     disabled={loading}
-                    className="form-checkbox"
+                    className="userform-native-checkbox"
                   />
-                  <div className="checkbox-custom">
-                    <svg className="checkbox-icon" viewBox="0 0 24 24">
+                  <div className="userform-custom-checkbox-box">
+                    <svg
+                      className="userform-checkbox-check-icon"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -490,25 +501,28 @@ const UserForm: React.FC<UserFormProps> = ({
                       />
                     </svg>
                   </div>
-                  <span className="checkbox-text">
+                  <span className="userform-checkbox-text-content">
                     Потребовать установить пароль
-                    <span className="checkbox-hint">
+                    <span className="userform-checkbox-hint-text">
                       Пользователю будет предложено установить пароль при первом
                       входе
                     </span>
                   </span>
                 </label>
 
-                <label className="checkbox-label">
+                <label className="userform-checkbox-item-label">
                   <input
                     type="checkbox"
                     checked={disablePasswordChange}
                     onChange={(e) => setDisablePasswordChange(e.target.checked)}
                     disabled={loading}
-                    className="form-checkbox"
+                    className="userform-native-checkbox"
                   />
-                  <div className="checkbox-custom">
-                    <svg className="checkbox-icon" viewBox="0 0 24 24">
+                  <div className="userform-custom-checkbox-box">
+                    <svg
+                      className="userform-checkbox-check-icon"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -517,24 +531,27 @@ const UserForm: React.FC<UserFormProps> = ({
                       />
                     </svg>
                   </div>
-                  <span className="checkbox-text">
+                  <span className="userform-checkbox-text-content">
                     Пользователю запрещено изменять пароль
-                    <span className="checkbox-hint">
+                    <span className="userform-checkbox-hint-text">
                       Пользователь не сможет самостоятельно изменить пароль
                     </span>
                   </span>
                 </label>
 
-                <label className="checkbox-label">
+                <label className="userform-checkbox-item-label">
                   <input
                     type="checkbox"
                     checked={showInSelection}
                     onChange={(e) => setShowInSelection(e.target.checked)}
                     disabled={loading}
-                    className="form-checkbox"
+                    className="userform-native-checkbox"
                   />
-                  <div className="checkbox-custom">
-                    <svg className="checkbox-icon" viewBox="0 0 24 24">
+                  <div className="userform-custom-checkbox-box">
+                    <svg
+                      className="userform-checkbox-check-icon"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -543,9 +560,9 @@ const UserForm: React.FC<UserFormProps> = ({
                       />
                     </svg>
                   </div>
-                  <span className="checkbox-text">
+                  <span className="userform-checkbox-text-content">
                     Показывать в списке выбора
-                    <span className="checkbox-hint">
+                    <span className="userform-checkbox-hint-text">
                       Пользователь будет отображаться в списках выбора
                     </span>
                   </span>
@@ -554,21 +571,23 @@ const UserForm: React.FC<UserFormProps> = ({
             </div>
 
             {/* Доступные организации */}
-            <div className="form-section">
-              <h3 className="section-title">Доступные организации</h3>
+            <div className="userform-section-block">
+              <h3 className="userform-section-header">Доступные организации</h3>
 
-              <div className="form-group">
-                <label className="form-label">
-                  <span className="label-text">Выбор организаций</span>
+              <div className="userform-field-group">
+                <label className="userform-input-label">
+                  <span className="userform-label-content">
+                    Выбор организаций
+                  </span>
                 </label>
-                <div className="organizations-field">
+                <div className="userform-organizations-selector">
                   <button
                     type="button"
-                    className="organizations-button"
+                    className="userform-organizations-trigger-btn"
                     onClick={() => setShowOrganizationsModal(true)}
                     disabled={loading || loadingOrganizations}
                   >
-                    <div className="organizations-icon">
+                    <div className="userform-organizations-btn-icon">
                       <svg
                         fill="none"
                         stroke="currentColor"
@@ -582,12 +601,12 @@ const UserForm: React.FC<UserFormProps> = ({
                         />
                       </svg>
                     </div>
-                    <span className="organizations-text">
+                    <span className="userform-organizations-btn-text">
                       {loadingOrganizations
                         ? "Загрузка..."
                         : getSelectedOrganizationsText()}
                     </span>
-                    <div className="organizations-arrow">
+                    <div className="userform-organizations-btn-arrow">
                       <svg
                         fill="none"
                         stroke="currentColor"
@@ -603,7 +622,7 @@ const UserForm: React.FC<UserFormProps> = ({
                     </div>
                   </button>
                 </div>
-                <span className="field-hint">
+                <span className="userform-field-hint-text">
                   Выберите организации, к которым пользователь будет иметь
                   доступ
                 </span>
@@ -611,17 +630,19 @@ const UserForm: React.FC<UserFormProps> = ({
             </div>
 
             {/* Контактная информация */}
-            <div className="form-section">
-              <h3 className="section-title">Контактная информация</h3>
+            <div className="userform-section-block">
+              <h3 className="userform-section-header">Контактная информация</h3>
 
-              {/* Электронная почта */}
-              <div className="form-row">
-                <div className="form-group">
-                  <label htmlFor="email" className="form-label">
-                    <span className="label-text">Электронная почта</span>
+              {/* Электронная почта и телефон */}
+              <div className="userform-fields-row">
+                <div className="userform-field-group">
+                  <label htmlFor="email" className="userform-input-label">
+                    <span className="userform-label-content">
+                      Электронная почта
+                    </span>
                   </label>
-                  <div className="input-wrapper">
-                    <div className="input-icon">
+                  <div className="userform-input-container">
+                    <div className="userform-input-svg">
                       <svg
                         fill="none"
                         stroke="currentColor"
@@ -642,18 +663,17 @@ const UserForm: React.FC<UserFormProps> = ({
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="user@example.com"
                       disabled={loading}
-                      className="form-input"
+                      className="userform-text-input"
                     />
                   </div>
                 </div>
 
-                {/* Телефон */}
-                <div className="form-group">
-                  <label htmlFor="phone" className="form-label">
-                    <span className="label-text">Телефон</span>
+                <div className="userform-field-group">
+                  <label htmlFor="phone" className="userform-input-label">
+                    <span className="userform-label-content">Телефон</span>
                   </label>
-                  <div className="input-wrapper">
-                    <div className="input-icon">
+                  <div className="userform-input-container">
+                    <div className="userform-input-svg">
                       <svg
                         fill="none"
                         stroke="currentColor"
@@ -674,19 +694,24 @@ const UserForm: React.FC<UserFormProps> = ({
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+7 (777) 123-45-67"
                       disabled={loading}
-                      className="form-input"
+                      className="userform-text-input"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Дополнительная почта */}
-              <div className="form-group">
-                <label htmlFor="additionalEmail" className="form-label">
-                  <span className="label-text">Дополнительная почта</span>
+              <div className="userform-field-group">
+                <label
+                  htmlFor="additionalEmail"
+                  className="userform-input-label"
+                >
+                  <span className="userform-label-content">
+                    Дополнительная почта
+                  </span>
                 </label>
-                <div className="input-wrapper">
-                  <div className="input-icon">
+                <div className="userform-input-container">
+                  <div className="userform-input-svg">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -703,31 +728,31 @@ const UserForm: React.FC<UserFormProps> = ({
                     onChange={(e) => setAdditionalEmail(e.target.value)}
                     placeholder="additional@example.com"
                     disabled={loading}
-                    className="form-input"
+                    className="userform-text-input"
                   />
                 </div>
-                <span className="field-hint">
+                <span className="userform-field-hint-text">
                   Резервный адрес электронной почты
                 </span>
               </div>
 
               {/* Комментарий */}
-              <div className="form-group">
-                <label htmlFor="comment" className="form-label">
-                  <span className="label-text">Комментарий</span>
+              <div className="userform-field-group">
+                <label htmlFor="comment" className="userform-input-label">
+                  <span className="userform-label-content">Комментарий</span>
                 </label>
-                <div className="textarea-wrapper">
+                <div className="userform-textarea-container">
                   <textarea
                     id="comment"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Дополнительная информация о пользователе..."
                     disabled={loading}
-                    className="form-textarea"
+                    className="userform-multiline-textarea"
                     rows={3}
                   />
                 </div>
-                <span className="field-hint">
+                <span className="userform-field-hint-text">
                   Любая дополнительная информация о пользователе
                 </span>
               </div>
@@ -735,8 +760,8 @@ const UserForm: React.FC<UserFormProps> = ({
 
             {/* Error Message */}
             {error && (
-              <div className="error-message">
-                <div className="error-icon">
+              <div className="userform-error-notification">
+                <div className="userform-error-warning-icon">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -752,24 +777,24 @@ const UserForm: React.FC<UserFormProps> = ({
           </div>
 
           {/* Form Footer */}
-          <div className="form-footer">
-            <div className="security-note">
-              <div className="security-icon">🔒</div>
+          <div className="userform-footer-area">
+            <div className="userform-security-notice">
+              <div className="userform-security-lock-icon">🔒</div>
               <span>Все данные передаются по защищённому соединению</span>
             </div>
 
-            <div className="form-actions">
+            <div className="userform-button-actions">
               <button
                 type="button"
                 onClick={onClose}
-                className="cancel-button"
+                className="userform-cancel-action-btn"
                 disabled={loading}
               >
                 Отмена
               </button>
               <button
                 type="submit"
-                className="submit-button"
+                className="userform-submit-action-btn"
                 disabled={
                   loading ||
                   !fullName.trim() ||
@@ -778,7 +803,7 @@ const UserForm: React.FC<UserFormProps> = ({
               >
                 {loading ? (
                   <>
-                    <div className="loading-spinner"></div>
+                    <div className="userform-loading-spinner-icon"></div>
                     <span>Сохранение...</span>
                   </>
                 ) : (
@@ -789,7 +814,7 @@ const UserForm: React.FC<UserFormProps> = ({
                         : "Создать пользователя"}
                     </span>
                     <svg
-                      className="submit-arrow"
+                      className="userform-submit-right-arrow"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -811,17 +836,17 @@ const UserForm: React.FC<UserFormProps> = ({
         {/* Organizations Modal */}
         {showOrganizationsModal && (
           <div
-            className="organizations-modal-overlay"
+            className="userform-organizations-modal-backdrop"
             onClick={() => setShowOrganizationsModal(false)}
           >
             <div
-              className="organizations-modal"
+              className="userform-organizations-modal-box"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="organizations-modal-header">
+              <div className="userform-organizations-modal-top">
                 <h3>Выбор доступных организаций</h3>
                 <button
-                  className="close-button"
+                  className="userform-close-btn"
                   onClick={() => setShowOrganizationsModal(false)}
                   type="button"
                 >
@@ -836,11 +861,11 @@ const UserForm: React.FC<UserFormProps> = ({
                 </button>
               </div>
 
-              <div className="organizations-modal-body">
-                <div className="organizations-actions">
+              <div className="userform-organizations-modal-content">
+                <div className="userform-organizations-bulk-actions">
                   <button
                     type="button"
-                    className="select-all-button"
+                    className="userform-select-all-orgs-btn"
                     onClick={() =>
                       setAvailableOrganizations(
                         organizations.map((org) => org.id)
@@ -851,24 +876,27 @@ const UserForm: React.FC<UserFormProps> = ({
                   </button>
                   <button
                     type="button"
-                    className="clear-all-button"
+                    className="userform-clear-all-orgs-btn"
                     onClick={() => setAvailableOrganizations([])}
                   >
                     Очистить все
                   </button>
                 </div>
 
-                <div className="organizations-list">
+                <div className="userform-organizations-listing">
                   {organizations.map((org) => (
-                    <label key={org.id} className="organization-item">
+                    <label key={org.id} className="userform-organization-entry">
                       <input
                         type="checkbox"
                         checked={availableOrganizations.includes(org.id)}
                         onChange={() => handleOrganizationToggle(org.id)}
-                        className="organization-checkbox"
+                        className="userform-org-native-checkbox"
                       />
-                      <div className="organization-checkbox-custom">
-                        <svg className="checkbox-icon" viewBox="0 0 24 24">
+                      <div className="userform-org-custom-checkbox">
+                        <svg
+                          className="userform-checkbox-check-icon"
+                          viewBox="0 0 24 24"
+                        >
                           <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -877,26 +905,28 @@ const UserForm: React.FC<UserFormProps> = ({
                           />
                         </svg>
                       </div>
-                      <span className="organization-name">{org.name}</span>
+                      <span className="userform-organization-title">
+                        {org.name}
+                      </span>
                     </label>
                   ))}
                 </div>
 
                 {organizations.length === 0 && !loadingOrganizations && (
-                  <div className="organizations-empty">
-                    <div className="empty-icon">📋</div>
+                  <div className="userform-organizations-empty-state">
+                    <div className="userform-empty-state-icon">📋</div>
                     <p>Организации не найдены</p>
                   </div>
                 )}
               </div>
 
-              <div className="organizations-modal-footer">
-                <div className="selected-count">
+              <div className="userform-organizations-modal-bottom">
+                <div className="userform-selected-orgs-counter">
                   Выбрано: {availableOrganizations.length} из{" "}
                   {organizations.length}
                 </div>
                 <button
-                  className="organizations-confirm-button"
+                  className="userform-organizations-done-btn"
                   onClick={() => setShowOrganizationsModal(false)}
                 >
                   Готово

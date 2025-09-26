@@ -1,5 +1,5 @@
-/* UserForm Component Styles - Expanded Version */
-.user-form-overlay {
+/* UserForm Component Styles - Уникальные названия классов */
+.userform-overlay-container {
   position: fixed;
   top: 0;
   left: 0;
@@ -11,12 +11,12 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: fadeIn 0.2s ease-out;
+  animation: userformFadeIn 0.2s ease-out;
   padding: 1rem;
-  overflow-y: auto;
+  overflow: hidden; /* Убираем внешний скролл */
 }
 
-@keyframes fadeIn {
+@keyframes userformFadeIn {
   from {
     opacity: 0;
   }
@@ -25,26 +25,22 @@
   }
 }
 
-.user-form-modal {
+.userform-modal-wrapper {
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(229, 231, 235, 0.5);
   border-radius: 1rem;
   width: 100%;
-  max-width: 600px;
-  max-height: 95vh;
+  max-width: 800px;
+  max-height: calc(100vh - 2rem); /* Гарантируем отступы сверху и снизу */
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  animation: slideIn 0.3s ease-out;
-  margin: 1rem 0;
+  animation: userformSlideIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
 }
 
-.user-form-modal.expanded {
-  max-width: 800px;
-  max-height: 95vh;
-}
-
-@keyframes slideIn {
+@keyframes userformSlideIn {
   from {
     opacity: 0;
     transform: translateY(-20px) scale(0.95);
@@ -55,23 +51,24 @@
   }
 }
 
-/* Form Header */
-.form-header {
+/* Заголовок формы */
+.userform-header-section {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   padding: 1.5rem 2rem;
   border-bottom: 1px solid rgba(229, 231, 235, 0.5);
   background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  flex-shrink: 0;
 }
 
-.form-title-section {
+.userform-title-group {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.form-icon {
+.userform-icon-badge {
   font-size: 2rem;
   background: rgba(79, 70, 229, 0.1);
   padding: 0.75rem;
@@ -79,7 +76,7 @@
   border: 1px solid rgba(79, 70, 229, 0.2);
 }
 
-.form-title {
+.userform-main-title {
   font-size: 1.5rem;
   font-weight: bold;
   color: #111827;
@@ -87,14 +84,14 @@
   line-height: 1.2;
 }
 
-.form-subtitle {
+.userform-subtitle-text {
   font-size: 0.875rem;
   color: #6b7280;
   margin: 0;
   line-height: 1.4;
 }
 
-.close-button {
+.userform-close-btn {
   background: none;
   border: none;
   padding: 0.5rem;
@@ -107,44 +104,46 @@
   justify-content: center;
 }
 
-.close-button:hover {
+.userform-close-btn:hover {
   color: #374151;
   background: rgba(0, 0, 0, 0.05);
 }
 
-.close-button svg {
+.userform-close-btn svg {
   width: 1.25rem;
   height: 1.25rem;
 }
 
-/* Form Body */
-.user-form {
+/* Основная форма */
+.userform-main-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  max-height: calc(95vh - 100px);
+  flex: 1;
+  min-height: 0; /* Важно для flex-контейнеров с overflow */
 }
 
-.form-content {
+.userform-content-area {
   flex: 1;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0;
   overflow-y: auto;
+  min-height: 0; /* Важно для прокрутки */
 }
 
-/* Form Sections */
-.form-section {
+/* Секции формы */
+.userform-section-block {
   padding: 2rem;
   border-bottom: 1px solid #f3f4f6;
 }
 
-.form-section:last-child {
+.userform-section-block:last-child {
   border-bottom: none;
 }
 
-.section-title {
+.userform-section-header {
   font-size: 1.125rem;
   font-weight: 600;
   color: #111827;
@@ -156,7 +155,7 @@
   gap: 0.5rem;
 }
 
-.section-title::before {
+.userform-section-header::before {
   content: "";
   width: 4px;
   height: 1.125rem;
@@ -164,26 +163,26 @@
   border-radius: 2px;
 }
 
-/* Form Groups */
-.form-group {
+/* Группы полей */
+.userform-field-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
 }
 
-.form-group:last-child {
+.userform-field-group:last-child {
   margin-bottom: 0;
 }
 
-.form-row {
+.userform-fields-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
-.form-label {
+.userform-input-label {
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -192,24 +191,24 @@
   font-size: 0.875rem;
 }
 
-.label-text {
+.userform-label-content {
   flex: 1;
 }
 
-.required-mark {
+.userform-required-asterisk {
   color: #dc2626;
   font-weight: bold;
 }
 
-/* Input Wrappers */
-.input-wrapper,
-.select-wrapper {
+/* Обертки для инпутов */
+.userform-input-container,
+.userform-select-container {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.input-icon {
+.userform-input-svg {
   position: absolute;
   left: 0.75rem;
   width: 1.25rem;
@@ -219,9 +218,9 @@
   pointer-events: none;
 }
 
-/* Form Inputs */
-.form-input,
-.form-select {
+/* Поля ввода */
+.userform-text-input,
+.userform-dropdown-select {
   width: 100%;
   padding: 0.875rem 0.875rem 0.875rem 2.75rem;
   border: 1px solid #d1d5db;
@@ -232,31 +231,31 @@
   color: #111827;
 }
 
-.form-input:focus,
-.form-select:focus {
+.userform-text-input:focus,
+.userform-dropdown-select:focus {
   outline: none;
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
   background: rgba(255, 255, 255, 0.95);
 }
 
-.form-input:disabled,
-.form-select:disabled {
+.userform-text-input:disabled,
+.userform-dropdown-select:disabled {
   background: #f9fafb;
   color: #9ca3af;
   cursor: not-allowed;
 }
 
-.form-input::placeholder {
+.userform-text-input::placeholder {
   color: #9ca3af;
 }
 
-/* Textarea */
-.textarea-wrapper {
+/* Текстовая область */
+.userform-textarea-container {
   position: relative;
 }
 
-.form-textarea {
+.userform-multiline-textarea {
   width: 100%;
   padding: 0.875rem;
   border: 1px solid #d1d5db;
@@ -270,25 +269,25 @@
   font-family: inherit;
 }
 
-.form-textarea:focus {
+.userform-multiline-textarea:focus {
   outline: none;
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
   background: rgba(255, 255, 255, 0.95);
 }
 
-.form-textarea::placeholder {
+.userform-multiline-textarea::placeholder {
   color: #9ca3af;
 }
 
-/* Select Specific */
-.form-select {
+/* Настройки селекта */
+.userform-dropdown-select {
   appearance: none;
   cursor: pointer;
   padding-right: 2.75rem;
 }
 
-.select-arrow {
+.userform-select-arrow-icon {
   position: absolute;
   right: 0.75rem;
   width: 1.25rem;
@@ -297,8 +296,8 @@
   pointer-events: none;
 }
 
-/* Password Toggle */
-.password-toggle {
+/* Переключатель пароля */
+.userform-password-visibility-btn {
   position: absolute;
   right: 0.75rem;
   background: none;
@@ -315,19 +314,19 @@
   justify-content: center;
 }
 
-.password-toggle:hover {
+.userform-password-visibility-btn:hover {
   color: #6b7280;
 }
 
-/* Checkbox Groups */
-.checkbox-group {
+/* Группы чекбоксов */
+.userform-checkbox-group {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   margin-top: 0.5rem;
 }
 
-.checkbox-label {
+.userform-checkbox-item-label {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
@@ -339,16 +338,16 @@
   transition: all 0.2s ease;
 }
 
-.checkbox-label:hover {
+.userform-checkbox-item-label:hover {
   background: rgba(248, 250, 252, 0.8);
   border-color: #d1d5db;
 }
 
-.form-checkbox {
+.userform-native-checkbox {
   display: none;
 }
 
-.checkbox-custom {
+.userform-custom-checkbox-box {
   width: 1.25rem;
   height: 1.25rem;
   border: 2px solid #d1d5db;
@@ -362,12 +361,12 @@
   margin-top: 0.125rem;
 }
 
-.form-checkbox:checked + .checkbox-custom {
+.userform-native-checkbox:checked + .userform-custom-checkbox-box {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   border-color: #4f46e5;
 }
 
-.checkbox-icon {
+.userform-checkbox-check-icon {
   width: 0.875rem;
   height: 0.875rem;
   fill: none;
@@ -376,31 +375,33 @@
   transition: opacity 0.2s ease;
 }
 
-.form-checkbox:checked + .checkbox-custom .checkbox-icon {
+.userform-native-checkbox:checked
+  + .userform-custom-checkbox-box
+  .userform-checkbox-check-icon {
   opacity: 1;
 }
 
-.checkbox-text {
+.userform-checkbox-text-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-.checkbox-hint {
+.userform-checkbox-hint-text {
   font-size: 0.75rem;
   color: #6b7280;
   font-weight: normal;
 }
 
-/* Organizations Field */
-.organizations-field {
+/* Поле организаций */
+.userform-organizations-selector {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.organizations-button {
+.userform-organizations-trigger-btn {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -414,45 +415,45 @@
   width: 100%;
 }
 
-.organizations-button:hover:not(:disabled) {
+.userform-organizations-trigger-btn:hover:not(:disabled) {
   background: #f9fafb;
   border-color: #9ca3af;
 }
 
-.organizations-button:focus {
+.userform-organizations-trigger-btn:focus {
   outline: none;
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-.organizations-button:disabled {
+.userform-organizations-trigger-btn:disabled {
   background: #f9fafb;
   color: #9ca3af;
   cursor: not-allowed;
 }
 
-.organizations-icon {
+.userform-organizations-btn-icon {
   width: 1.25rem;
   height: 1.25rem;
   color: #9ca3af;
   flex-shrink: 0;
 }
 
-.organizations-text {
+.userform-organizations-btn-text {
   flex: 1;
   color: #374151;
   font-size: 1rem;
 }
 
-.organizations-arrow {
+.userform-organizations-btn-arrow {
   width: 1.25rem;
   height: 1.25rem;
   color: #9ca3af;
   flex-shrink: 0;
 }
 
-/* Organizations Modal */
-.organizations-modal-overlay {
+/* Модальное окно организаций */
+.userform-organizations-modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
@@ -464,48 +465,53 @@
   justify-content: center;
   z-index: 1100;
   padding: 1rem;
+  overflow: hidden; /* Убираем внешний скролл */
 }
 
-.organizations-modal {
+.userform-organizations-modal-box {
   background: white;
   border-radius: 1rem;
   width: 100%;
   max-width: 500px;
-  max-height: 80vh;
+  max-height: calc(100vh - 2rem);
   overflow: hidden;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
 }
 
-.organizations-modal-header {
+.userform-organizations-modal-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid #e5e7eb;
   background: #f8fafc;
+  flex-shrink: 0;
 }
 
-.organizations-modal-header h3 {
+.userform-organizations-modal-top h3 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #111827;
 }
 
-.organizations-modal-body {
+.userform-organizations-modal-content {
   padding: 1.5rem;
-  max-height: 50vh;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
-.organizations-actions {
+.userform-organizations-bulk-actions {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
 
-.select-all-button,
-.clear-all-button {
+.userform-select-all-orgs-btn,
+.userform-clear-all-orgs-btn {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   border-radius: 0.375rem;
@@ -514,33 +520,33 @@
   border: 1px solid transparent;
 }
 
-.select-all-button {
+.userform-select-all-orgs-btn {
   background: #e0f2fe;
   color: #0369a1;
   border-color: #bae6fd;
 }
 
-.select-all-button:hover {
+.userform-select-all-orgs-btn:hover {
   background: #bae6fd;
 }
 
-.clear-all-button {
+.userform-clear-all-orgs-btn {
   background: #fef2f2;
   color: #dc2626;
   border-color: #fecaca;
 }
 
-.clear-all-button:hover {
+.userform-clear-all-orgs-btn:hover {
   background: #fecaca;
 }
 
-.organizations-list {
+.userform-organizations-listing {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.organization-item {
+.userform-organization-entry {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -551,16 +557,16 @@
   transition: all 0.2s ease;
 }
 
-.organization-item:hover {
+.userform-organization-entry:hover {
   background: #f9fafb;
   border-color: #d1d5db;
 }
 
-.organization-checkbox {
+.userform-org-native-checkbox {
   display: none;
 }
 
-.organization-checkbox-custom {
+.userform-org-custom-checkbox {
   width: 1.25rem;
   height: 1.25rem;
   border: 2px solid #d1d5db;
@@ -573,48 +579,51 @@
   flex-shrink: 0;
 }
 
-.organization-checkbox:checked + .organization-checkbox-custom {
+.userform-org-native-checkbox:checked + .userform-org-custom-checkbox {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   border-color: #4f46e5;
 }
 
-.organization-checkbox:checked + .organization-checkbox-custom .checkbox-icon {
+.userform-org-native-checkbox:checked
+  + .userform-org-custom-checkbox
+  .userform-checkbox-check-icon {
   opacity: 1;
 }
 
-.organization-name {
+.userform-organization-title {
   flex: 1;
   font-size: 0.875rem;
   color: #374151;
 }
 
-.organizations-empty {
+.userform-organizations-empty-state {
   text-align: center;
   padding: 2rem;
   color: #6b7280;
 }
 
-.empty-icon {
+.userform-empty-state-icon {
   font-size: 3rem;
   margin-bottom: 1rem;
   opacity: 0.5;
 }
 
-.organizations-modal-footer {
+.userform-organizations-modal-bottom {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
   border-top: 1px solid #e5e7eb;
   background: #f8fafc;
+  flex-shrink: 0;
 }
 
-.selected-count {
+.userform-selected-orgs-counter {
   font-size: 0.875rem;
   color: #6b7280;
 }
 
-.organizations-confirm-button {
+.userform-organizations-done-btn {
   padding: 0.5rem 1.5rem;
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: white;
@@ -625,19 +634,19 @@
   transition: all 0.2s ease;
 }
 
-.organizations-confirm-button:hover {
+.userform-organizations-done-btn:hover {
   background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
 }
 
-/* Field Hints */
-.field-hint {
+/* Подсказки к полям */
+.userform-field-hint-text {
   font-size: 0.75rem;
   color: #6b7280;
   line-height: 1.4;
 }
 
-/* Error Message */
-.error-message {
+/* Сообщение об ошибке */
+.userform-error-notification {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -650,23 +659,24 @@
   margin: 1rem 2rem;
 }
 
-.error-icon {
+.userform-error-warning-icon {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
 }
 
-/* Form Footer */
-.form-footer {
+/* Подвал формы */
+.userform-footer-area {
   border-top: 1px solid rgba(229, 231, 235, 0.5);
   background: #f9fafb;
-  padding: 1.5rem 2rem;
+  padding: 1.5rem 2rem 2rem 2rem; /* Увеличиваем нижний отступ */
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
-.security-note {
+.userform-security-notice {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -675,19 +685,20 @@
   justify-content: center;
 }
 
-.security-icon {
+.userform-security-lock-icon {
   font-size: 0.875rem;
 }
 
-.form-actions {
+.userform-button-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+  margin-bottom: 0.5rem; /* Добавляем отступ снизу */
 }
 
-/* Form Buttons */
-.cancel-button,
-.submit-button {
+/* Кнопки формы */
+.userform-cancel-action-btn,
+.userform-submit-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -702,35 +713,35 @@
   min-width: 140px;
 }
 
-.cancel-button {
+.userform-cancel-action-btn {
   background: #f3f4f6;
   color: #374151;
   border-color: #d1d5db;
 }
 
-.cancel-button:hover:not(:disabled) {
+.userform-cancel-action-btn:hover:not(:disabled) {
   background: #e5e7eb;
   color: #111827;
 }
 
-.submit-button {
+.userform-submit-action-btn {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.submit-button:hover:not(:disabled) {
+.userform-submit-action-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.submit-button:active:not(:disabled) {
+.userform-submit-action-btn:active:not(:disabled) {
   transform: translateY(0);
 }
 
-.submit-button:disabled,
-.cancel-button:disabled {
+.userform-submit-action-btn:disabled,
+.userform-cancel-action-btn:disabled {
   background: #d1d5db;
   color: #9ca3af;
   cursor: not-allowed;
@@ -738,93 +749,93 @@
   box-shadow: none;
 }
 
-.submit-arrow {
+.userform-submit-right-arrow {
   width: 1rem;
   height: 1rem;
   transition: transform 0.2s ease;
 }
 
-.submit-button:hover:not(:disabled) .submit-arrow {
+.userform-submit-action-btn:hover:not(:disabled) .userform-submit-right-arrow {
   transform: translateX(0.125rem);
 }
 
-/* Loading Spinner */
-.loading-spinner {
+/* Спиннер загрузки */
+.userform-loading-spinner-icon {
   width: 1rem;
   height: 1rem;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
+  animation: userformSpinAnimation 1s ease-in-out infinite;
 }
 
-@keyframes spin {
+@keyframes userformSpinAnimation {
   to {
     transform: rotate(360deg);
   }
 }
 
-/* Responsive Design */
+/* Адаптивный дизайн */
 @media (max-width: 1024px) {
-  .user-form-modal.expanded {
+  .userform-modal-wrapper {
     max-width: 90vw;
   }
 
-  .form-row {
+  .userform-fields-row {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
 }
 
 @media (max-width: 768px) {
-  .user-form-overlay {
+  .userform-overlay-container {
     padding: 0.5rem;
   }
 
-  .user-form-modal {
-    max-height: 98vh;
-    margin: 0.5rem 0;
+  .userform-modal-wrapper {
+    max-height: calc(100vh - 1rem);
   }
 
-  .form-header {
+  .userform-header-section {
     padding: 1rem 1.5rem;
   }
 
-  .form-section {
+  .userform-section-block {
     padding: 1.5rem;
   }
 
-  .form-footer {
-    padding: 1rem 1.5rem;
+  .userform-footer-area {
+    padding: 1rem 1.5rem 1.5rem 1.5rem;
   }
 
-  .form-actions {
+  .userform-button-actions {
     flex-direction: column-reverse;
+    margin-bottom: 0.5rem;
   }
 
-  .cancel-button,
-  .submit-button {
+  .userform-cancel-action-btn,
+  .userform-submit-action-btn {
     width: 100%;
     justify-content: center;
     min-width: 0;
   }
 
-  .checkbox-group {
+  .userform-checkbox-group {
     gap: 0.75rem;
   }
 
-  .checkbox-label {
+  .userform-checkbox-item-label {
     padding: 0.75rem;
   }
 
-  .organizations-modal {
+  .userform-organizations-modal-box {
     max-width: 95vw;
-    max-height: 90vh;
+    max-height: calc(100vh - 1rem);
   }
 }
 
 @media (max-width: 640px) {
-  .form-header {
+  .userform-header-section {
     flex-direction: column;
     align-items: center;
     text-align: center;
@@ -832,36 +843,36 @@
     padding: 1rem;
   }
 
-  .close-button {
+  .userform-close-btn {
     align-self: flex-end;
     position: absolute;
     top: 1rem;
     right: 1rem;
   }
 
-  .form-title-section {
+  .userform-title-group {
     flex-direction: column;
     align-items: center;
   }
 
-  .form-section {
+  .userform-section-block {
     padding: 1rem;
   }
 
-  .form-input,
-  .form-select {
+  .userform-text-input,
+  .userform-dropdown-select {
     font-size: 0.875rem;
     padding: 0.75rem 0.75rem 0.75rem 2.5rem;
   }
 
-  .input-icon,
-  .select-arrow,
-  .password-toggle {
+  .userform-input-svg,
+  .userform-select-arrow-icon,
+  .userform-password-visibility-btn {
     width: 1rem;
     height: 1rem;
   }
 
-  .section-title {
+  .userform-section-header {
     font-size: 1rem;
   }
 }

@@ -54,18 +54,35 @@ const Users: React.FC = () => {
     fetchUsers();
   };
 
+  // Добавьте новое состояние в компонент
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    show: boolean;
+    user: User | null;
+  }>({ show: false, user: null });
+
+  // Замените функцию handleDelete
   const handleDelete = async (id: number) => {
     const user = users.find((u) => u.id === id);
-    const confirmMessage = `Вы действительно хотите удалить пользователя "${user?.full_name}" (${user?.username})?\n\nЭто действие нельзя отменить.`;
-
-    if (window.confirm(confirmMessage)) {
-      try {
-        await deleteUser(id);
-        fetchUsers();
-      } catch (err) {
-        setError("Не удалось удалить пользователя");
-      }
+    if (user) {
+      setDeleteConfirmation({ show: true, user });
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmation.user) return;
+
+    try {
+      await deleteUser(deleteConfirmation.user.id);
+      fetchUsers();
+      setDeleteConfirmation({ show: false, user: null });
+    } catch (err) {
+      setError("Не удалось удалить пользователя");
+      setDeleteConfirmation({ show: false, user: null });
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation({ show: false, user: null });
   };
 
   const openCreateModal = () => {
@@ -470,7 +487,11 @@ const Users: React.FC = () => {
                         {getSortIcon("created_at")}
                       </div>
                     </th>
-                    <th className="users-page-actions-header">Действия</th>
+                    <th className="users-page-th-non-sortable">
+                      <div className="users-page-th-content">
+                        <span>Действия</span>
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -598,7 +619,7 @@ const Users: React.FC = () => {
                           <button
                             onClick={() => openEditModal(user)}
                             className="users-page-edit-button"
-                            title="Редактировать пользователя"
+                            data-title="Редактировать пользователя"
                           >
                             <svg
                               viewBox="0 0 24 24"
@@ -616,7 +637,7 @@ const Users: React.FC = () => {
                           <button
                             onClick={() => handleDelete(user.id)}
                             className="users-page-delete-button"
-                            title="Удалить пользователя"
+                            data-title="Удалить пользователя"
                           >
                             <svg
                               viewBox="0 0 24 24"
@@ -720,6 +741,58 @@ const Users: React.FC = () => {
           onClose={closeModal}
           initialData={editingUser || undefined}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.show && deleteConfirmation.user && (
+        <div className="users-page-modal-overlay">
+          <div className="users-page-delete-modal">
+            <div className="users-page-delete-modal-header">
+              <div className="users-page-delete-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <h3>Подтвердите удаление</h3>
+            </div>
+
+            <div className="users-page-delete-modal-body">
+              <p>
+                Вы действительно хотите удалить пользователя{" "}
+                <strong>"{deleteConfirmation.user.full_name}"</strong> (
+                {deleteConfirmation.user.username})?
+              </p>
+              <p className="users-page-delete-warning">
+                Это действие нельзя отменить. Все данные пользователя будут
+                удалены навсегда.
+              </p>
+            </div>
+
+            <div className="users-page-delete-modal-actions">
+              <button
+                onClick={cancelDelete}
+                className="users-page-cancel-delete-button"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="users-page-confirm-delete-button"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <polyline points="3,6 5,6 21,6"></polyline>
+                  <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                </svg>
+                Удалить пользователя
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
