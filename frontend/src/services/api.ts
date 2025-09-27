@@ -121,3 +121,17 @@ export const getOrganizations = async (): Promise<Organization[]> => {
   const data = await response.json();
   return data.organizations;
 };
+
+export const submitReport = async (reportType: string, data: any) => {
+  const response = await fetch("/api/reports", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reportType, data }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Ошибка отправки отчета");
+  }
+
+  return response.json();
+};

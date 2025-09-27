@@ -1,27 +1,249 @@
-import React, { useState } from "react";
+import React, { useState, Suspense, lazy } from "react";
 import "./Home.css";
+
+const readyModals = [
+  "consolidated-statement",
+  "tariff-list",
+  "os-balance",
+  "long-term-search",
+  "tmz-balance",
+  "cash-flow-report",
+  "employee-list",
+  "debt-report",
+];
+
+// Импорт только для готового модального окна
+const ConsolidatedStatementModal = lazy(
+  () =>
+    import(
+      "../../components/modals/ConsolidatedStatement/ConsolidatedStatementModal"
+    )
+);
+
+const TariffListModal = lazy(
+  () => import("../../components/modals/TariffList/TariffListModal")
+);
+
+const OSBalanceModal = lazy(
+  () => import("../../components/modals/OSBalance/OSBalanceModal")
+);
+
+const LongTermSearchModal = lazy(
+  () => import("../../components/modals/LongTermSearch/LongTermSearchModal")
+);
+
+const TMZBalanceModal = lazy(
+  () => import("../../components/modals/TMZBalance/TMZBalanceModal")
+);
+
+const CashFlowReportModal = lazy(
+  () => import("../../components/modals/CashFlowReport/CashFlowReportModal")
+);
+
+const EmployeeListModal = lazy(
+  () => import("../../components/modals/EmployeeList/EmployeeListModal")
+);
+
+const DebtReportModal = lazy(
+  () => import("../../components/modals/DebtReport/DebtReportModal")
+);
+
+// Временная заглушка для остальных модальных окон
+const TemporaryModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  reportTitle: string;
+}> = ({ isOpen, onClose, reportTitle }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modalOverlayBackdrop_7k3m9" onClick={onClose}>
+      <div
+        className="modalContentDialog_4q8r2"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modalHeaderSection_6w5t1">
+          <h3>{reportTitle}</h3>
+          <button className="modalCloseButton_3s9f4" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="modalBodyContent_8u7y5">
+          <div style={{ padding: "20px", textAlign: "center" }}>
+            <div style={{ fontSize: "48px", marginBottom: "16px" }}>🚧</div>
+            <h4 style={{ marginBottom: "12px", color: "#374151" }}>
+              Модальное окно в разработке
+            </h4>
+            <p style={{ color: "#6b7280", marginBottom: "20px" }}>
+              Это временная заглушка. Скоро здесь будет полнофункциональная
+              форма для создания отчета "{reportTitle}".
+            </p>
+            <div
+              style={{
+                background: "#f3f4f6",
+                padding: "12px",
+                borderRadius: "6px",
+                fontSize: "14px",
+                color: "#374151",
+              }}
+            >
+              <strong>Планируемые функции:</strong>
+              <ul
+                style={{
+                  textAlign: "left",
+                  margin: "8px 0 0 0",
+                  paddingLeft: "20px",
+                }}
+              >
+                <li>Пошаговый мастер настройки отчета</li>
+                <li>Выбор организаций и периодов</li>
+                <li>Настройка параметров вывода</li>
+                <li>Предварительный просмотр</li>
+                <li>Отправка по электронной почте</li>
+              </ul>
+            </div>
+          </div>
+          <div
+            style={{
+              padding: "16px",
+              borderTop: "1px solid #e5e7eb",
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "12px",
+            }}
+          >
+            <button
+              onClick={onClose}
+              style={{
+                padding: "8px 16px",
+                border: "1px solid #d1d5db",
+                borderRadius: "6px",
+                background: "white",
+                cursor: "pointer",
+              }}
+            >
+              Закрыть
+            </button>
+            <button
+              onClick={() => {
+                alert(`Будет создан отчет: ${reportTitle}`);
+                onClose();
+              }}
+              style={{
+                padding: "8px 16px",
+                border: "none",
+                borderRadius: "6px",
+                background: "#3b82f6",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              Создать отчет (заглушка)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Компонент загрузки для Suspense
+const ModalLoadingSpinner: React.FC = () => (
+  <div className="modalOverlayBackdrop_7k3m9">
+    <div className="modalContentDialog_4q8r2">
+      <div style={{ padding: "40px", textAlign: "center" }}>
+        <div
+          style={{
+            width: "24px",
+            height: "24px",
+            border: "2px solid #f3f3f3",
+            borderTop: "2px solid #3b82f6",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+            margin: "0 auto 16px",
+          }}
+        ></div>
+        <p>Загрузка модального окна...</p>
+      </div>
+    </div>
+  </div>
+);
+
+interface ReportConfig {
+  id: string;
+  title: string;
+  icon: string;
+  category: string;
+  description?: string;
+}
 
 const Home: React.FC = () => {
   const [selectedModal, setSelectedModal] = useState<string | null>(null);
 
-  const availableReports = [
-    { id: "consolidated-statement", title: "Сводная расчетная ведомость" },
-    { id: "tariff-list", title: "Сводный тарификационный список" },
-    { id: "os-balance", title: "Сводная ведомость остатков ОС" },
-    { id: "long-term-search", title: "Поиск долгосрочных активов" },
-    { id: "tmz-balance", title: "Сводная ведомость остатков ТМЗ" },
-    { id: "expense-report", title: "Отчет по расходам по форме 4-20" },
+  // Конфигурация всех доступных отчетов
+  const availableReports: ReportConfig[] = [
+    {
+      id: "consolidated-statement",
+      title: "Сводная расчетная ведомость",
+      icon: "💰",
+      category: "Зарплата и кадры",
+      description: "Сводный отчет по заработной плате всех организаций",
+    },
+    {
+      id: "tariff-list",
+      title: "Сводный тарификационный список",
+      icon: "📋",
+      category: "Зарплата и кадры",
+      description: "Список тарифных ставок и должностных окладов",
+    },
+    {
+      id: "os-balance",
+      title: "Сводная ведомость остатков ОС",
+      icon: "🏢",
+      category: "Долгосрочные активы",
+      description: "Отчет по остаткам основных средств",
+    },
+    {
+      id: "long-term-search",
+      title: "Поиск долгосрочных активов",
+      icon: "🔍",
+      category: "Долгосрочные активы",
+      description: "Поиск и анализ долгосрочных активов организаций",
+    },
+    {
+      id: "tmz-balance",
+      title: "Сводная ведомость остатков ТМЗ",
+      icon: "📦",
+      category: "Номенклатура и склад",
+      description: "Отчет по товарно-материальным запасам",
+    },
+    {
+      id: "expense-report",
+      title: "Отчет по расходам по форме 4-20",
+      icon: "💸",
+      category: "Банк и касса",
+      description: "Отчет о расходах по установленной форме 4-20",
+    },
     {
       id: "cash-flow-report",
       title: "Сводный отчет об исполнении денежных средств",
+      icon: "💳",
+      category: "Банк и касса",
+      description: "Отчет о движении денежных средств организаций",
     },
-    { id: "tariff-list-2", title: "Сводный тарификационный список" },
-    { id: "long-term-search-2", title: "Поиск долгосрочных активов" },
-    { id: "employee-list", title: "Сводный список работников организации" },
-    { id: "long-term-search-3", title: "Поиск долгосрочных активов" },
+    {
+      id: "employee-list",
+      title: "Сводный список работников организации",
+      icon: "👥",
+      category: "Зарплата и кадры",
+      description: "Полный список сотрудников всех организаций",
+    },
     {
       id: "debt-report",
       title: "Сводный отчет по дебиторской и кредиторской задолженности",
+      icon: "📊",
+      category: "Банк и касса",
+      description: "Анализ задолженностей организаций",
     },
   ];
 
@@ -32,6 +254,134 @@ const Home: React.FC = () => {
   const closeModal = () => {
     setSelectedModal(null);
   };
+
+  const getSelectedReport = () => {
+    return availableReports.find((r) => r.id === selectedModal);
+  };
+
+  // Рендер соответствующего модального окна
+  const renderModal = () => {
+    if (!selectedModal) return null;
+
+    const selectedReport = getSelectedReport();
+    if (!selectedReport) return null;
+
+    // Обработка готовых модальных окон
+    if (selectedModal === "consolidated-statement") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <ConsolidatedStatementModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    if (selectedModal === "tariff-list") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <TariffListModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    if (selectedModal === "os-balance") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <OSBalanceModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    if (selectedModal === "long-term-search") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <LongTermSearchModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    if (selectedModal === "tmz-balance") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <TMZBalanceModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    if (selectedModal === "cash-flow-report") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <CashFlowReportModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    if (selectedModal === "employee-list") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <EmployeeListModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    if (selectedModal === "debt-report") {
+      return (
+        <Suspense fallback={<ModalLoadingSpinner />}>
+          <DebtReportModal
+            isOpen={true}
+            onClose={closeModal}
+            reportTitle={selectedReport.title}
+          />
+        </Suspense>
+      );
+    }
+
+    // Для остальных используем заглушку
+    return (
+      <TemporaryModal
+        isOpen={true}
+        onClose={closeModal}
+        reportTitle={selectedReport.title}
+      />
+    );
+  };
+
+  // Группировка отчетов по категориям
+  const reportsByCategory = availableReports.reduce((acc, report) => {
+    const category = report.category;
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(report);
+    return acc;
+  }, {} as Record<string, ReportConfig[]>);
 
   return (
     <div className="homePageMainWrapper_2k9x7">
@@ -49,42 +399,42 @@ const Home: React.FC = () => {
 
         <div className="reportsSection_4b8k5">
           <h2>Доступные отчеты</h2>
-          <div className="reportsGridLayout_6n9m1">
-            {availableReports.map((report) => (
-              <button
-                key={report.id}
-                className="reportButtonElement_5v2l7"
-                onClick={() => openModal(report.id)}
-              >
-                <span className="reportIconSymbol_8h4x3">📊</span>
-                <span className="reportTitleText_9j1p6">{report.title}</span>
-              </button>
-            ))}
-          </div>
+
+          {/* Отображение отчетов по категориям */}
+          {Object.entries(reportsByCategory).map(([category, reports]) => (
+            <div key={category} className="reportCategorySection_3x8k2">
+              <h3 className="reportCategoryTitle_5m9q1">{category}</h3>
+              <div className="reportsGridLayout_6n9m1">
+                {reports.map((report) => (
+                  <button
+                    key={report.id}
+                    className={`reportButtonElement_5v2l7 ${
+                      readyModals.includes(report.id) ? "report-ready" : ""
+                    }`}
+                    onClick={() => openModal(report.id)}
+                    title={
+                      report.description || `Создать отчет: ${report.title}`
+                    }
+                  >
+                    <span className="reportIconSymbol_8h4x3">
+                      {report.icon}
+                    </span>
+                    <span className="reportTitleText_9j1p6">
+                      {report.title}
+                    </span>
+                    {readyModals.includes(report.id) && (
+                      <span className="report-status-badge">Готов</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {selectedModal && (
-        <div className="modalOverlayBackdrop_7k3m9" onClick={closeModal}>
-          <div
-            className="modalContentDialog_4q8r2"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modalHeaderSection_6w5t1">
-              <h3>
-                {availableReports.find((r) => r.id === selectedModal)?.title}
-              </h3>
-              <button className="modalCloseButton_3s9f4" onClick={closeModal}>
-                ×
-              </button>
-            </div>
-            <div className="modalBodyContent_8u7y5">
-              <p>Модальное окно для отчета будет реализовано позже.</p>
-              <p>ID отчета: {selectedModal}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Рендер модального окна */}
+      {renderModal()}
     </div>
   );
 };

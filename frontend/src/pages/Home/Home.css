@@ -197,3 +197,69 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Добавить в Home.css */
+
+.reportCategorySection_3x8k2 {
+  margin-bottom: 2rem;
+}
+
+.reportCategoryTitle_5m9q1 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 1rem 0;
+  padding-left: 0.5rem;
+  border-left: 3px solid #3b82f6;
+}
+
+.reportButtonElement_5v2l7:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive дизайн */
+@media (max-width: 640px) {
+  .reportsGridLayout_6n9m1 {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .reportButtonElement_5v2l7 {
+    padding: 1rem 0.75rem;
+    min-height: 100px;
+  }
+
+  .reportIconSymbol_8h4x3 {
+    font-size: 1.5rem;
+  }
+
+  .reportTitleText_9j1p6 {
+    font-size: 0.8125rem;
+  }
+
+  .reportCategoryTitle_5m9q1 {
+    font-size: 1rem;
+  }
+}
+
+/* Анимация для спиннера загрузки */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
