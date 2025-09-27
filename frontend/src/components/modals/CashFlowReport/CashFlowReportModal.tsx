@@ -1,11 +1,15 @@
 import React from "react";
 import ReportModal from "../../common/ReportModal/ReportModal";
 import { ModalConfig } from "../../common/ReportModal/types";
+import { REPORT_OPTIONS } from "../../common/ReportModal/reportOptions";
 
 const config: ModalConfig = {
   id: "cash-flow-report",
   title: "Сводный отчет об исполнении денежных средств",
   colorScheme: "blue",
+  startStep: 2, // Начинаем с шага "Организации"
+  reportOptions: REPORT_OPTIONS,
+  defaultReportId: "cash-flow-report", // Дефолтно выбран этот отчет
   steps: [
     {
       title: "Параметры отчета",

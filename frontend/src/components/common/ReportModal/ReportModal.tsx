@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./ReportModal.css";
 import {
   Organization,
@@ -6,17 +6,139 @@ import {
   ModalConfig,
   ReportModalProps,
   FormData,
+  SearchOption,
 } from "./types";
+
+// Компонент модального окна поиска
+interface SearchModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (option: SearchOption) => void;
+  title: string;
+  options: SearchOption[];
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  placeholder: string;
+}
+
+const SearchModal: React.FC<SearchModalProps> = ({
+  isOpen,
+  onClose,
+  onSelect,
+  title,
+  options,
+  searchTerm,
+  onSearchChange,
+  placeholder,
+}) => {
+  const [filteredOptions, setFilteredOptions] = useState<SearchOption[]>([]);
+
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFilteredOptions(options);
+    } else {
+      setFilteredOptions(
+        options.filter((option) =>
+          option.name.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+  }, [searchTerm, options]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="rm-search-modal-overlay" onClick={onClose}>
+      <div
+        className="rm-search-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="rm-search-modal-header">
+          <h3>{title}</h3>
+          <div className="rm-search-modal-actions">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rm-btn rm-btn-secondary"
+            >
+              Назад
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rm-btn rm-btn-primary"
+              disabled
+            >
+              Выбрать
+            </button>
+          </div>
+        </div>
+
+        <div className="rm-search-modal-body">
+          <div className="rm-search-input-section">
+            <label>Наименование</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={placeholder}
+              className="rm-search-input"
+            />
+          </div>
+
+          <div className="rm-search-results">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <div
+                  key={option.id}
+                  className="rm-search-option"
+                  onClick={() => {
+                    onSelect(option);
+                    onClose();
+                  }}
+                >
+                  <div className="rm-search-option-name">{option.name}</div>
+                  {option.description && (
+                    <div className="rm-search-option-description">
+                      {option.description}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="rm-search-no-results">
+                Ничего не найдено по запросу "{searchTerm}"
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ReportModal: React.FC<ReportModalProps> = ({
   isOpen,
   onClose,
   reportTitle,
   config,
+  onReportChange, // Новый пропс
 }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  // Стартовый шаг: если указан startStep в конфиге, иначе 1
+  const [currentStep, setCurrentStep] = useState(config.startStep || 1);
+
+  // Сброс currentStep при изменении конфигурации
+  useEffect(() => {
+    if (config.startStep) {
+      setCurrentStep(config.startStep);
+    }
+  }, [config.id, config.startStep]); // Отслеживаем изменение ID конфигурации
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [searchModals, setSearchModals] = useState<Record<string, boolean>>({});
+  const [searchData, setSearchData] = useState<
+    Record<string, { options: SearchOption[]; searchTerm: string }>
+  >({});
 
   // Временные данные организаций
   const [organizations] = useState<Organization[]>([
@@ -30,30 +152,27 @@ const ReportModal: React.FC<ReportModalProps> = ({
   const [formData, setFormData] = useState<FormData>({
     selectedOrganizations: [],
     emails: [""],
+    selectedReportId: config.defaultReportId, // Устанавливаем дефолтный отчет
   });
 
   if (!isOpen) return null;
 
-  // Четкая структура шагов: Организации + Конфиг + Email + Сводка
-  const totalSteps = 1 + config.steps.length + 1 + 1; // Организации + Конфиг + Email + Сводка
-  const organizationStep = 1;
-  const configStepsStart = 2;
+  // Новая структура шагов: Выбор отчета + Организации + Конфиг + Email + Сводка
+  const totalSteps = 1 + 1 + config.steps.length + 1 + 1; // Выбор отчета + Организации + Конфиг + Email + Сводка
+  const reportSelectionStep = 1;
+  const organizationStep = 2;
+  const configStepsStart = 3;
   const configStepsEnd = configStepsStart + config.steps.length - 1;
   const emailStep = configStepsEnd + 1;
   const summaryStep = emailStep + 1;
 
-  console.log("Структура шагов:", {
-    totalSteps,
-    organizationStep,
-    configStepsStart,
-    configStepsEnd,
-    emailStep,
-    summaryStep,
-    currentStep,
-  });
-
   const validateCurrentStep = (): boolean => {
-    // Шаг 1: Организации
+    // Шаг 1: Выбор отчета
+    if (currentStep === reportSelectionStep) {
+      return !!formData.selectedReportId;
+    }
+
+    // Шаг 2: Организации
     if (currentStep === organizationStep) {
       return formData.selectedOrganizations?.length > 0;
     }
@@ -112,6 +231,68 @@ const ReportModal: React.FC<ReportModalProps> = ({
 
   const updateFormData = (key: string, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Функции для работы с search полями
+  const openSearchModal = async (fieldName: string, field: FieldConfig) => {
+    if (!field.searchConfig) return;
+
+    setSearchModals((prev) => ({ ...prev, [fieldName]: true }));
+
+    // Загружаем опции если еще не загружены
+    if (!searchData[fieldName]) {
+      try {
+        const options = await field.searchConfig.loadOptions();
+        setSearchData((prev) => ({
+          ...prev,
+          [fieldName]: {
+            options: Array.isArray(options) ? options : [],
+            searchTerm: "",
+          },
+        }));
+      } catch (error) {
+        console.error("Ошибка загрузки опций поиска:", error);
+        setSearchData((prev) => ({
+          ...prev,
+          [fieldName]: { options: [], searchTerm: "" },
+        }));
+      }
+    }
+  };
+
+  const closeSearchModal = (fieldName: string) => {
+    setSearchModals((prev) => ({ ...prev, [fieldName]: false }));
+  };
+
+  const handleSearchSelect = (fieldName: string, option: SearchOption) => {
+    updateFormData(fieldName, option.name);
+    updateFormData(`${fieldName}_id`, option.id);
+    closeSearchModal(fieldName);
+  };
+
+  const handleSearchTermChange = (fieldName: string, value: string) => {
+    setSearchData((prev) => ({
+      ...prev,
+      [fieldName]: { ...prev[fieldName], searchTerm: value },
+    }));
+  };
+
+  const showAllOptions = async (fieldName: string, field: FieldConfig) => {
+    if (!field.searchConfig) return;
+
+    try {
+      const options = await field.searchConfig.loadOptions();
+      setSearchData((prev) => ({
+        ...prev,
+        [fieldName]: {
+          options: Array.isArray(options) ? options : [],
+          searchTerm: "",
+        },
+      }));
+      setSearchModals((prev) => ({ ...prev, [fieldName]: true }));
+    } catch (error) {
+      console.error("Ошибка загрузки всех опций:", error);
+    }
   };
 
   const handleSelectAllOrganizations = () => {
@@ -181,6 +362,64 @@ const ReportModal: React.FC<ReportModalProps> = ({
     const value = formData[field.name];
 
     switch (field.type) {
+      case "search":
+        if (!field.searchConfig) return null;
+
+        return (
+          <div className="rm-form-group" key={field.name}>
+            <label htmlFor={field.name}>{field.label}:</label>
+            <div className="rm-search-field">
+              <div className="rm-search-input-wrapper">
+                <input
+                  id={field.name}
+                  type="text"
+                  value={value || ""}
+                  onChange={(e) => updateFormData(field.name, e.target.value)}
+                  placeholder={field.searchConfig.searchPlaceholder}
+                  required={field.required}
+                  className="rm-search-text-input"
+                />
+                <button
+                  type="button"
+                  className="rm-search-dropdown-btn"
+                  onClick={() => openSearchModal(field.name, field)}
+                >
+                  ▼
+                </button>
+              </div>
+
+              {(!value || value.trim() === "") && (
+                <div className="rm-search-helper">
+                  <p>
+                    Введите строку для поиска. Нажмите "Показать все" для выбора
+                  </p>
+                  <button
+                    type="button"
+                    className="rm-btn rm-btn-outline rm-btn-small"
+                    onClick={() => showAllOptions(field.name, field)}
+                  >
+                    Показать все
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Модальное окно поиска */}
+            <SearchModal
+              isOpen={searchModals[field.name] || false}
+              onClose={() => closeSearchModal(field.name)}
+              onSelect={(option) => handleSearchSelect(field.name, option)}
+              title={field.searchConfig.modalTitle}
+              options={searchData[field.name]?.options || []}
+              searchTerm={searchData[field.name]?.searchTerm || ""}
+              onSearchChange={(value) =>
+                handleSearchTermChange(field.name, value)
+              }
+              placeholder={field.searchConfig.searchPlaceholder}
+            />
+          </div>
+        );
+
       case "select":
         return (
           <div className="rm-form-group" key={field.name}>
@@ -285,7 +524,59 @@ const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   const renderStepContent = () => {
-    // Шаг 1: Организации
+    // Шаг 1: Выбор отчета
+    if (currentStep === reportSelectionStep) {
+      const selectedReport = config.reportOptions?.find(
+        (report) => report.id === formData.selectedReportId
+      );
+
+      return (
+        <div className="rm-step-content">
+          <p className="rm-description">
+            Выберите отчет, по которому будет создан запрос и нажмите "Далее"
+            для ввода параметров
+          </p>
+
+          <div className="rm-form-group">
+            <label htmlFor="reportSelection">Отчет:</label>
+            <select
+              id="reportSelection"
+              value={formData.selectedReportId || ""}
+              onChange={(e) => {
+                const newReportId = e.target.value;
+                updateFormData("selectedReportId", newReportId);
+                // Очищаем состояние формы кроме организаций и emails при смене отчета
+                const clearedFormData = {
+                  selectedOrganizations: formData.selectedOrganizations,
+                  emails: formData.emails,
+                  selectedReportId: newReportId,
+                };
+                setFormData(clearedFormData);
+                // Уведомляем родительский компонент об изменении отчета
+                if (onReportChange) {
+                  onReportChange(newReportId);
+                }
+              }}
+              required
+            >
+              {config.reportOptions?.map((report) => (
+                <option key={report.id} value={report.id}>
+                  {report.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedReport && (
+            <div className="rm-report-description">
+              <p>{selectedReport.description}</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Шаг 2: Организации
     if (currentStep === organizationStep) {
       return (
         <div className="rm-step-content">

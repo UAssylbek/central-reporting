@@ -10,42 +10,12 @@ const readyModals = [
   "cash-flow-report",
   "employee-list",
   "debt-report",
+  "expense-report",
 ];
 
-// Импорт только для готового модального окна
-const ConsolidatedStatementModal = lazy(
-  () =>
-    import(
-      "../../components/modals/ConsolidatedStatement/ConsolidatedStatementModal"
-    )
-);
-
-const TariffListModal = lazy(
-  () => import("../../components/modals/TariffList/TariffListModal")
-);
-
-const OSBalanceModal = lazy(
-  () => import("../../components/modals/OSBalance/OSBalanceModal")
-);
-
-const LongTermSearchModal = lazy(
-  () => import("../../components/modals/LongTermSearch/LongTermSearchModal")
-);
-
-const TMZBalanceModal = lazy(
-  () => import("../../components/modals/TMZBalance/TMZBalanceModal")
-);
-
-const CashFlowReportModal = lazy(
-  () => import("../../components/modals/CashFlowReport/CashFlowReportModal")
-);
-
-const EmployeeListModal = lazy(
-  () => import("../../components/modals/EmployeeList/EmployeeListModal")
-);
-
-const DebtReportModal = lazy(
-  () => import("../../components/modals/DebtReport/DebtReportModal")
+// Новый импорт для универсального модального окна
+const UniversalReportModal = lazy(
+  () => import("../../components/modals/Universal/UniversalReportModal")
 );
 
 // Временная заглушка для остальных модальных окон
@@ -266,110 +236,17 @@ const Home: React.FC = () => {
     const selectedReport = getSelectedReport();
     if (!selectedReport) return null;
 
-    // Обработка готовых модальных окон
-    if (selectedModal === "consolidated-statement") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <ConsolidatedStatementModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    if (selectedModal === "tariff-list") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <TariffListModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    if (selectedModal === "os-balance") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <OSBalanceModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    if (selectedModal === "long-term-search") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <LongTermSearchModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    if (selectedModal === "tmz-balance") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <TMZBalanceModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    if (selectedModal === "cash-flow-report") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <CashFlowReportModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    if (selectedModal === "employee-list") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <EmployeeListModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    if (selectedModal === "debt-report") {
-      return (
-        <Suspense fallback={<ModalLoadingSpinner />}>
-          <DebtReportModal
-            isOpen={true}
-            onClose={closeModal}
-            reportTitle={selectedReport.title}
-          />
-        </Suspense>
-      );
-    }
-
-    // Для остальных используем заглушку
+    // Теперь все модальные окна используют UniversalReportModal
     return (
-      <TemporaryModal
-        isOpen={true}
-        onClose={closeModal}
-        reportTitle={selectedReport.title}
-      />
+      <Suspense fallback={<ModalLoadingSpinner />}>
+        <UniversalReportModal
+          key={selectedModal} // Добавляем key для принудительного перерендера
+          isOpen={true}
+          onClose={closeModal}
+          reportTitle={selectedReport.title}
+          initialReportId={selectedModal}
+        />
+      </Suspense>
     );
   };
 
