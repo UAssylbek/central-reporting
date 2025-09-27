@@ -127,12 +127,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
   // Стартовый шаг: если указан startStep в конфиге, иначе 1
   const [currentStep, setCurrentStep] = useState(config.startStep || 1);
 
-  // Сброс currentStep при изменении конфигурации
-  useEffect(() => {
-    if (config.startStep) {
-      setCurrentStep(config.startStep);
-    }
-  }, [config.id, config.startStep]); // Отслеживаем изменение ID конфигурации
+  // Убираем автоматический сброс шага при смене конфигурации
+  // Пользователь должен сам переходить между шагами
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [searchModals, setSearchModals] = useState<Record<string, boolean>>({});

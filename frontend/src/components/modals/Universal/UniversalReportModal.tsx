@@ -20,7 +20,6 @@ const UniversalReportModal: React.FC<UniversalReportModalProps> = ({
   const allConfigs = useMemo(() => getAllReportConfigs(), []);
 
   const [currentConfig, setCurrentConfig] = useState<ModalConfig | null>(null);
-  const [currentStep, setCurrentStep] = useState<number>(2); // Сброс на шаг 2 при смене отчета
 
   useEffect(() => {
     // Устанавливаем начальную конфигурацию только один раз
@@ -35,20 +34,19 @@ const UniversalReportModal: React.FC<UniversalReportModalProps> = ({
     const newConfig = allConfigs[newReportId];
     if (newConfig && newConfig.id !== currentConfig?.id) {
       // Создаем новую конфигурацию с обновленным defaultReportId
+      // НЕ сбрасываем startStep - пользователь остается на текущем шаге
       const updatedConfig = {
         ...newConfig,
         defaultReportId: newReportId,
-        startStep: 2, // Сбрасываем на шаг организаций
+        startStep: currentConfig?.startStep || 2, // Сохраняем текущий startStep
       };
       setCurrentConfig(updatedConfig);
-      setCurrentStep(2); // Принудительно переходим на шаг организаций
     }
   };
 
   // Обработчик закрытия с очисткой состояния
   const handleClose = () => {
     setCurrentConfig(null);
-    setCurrentStep(2);
     onClose();
   };
 
