@@ -122,21 +122,21 @@ const ReportModal: React.FC<ReportModalProps> = ({
   onClose,
   reportTitle,
   config,
-  onReportChange, // Новый пропс
+  onReportChange,
 }) => {
-  // Стартовый шаг: если указан startStep в конфиге, иначе 1
   const [currentStep, setCurrentStep] = useState(config.startStep || 1);
-
-  // Убираем автоматический сброс шага при смене конфигурации
-  // Пользователь должен сам переходить между шагами
+  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(
+    null
+  );
+  const [isAnimating, setIsAnimating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [showCloseConfirmation, setShowCloseConfirmation] = useState(false);
   const [searchModals, setSearchModals] = useState<Record<string, boolean>>({});
   const [searchData, setSearchData] = useState<
     Record<string, { options: SearchOption[]; searchTerm: string }>
   >({});
 
-  // Временные данные организаций
   const [organizations] = useState<Organization[]>([
     { id: 1, name: 'ТОО "Компания 1"' },
     { id: 2, name: 'АО "Предприятие 2"' },
@@ -148,13 +148,11 @@ const ReportModal: React.FC<ReportModalProps> = ({
   const [formData, setFormData] = useState<FormData>({
     selectedOrganizations: [],
     emails: [""],
-    selectedReportId: config.defaultReportId, // Устанавливаем дефолтный отчет
+    selectedReportId: config.defaultReportId,
   });
 
-  if (!isOpen) return null;
-
-  // Новая структура шагов: Выбор отчета + Организации + Конфиг + Email + Сводка
-  const totalSteps = 1 + 1 + config.steps.length + 1 + 1; // Выбор отчета + Организации + Конфиг + Email + Сводка
+  // Объявляем константы шагов
+  const totalSteps = 1 + 1 + config.steps.length + 1 + 1;
   const reportSelectionStep = 1;
   const organizationStep = 2;
   const configStepsStart = 3;
@@ -162,18 +160,16 @@ const ReportModal: React.FC<ReportModalProps> = ({
   const emailStep = configStepsEnd + 1;
   const summaryStep = emailStep + 1;
 
+  // Все функции валидации и обработчиков
   const validateCurrentStep = (): boolean => {
-    // Шаг 1: Выбор отчета
     if (currentStep === reportSelectionStep) {
       return !!formData.selectedReportId;
     }
 
-    // Шаг 2: Организации
     if (currentStep === organizationStep) {
       return formData.selectedOrganizations?.length > 0;
     }
 
-    // Конфигурационные шаги (2, 3, 4, ...)
     if (currentStep >= configStepsStart && currentStep <= configStepsEnd) {
       const stepIndex = currentStep - configStepsStart;
       const step = config.steps[stepIndex];
@@ -193,14 +189,12 @@ const ReportModal: React.FC<ReportModalProps> = ({
       });
     }
 
-    // Email шаг
     if (currentStep === emailStep) {
       return formData.emails?.some(
         (email: string) => email.trim() !== "" && isValidEmail(email)
       );
     }
 
-    // Сводка всегда валидна
     if (currentStep === summaryStep) {
       return true;
     }
@@ -214,28 +208,80 @@ const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   const handleNext = () => {
-    if (validateCurrentStep() && currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+    if (validateCurrentStep() && currentStep < totalSteps && !isAnimating) {
+      setIsAnimating(true);
+      setSlideDirection("left");
+
+      setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+        setTimeout(() => {
+          setSlideDirection(null);
+          setIsAnimating(false);
+        }, 50);
+      }, 300);
     }
   };
 
   const handlePrev = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+    if (currentStep > 1 && !isAnimating) {
+      setIsAnimating(true);
+      setSlideDirection("right");
+
+      setTimeout(() => {
+        setCurrentStep(currentStep - 1);
+        setTimeout(() => {
+          setSlideDirection(null);
+          setIsAnimating(false);
+        }, 50);
+      }, 300);
     }
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      console.log("Создание отчета с параметрами:", {
+        reportType: config.id,
+        formData,
+      });
+
+      setShowSuccessNotification(true);
+    } catch (error) {
+      alert("Ошибка при создании запроса отчета");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCloseAttempt = () => {
+    setShowCloseConfirmation(true);
+  };
+
+  const confirmClose = () => {
+    setShowCloseConfirmation(false);
+    onClose();
+  };
+
+  const cancelClose = () => {
+    setShowCloseConfirmation(false);
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessNotification(false);
+    onClose();
   };
 
   const updateFormData = (key: string, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Функции для работы с search полями
   const openSearchModal = async (fieldName: string, field: FieldConfig) => {
     if (!field.searchConfig) return;
 
     setSearchModals((prev) => ({ ...prev, [fieldName]: true }));
 
-    // Загружаем опции если еще не загружены
     if (!searchData[fieldName]) {
       try {
         const options = await field.searchConfig.loadOptions();
@@ -331,28 +377,143 @@ const ReportModal: React.FC<ReportModalProps> = ({
     }
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      console.log("Создание отчета с параметрами:", {
-        reportType: config.id,
-        formData,
-      });
-
-      setShowSuccessNotification(true);
-    } catch (error) {
-      alert("Ошибка при создании запроса отчета");
-    } finally {
-      setIsSubmitting(false);
+  // useEffect для блокировки скролла
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add("modal-open");
+    } else {
+      document.body.classList.remove("modal-open");
     }
-  };
 
-  const handleSuccessClose = () => {
-    setShowSuccessNotification(false);
-    onClose();
-  };
+    return () => {
+      document.body.classList.remove("modal-open");
+    };
+  }, [isOpen]);
+
+  // useEffect для клавиатурной навигации с последовательным переходом по полям
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isAnimating || isSubmitting) return;
+
+      const hasOpenSearchModal = Object.values(searchModals).some(
+        (isOpen) => isOpen
+      );
+      if (hasOpenSearchModal) return;
+
+      // НАВИГАЦИЯ ДЛЯ ДИАЛОГА ПОДТВЕРЖДЕНИЯ ЗАКРЫТИЯ
+      if (showCloseConfirmation) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          confirmClose(); // Закрыть
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          cancelClose(); // Продолжить редактирование
+        }
+        return; // Блокируем остальную навигацию
+      }
+
+      // НАВИГАЦИЯ ДЛЯ УВЕДОМЛЕНИЯ ОБ УСПЕХЕ
+      if (showSuccessNotification) {
+        if (e.key === "Enter" || e.key === "Escape") {
+          e.preventDefault();
+          handleSuccessClose(); // Понятно
+        }
+        return; // Блокируем остальную навигацию
+      }
+
+      // ОСНОВНАЯ НАВИГАЦИЯ ПО ФОРМЕ
+      if (e.key === "Enter") {
+        e.preventDefault();
+
+        const modalBody = document.querySelector(".rm-modal-body");
+        if (!modalBody) return;
+
+        const focusableElements = modalBody.querySelectorAll(
+          'input:not([type="radio"]):not([type="checkbox"]), select, textarea, input[type="radio"]:checked'
+        );
+
+        const focusableArray = Array.from(focusableElements) as HTMLElement[];
+        const activeElement = document.activeElement as HTMLElement;
+        const currentIndex = focusableArray.indexOf(activeElement);
+
+        const isStepValid = validateCurrentStep();
+
+        if (currentIndex !== -1) {
+          let nextIndex = currentIndex + 1;
+
+          while (nextIndex < focusableArray.length) {
+            const nextElement = focusableArray[nextIndex];
+
+            if (
+              nextElement instanceof HTMLInputElement ||
+              nextElement instanceof HTMLSelectElement ||
+              nextElement instanceof HTMLTextAreaElement
+            ) {
+              if (!nextElement.value || nextElement.value === "") {
+                nextElement.focus();
+                return;
+              }
+            }
+
+            nextIndex++;
+          }
+
+          if (isStepValid) {
+            if (currentStep < totalSteps) {
+              handleNext();
+            } else if (currentStep === totalSteps) {
+              handleSubmit();
+            }
+          }
+        } else {
+          const firstEmptyField = focusableArray.find((element) => {
+            if (
+              element instanceof HTMLInputElement ||
+              element instanceof HTMLSelectElement ||
+              element instanceof HTMLTextAreaElement
+            ) {
+              return !element.value || element.value === "";
+            }
+            return false;
+          });
+
+          if (firstEmptyField) {
+            firstEmptyField.focus();
+          } else if (isStepValid) {
+            if (currentStep < totalSteps) {
+              handleNext();
+            } else if (currentStep === totalSteps) {
+              handleSubmit();
+            }
+          }
+        }
+      }
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        handleCloseAttempt();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    isOpen,
+    currentStep,
+    totalSteps,
+    isAnimating,
+    isSubmitting,
+    searchModals,
+    formData,
+    showCloseConfirmation,
+    showSuccessNotification,
+  ]);
 
   const renderField = (field: FieldConfig) => {
     const value = formData[field.name];
@@ -400,7 +561,6 @@ const ReportModal: React.FC<ReportModalProps> = ({
               )}
             </div>
 
-            {/* Модальное окно поиска */}
             <SearchModal
               isOpen={searchModals[field.name] || false}
               onClose={() => closeSearchModal(field.name)}
@@ -520,14 +680,21 @@ const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   const renderStepContent = () => {
-    // Шаг 1: Выбор отчета
     if (currentStep === reportSelectionStep) {
       const selectedReport = config.reportOptions?.find(
         (report) => report.id === formData.selectedReportId
       );
 
       return (
-        <div className="rm-step-content">
+        <div
+          className={`rm-step-content ${
+            slideDirection === "left"
+              ? "rm-slide-out-left"
+              : slideDirection === "right"
+              ? "rm-slide-out-right"
+              : "rm-slide-in"
+          }`}
+        >
           <p className="rm-description">
             Выберите отчет, по которому будет создан запрос и нажмите "Далее"
             для ввода параметров
@@ -541,14 +708,12 @@ const ReportModal: React.FC<ReportModalProps> = ({
               onChange={(e) => {
                 const newReportId = e.target.value;
                 updateFormData("selectedReportId", newReportId);
-                // Очищаем состояние формы кроме организаций и emails при смене отчета
                 const clearedFormData = {
                   selectedOrganizations: formData.selectedOrganizations,
                   emails: formData.emails,
                   selectedReportId: newReportId,
                 };
                 setFormData(clearedFormData);
-                // Уведомляем родительский компонент об изменении отчета
                 if (onReportChange) {
                   onReportChange(newReportId);
                 }
@@ -572,10 +737,17 @@ const ReportModal: React.FC<ReportModalProps> = ({
       );
     }
 
-    // Шаг 2: Организации
     if (currentStep === organizationStep) {
       return (
-        <div className="rm-step-content">
+        <div
+          className={`rm-step-content ${
+            slideDirection === "left"
+              ? "rm-slide-out-left"
+              : slideDirection === "right"
+              ? "rm-slide-out-right"
+              : "rm-slide-in"
+          }`}
+        >
           <p className="rm-description">
             Выберите организации, данные которых необходимо предоставить в
             отчете
@@ -616,7 +788,6 @@ const ReportModal: React.FC<ReportModalProps> = ({
       );
     }
 
-    // Конфигурационные шаги
     if (currentStep >= configStepsStart && currentStep <= configStepsEnd) {
       const stepIndex = currentStep - configStepsStart;
       const step = config.steps[stepIndex];
@@ -624,17 +795,32 @@ const ReportModal: React.FC<ReportModalProps> = ({
       if (!step) return null;
 
       return (
-        <div className="rm-step-content">
+        <div
+          className={`rm-step-content ${
+            slideDirection === "left"
+              ? "rm-slide-out-left"
+              : slideDirection === "right"
+              ? "rm-slide-out-right"
+              : "rm-slide-in"
+          }`}
+        >
           <p className="rm-description">{step.description}</p>
           {step.fields.map(renderField)}
         </div>
       );
     }
 
-    // Email шаг
     if (currentStep === emailStep) {
       return (
-        <div className="rm-step-content">
+        <div
+          className={`rm-step-content ${
+            slideDirection === "left"
+              ? "rm-slide-out-left"
+              : slideDirection === "right"
+              ? "rm-slide-out-right"
+              : "rm-slide-in"
+          }`}
+        >
           <p className="rm-description">
             Введите адреса электронной почты, на которые будет отправлен отчет
           </p>
@@ -676,10 +862,17 @@ const ReportModal: React.FC<ReportModalProps> = ({
       );
     }
 
-    // Сводка
     if (currentStep === summaryStep) {
       return (
-        <div className="rm-step-content">
+        <div
+          className={`rm-step-content ${
+            slideDirection === "left"
+              ? "rm-slide-out-left"
+              : slideDirection === "right"
+              ? "rm-slide-out-right"
+              : "rm-slide-in"
+          }`}
+        >
           <p className="rm-description">
             Ввод параметров завершен. Нажмите "Создать запрос" чтобы завершить
             работу помощника.
@@ -727,7 +920,6 @@ const ReportModal: React.FC<ReportModalProps> = ({
     return null;
   };
 
-  // Success Notification Component
   const SuccessNotification = () => (
     <div className="rm-success-overlay">
       <div className="rm-success-content">
@@ -756,24 +948,62 @@ const ReportModal: React.FC<ReportModalProps> = ({
     </div>
   );
 
+  const CloseConfirmation = () => (
+    <div className="rm-success-overlay">
+      <div className="rm-success-content">
+        <div className="rm-success-icon" style={{ color: "#f59e0b" }}>
+          <svg
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h3>Подтверждение закрытия</h3>
+        <p>
+          Вы уверены, что хотите закрыть создание запроса отчета? Все введенные
+          данные будут потеряны.
+        </p>
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <button onClick={cancelClose} className="rm-btn rm-btn-secondary">
+            Продолжить редактирование
+          </button>
+          <button onClick={confirmClose} className="rm-btn rm-btn-danger">
+            Да, закрыть
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!isOpen) return null;
+
   return (
     <div
       className={`rm-modal-overlay rm-theme-${config.colorScheme}`}
-      onClick={onClose}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="rm-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="rm-modal-header">
           <h2>Создание запроса отчета</h2>
           <button
             className="rm-modal-close"
-            onClick={onClose}
+            onClick={handleCloseAttempt}
             disabled={isSubmitting}
           >
             ×
           </button>
         </div>
 
-        <div className="rm-modal-body">{renderStepContent()}</div>
+        <div className={`rm-modal-body ${isAnimating ? "animating" : ""}`}>
+          {renderStepContent()}
+        </div>
 
         <div className="rm-modal-actions">
           <div className="rm-actions-left">
@@ -812,7 +1042,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
 
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleCloseAttempt}
               className="rm-btn rm-btn-secondary"
               disabled={isSubmitting}
             >
@@ -822,6 +1052,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
         </div>
 
         {showSuccessNotification && <SuccessNotification />}
+        {showCloseConfirmation && <CloseConfirmation />}
       </div>
     </div>
   );

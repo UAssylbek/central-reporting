@@ -36,6 +36,72 @@
   --rm-primary-bg: rgba(239, 68, 68, 0.1);
 }
 
+.rm-btn-danger {
+  background: #ef4444;
+  color: white;
+  border-color: transparent;
+}
+
+.rm-btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+/* Анимации для переходов между шагами */
+.rm-step-content {
+  animation-duration: 0.3s;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+.rm-slide-in {
+  animation-name: slideIn;
+}
+
+.rm-slide-out-left {
+  animation-name: slideOutLeft;
+}
+
+.rm-slide-out-right {
+  animation-name: slideOutRight;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+
+/* Запрет взаимодействия во время анимации */
+.rm-modal-body.animating {
+  pointer-events: none;
+}
 /* Основные стили модального окна */
 .rm-modal-overlay {
   position: fixed;
@@ -54,15 +120,16 @@
 
 .rm-modal-content {
   background: white;
-  border-radius: 16px;
+  border-radius: 12px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  max-width: 600px;
-  width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
+  width: 600px;
+  max-width: 90vw;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
-  animation: rm-modal-appear 0.3s ease-out;
+  overflow: hidden;
+  min-height: 600px;
+  height: 70vh;
 }
 
 @keyframes rm-modal-appear {
@@ -121,10 +188,7 @@
   padding: 24px;
   flex: 1;
   overflow-y: auto;
-}
-
-.rm-step-content {
-  min-height: 300px;
+  overflow-x: hidden;
 }
 
 .rm-description {
@@ -446,16 +510,6 @@
 .rm-btn-outline:hover:not(:disabled) {
   background: var(--rm-primary-color);
   color: white;
-}
-
-.rm-btn-danger {
-  background: #ef4444;
-  color: white;
-  border-color: transparent;
-}
-
-.rm-btn-danger:hover:not(:disabled) {
-  background: #dc2626;
 }
 
 .rm-btn-small {
@@ -794,4 +848,8 @@
   text-align: center;
   color: #6b7280;
   font-style: italic;
+}
+
+body.modal-open {
+  overflow: hidden;
 }

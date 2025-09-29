@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from "react";
+import React, { useState, FormEvent, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { login } from "../../services/api";
 import { setToken, setUser } from "../../utils/auth";
@@ -14,6 +14,53 @@ const Login: React.FC = () => {
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const navigate = useNavigate();
 
+  // Клавиатурная навигация для формы логина
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (loading || showChangePasswordModal) return;
+
+      if (e.key === "Enter") {
+        e.preventDefault();
+
+        const activeElement = document.activeElement as HTMLElement;
+
+        // Если фокус на username - переходим к password
+        if (activeElement?.id === "username") {
+          const passwordInput = document.getElementById("password");
+          passwordInput?.focus();
+          return;
+        }
+
+        // Если фокус на password или кнопке - отправляем форму
+        if (
+          activeElement?.id === "password" ||
+          activeElement?.classList.contains("submit-button")
+        ) {
+          if (username.trim()) {
+            const form = document.querySelector(
+              ".login-form"
+            ) as HTMLFormElement;
+            form?.requestSubmit();
+          }
+          return;
+        }
+
+        // Если фокус не на поле - переходим к первому пустому полю
+        if (!username.trim()) {
+          document.getElementById("username")?.focus();
+        } else {
+          document.getElementById("password")?.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [username, password, loading, showChangePasswordModal]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -24,7 +71,6 @@ const Login: React.FC = () => {
       setToken(response.token);
       setUser(response.user);
 
-      // Проверяем нужно ли менять пароль
       if (response.require_password_change) {
         setShowChangePasswordModal(true);
       } else {
@@ -43,8 +89,6 @@ const Login: React.FC = () => {
   };
 
   const handlePasswordChangeClose = () => {
-    // При первом входе нельзя закрыть модальное окно смены пароля
-    // Пользователь должен либо сменить пароль, либо выйти из системы
     setShowChangePasswordModal(false);
     setToken("");
     setUser(null);
@@ -53,7 +97,6 @@ const Login: React.FC = () => {
 
   return (
     <div className="login-page">
-      {/* Main Content */}
       <main className="login-main">
         <div className="login-container">
           <div className="login-form-section">
@@ -227,7 +270,6 @@ const Login: React.FC = () => {
         </div>
       </main>
 
-      {/* Change Password Modal */}
       {showChangePasswordModal && (
         <ChangePasswordModal
           onSuccess={handlePasswordChangeSuccess}
@@ -236,7 +278,6 @@ const Login: React.FC = () => {
         />
       )}
 
-      {/* Footer */}
       <footer className="login-footer">
         <div className="footer-content">
           <div className="footer-info">
