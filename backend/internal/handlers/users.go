@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/UAssylbek/central-reporting/internal/repositories"
@@ -61,6 +63,15 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		req.Role = models.RoleUser
 	}
 
+	// ДОБАВИТЬ: Проверяем существует ли пользователь с таким username
+	existingUser, _ := h.userRepo.GetByUsername(req.Username)
+	if existingUser != nil {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": fmt.Sprintf("Пользователь с логином '%s' уже существует", req.Username),
+		})
+		return
+	}
+
 	// Функция для создания NullString из строки
 	createNullString := func(s string) models.NullString {
 		return models.NullString{
@@ -72,31 +83,41 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	user := models.User{
 		FullName:               req.FullName,
 		Username:               req.Username,
-		Password:               req.Password,
+		Password:               createNullString(req.Password),
 		RequirePasswordChange:  req.RequirePasswordChange,
 		DisablePasswordChange:  req.DisablePasswordChange,
 		ShowInSelection:        req.ShowInSelection,
 		AvailableOrganizations: req.AvailableOrganizations,
-		Email:                  createNullString(req.Email),           // Используем helper функцию
-		Phone:                  createNullString(req.Phone),           // Используем helper функцию
-		AdditionalEmail:        createNullString(req.AdditionalEmail), // Используем helper функцию
-		Comment:                createNullString(req.Comment),         // Используем helper функцию
+		Email:                  createNullString(req.Email),
+		Phone:                  createNullString(req.Phone),
+		AdditionalEmail:        createNullString(req.AdditionalEmail),
+		Comment:                createNullString(req.Comment),
 		Role:                   req.Role,
 		IsFirstLogin:           true,
 	}
 
 	// Если пароль не задан, но требуется его смена при первом входе, устанавливаем флаг
-	if user.Password == "" && user.RequirePasswordChange {
+	if !user.Password.Valid && user.RequirePasswordChange {
 		user.IsFirstLogin = true
 	}
 
 	if err := h.userRepo.Create(&user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось создать пользователя"})
+		log.Printf("Failed to create user: %v", err)
+		// Проверяем тип ошибки для более информативного сообщения
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": fmt.Sprintf("Пользователь с логином '%s' уже существует", req.Username),
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Не удалось создать пользователя",
+			})
+		}
 		return
 	}
 
 	// Очищаем пароль перед отправкой
-	user.Password = ""
+	user.Password = models.NullString{}
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
@@ -114,8 +135,28 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	// ДОБАВИТЬ: Если меняется username, проверяем что он не занят
+	if req.Username != "" {
+		existingUser, _ := h.userRepo.GetByUsername(req.Username)
+		if existingUser != nil && existingUser.ID != id {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": fmt.Sprintf("Пользователь с логином '%s' уже существует", req.Username),
+			})
+			return
+		}
+	}
+
 	if err := h.userRepo.Update(id, req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось обновить пользователя"})
+		log.Printf("Failed to update user: %v", err)
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": "Пользователь с таким логином уже существует",
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Не удалось обновить пользователя",
+			})
+		}
 		return
 	}
 

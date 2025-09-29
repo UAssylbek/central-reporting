@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/UAssylbek/central-reporting/internal/auth"
 	"github.com/UAssylbek/central-reporting/internal/config"
@@ -52,11 +53,13 @@ func main() {
 	// Protected routes
 	protected := r.Group("/api")
 	protected.Use(auth.JWTMiddleware(cfg.JWTSecret))
+
+	protected.Use(auth.ActivityMiddleware(userRepo))
 	{
 		// Auth routes
 		protected.GET("/auth/me", authHandler.Me)
 		protected.POST("/auth/logout", authHandler.Logout)
-		protected.POST("/auth/change-password", authHandler.ChangePassword) // Новый маршрут
+		protected.POST("/auth/change-password", authHandler.ChangePassword)
 
 		// User routes (доступны всем авторизованным пользователям)
 		protected.GET("/users/organizations", userHandler.GetOrganizations) // Список организаций
@@ -66,13 +69,37 @@ func main() {
 		adminOnly.Use(auth.AdminMiddleware())
 		{
 			adminOnly.GET("/users", userHandler.GetUsers)
-			adminOnly.GET("/users/:id", userHandler.GetUser) // Новый маршрут
+			adminOnly.GET("/users/:id", userHandler.GetUser)
 			adminOnly.POST("/users", userHandler.CreateUser)
 			adminOnly.PUT("/users/:id", userHandler.UpdateUser)
 			adminOnly.DELETE("/users/:id", userHandler.DeleteUser)
 		}
 	}
 
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if err := userRepo.UpdateOfflineUsers(5); err != nil {
+				log.Printf("Error updating offline users: %v", err)
+			}
+		}
+	}()
+
 	log.Printf("Server starting on port %s", cfg.Port)
 	r.Run(":" + cfg.Port)
+}
+
+// startOfflineStatusUpdater обновляет статус неактивных пользователей каждую минуту
+func startOfflineStatusUpdater(userRepo *repositories.UserRepository) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		// Помечаем пользователей как офлайн если они неактивны более 5 минут
+		if err := userRepo.UpdateOfflineUsers(5); err != nil {
+			log.Printf("Error updating offline users: %v", err)
+		}
+	}
 }

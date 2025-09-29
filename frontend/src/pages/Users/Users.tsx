@@ -26,6 +26,34 @@ const Users: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  const formatLastSeen = (lastSeen: string): string => {
+    if (!lastSeen) return "Давно";
+
+    const lastSeenDate = new Date(lastSeen);
+
+    // Проверка на невалидную дату
+    if (isNaN(lastSeenDate.getTime()) || lastSeenDate.getFullYear() < 2000) {
+      return "Давно";
+    }
+
+    const now = new Date();
+    const diffMs = now.getTime() - lastSeenDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return "Только что";
+    if (diffMins < 60) return `${diffMins} мин. назад`;
+    if (diffHours < 24) return `${diffHours} ч. назад`;
+    if (diffDays < 7) return `${diffDays} дн. назад`;
+
+    return lastSeenDate.toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "short",
+      year: diffDays > 365 ? "numeric" : undefined,
+    });
+  };
+
   useEffect(() => {
     fetchUsers();
   }, []);
@@ -450,6 +478,11 @@ const Users: React.FC = () => {
                         {getSortIcon("full_name")}
                       </div>
                     </th>
+                    <th className="users-page-th-non-sortable">
+                      <div className="users-page-th-content">
+                        <span>Статус активности</span>
+                      </div>
+                    </th>
                     <th
                       onClick={() => handleSort("role")}
                       className="users-page-th-sortable"
@@ -501,8 +534,17 @@ const Users: React.FC = () => {
 
                       <td className="users-page-user-cell">
                         <div className="users-page-user-info">
-                          <div className="users-page-user-avatar">
-                            {user.full_name.charAt(0).toUpperCase()}
+                          <div className="users-page-user-avatar-wrapper">
+                            <div className="users-page-user-avatar">
+                              {user.full_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div
+                              className={`users-page-avatar-badge ${
+                                user.is_online
+                                  ? "users-page-badge-online"
+                                  : "users-page-badge-offline"
+                              }`}
+                            ></div>
                           </div>
                           <div className="users-page-user-details">
                             <div className="users-page-user-full-name">
@@ -513,6 +555,30 @@ const Users: React.FC = () => {
                             </div>
                           </div>
                         </div>
+                      </td>
+
+                      <td className="users-page-online-status-cell">
+                        <div className="users-page-online-status">
+                          <div
+                            className={`users-page-online-indicator ${
+                              user.is_online
+                                ? "users-page-status-online"
+                                : "users-page-status-offline"
+                            }`}
+                          ></div>
+                          <span
+                            className={`users-page-online-text ${
+                              user.is_online ? "users-page-text-online" : ""
+                            }`}
+                          >
+                            {user.is_online ? "Онлайн" : "Не в сети"}
+                          </span>
+                        </div>
+                        {!user.is_online && user.last_seen && (
+                          <div className="users-page-last-seen">
+                            {formatLastSeen(user.last_seen)}
+                          </div>
+                        )}
                       </td>
 
                       <td className="users-page-role-cell">

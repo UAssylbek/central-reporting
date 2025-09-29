@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/UAssylbek/central-reporting/internal/auth"
@@ -28,29 +29,61 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	log.Printf("Login attempt - Username: %s, Password length: %d", req.Username, len(req.Password))
+
 	user, err := h.userRepo.GetByUsername(req.Username)
 	if err != nil {
+		log.Printf("User not found: %s", req.Username)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные учетные данные"})
 		return
 	}
 
-	// Проверяем пароль (учитываем что пароль может быть пустым в БД)
-	if !h.userRepo.CheckPassword(user, req.Password) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные учетные данные"})
-		return
+	hasPassword := user.Password.Valid && user.Password.String != ""
+	log.Printf("User found - ID: %d, IsFirstLogin: %v, RequirePasswordChange: %v, HasPassword: %v",
+		user.ID, user.IsFirstLogin, user.RequirePasswordChange, hasPassword)
+
+	// Специальная логика для первого входа с требованием смены пароля
+	if user.IsFirstLogin && user.RequirePasswordChange {
+		log.Printf("First login with password change required")
+
+		// Если пароль в БД пустой - пропускаем любой введённый пароль
+		if hasPassword {
+			log.Printf("Checking password (password exists in DB)")
+			// Если пароль задан - проверяем его
+			if !h.userRepo.CheckPassword(user, req.Password) {
+				log.Printf("Password check failed")
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные учетные данные"})
+				return
+			}
+			log.Printf("Password check passed")
+		} else {
+			log.Printf("Password is empty in DB - allowing login without password check")
+		}
+	} else {
+		log.Printf("Regular login - checking password")
+		// Обычная проверка пароля для всех остальных случаев
+		if !h.userRepo.CheckPassword(user, req.Password) {
+			log.Printf("Password check failed")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные учетные данные"})
+			return
+		}
+		log.Printf("Password check passed")
 	}
 
 	token, err := auth.GenerateToken(*user, h.jwtSecret)
 	if err != nil {
+		log.Printf("Token generation failed: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось создать токен"})
 		return
 	}
 
 	// Очищаем пароль перед отправкой
-	user.Password = ""
+	user.Password = models.NullString{}
 
 	// Определяем нужно ли менять пароль
 	requirePasswordChange := user.IsFirstLogin && user.RequirePasswordChange
+
+	log.Printf("Login successful - RequirePasswordChange: %v", requirePasswordChange)
 
 	c.JSON(http.StatusOK, models.LoginResponse{
 		User:                  *user,
@@ -71,6 +104,11 @@ func (h *AuthHandler) Me(c *gin.Context) {
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if exists {
+		// Помечаем пользователя как офлайн
+		h.userRepo.SetUserOffline(userID.(int))
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Выход выполнен успешно"})
 }
 
@@ -101,10 +139,23 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	// Проверяем старый пароль
-	if !h.userRepo.CheckPassword(user, req.OldPassword) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный текущий пароль"})
-		return
+	// ИСПРАВЛЕНИЕ: Для первого входа разрешаем пустой старый пароль
+	if !user.IsFirstLogin {
+		// Обычная проверка старого пароля
+		if !h.userRepo.CheckPassword(user, req.OldPassword) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный текущий пароль"})
+			return
+		}
+	} else {
+		// Для первого входа проверяем старый пароль только если он был задан
+		hasPassword := user.Password.Valid && user.Password.String != ""
+		if hasPassword {
+			if !h.userRepo.CheckPassword(user, req.OldPassword) {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный текущий пароль"})
+				return
+			}
+		}
+		// Если пароля не было - пропускаем проверку
 	}
 
 	// Меняем пароль

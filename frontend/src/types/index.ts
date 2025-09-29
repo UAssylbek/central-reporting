@@ -15,6 +15,8 @@ export interface User {
   is_first_login: boolean; // Первый вход
   created_at: string;
   updated_at: string;
+  is_online: boolean;
+  last_seen: string;
 }
 
 export interface AuthResponse {

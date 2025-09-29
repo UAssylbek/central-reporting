@@ -1,19 +1,21 @@
 -- Создаем таблицу пользователей с расширенными полями
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    full_name VARCHAR(255) NOT NULL,                    -- Полное имя (обязательное)
-    username VARCHAR(255) UNIQUE NOT NULL,              -- Имя для входа (обязательное)
-    password TEXT,                                      -- Пароль (может быть NULL)
-    require_password_change BOOLEAN DEFAULT FALSE,      -- Требовать смену пароля
-    disable_password_change BOOLEAN DEFAULT FALSE,      -- Запретить смену пароля  
-    show_in_selection BOOLEAN DEFAULT TRUE,             -- Показывать в списке выбора
-    available_organizations JSONB DEFAULT '[]'::jsonb,  -- Доступные организации (массив ID)
-    email VARCHAR(255),                                 -- Электронная почта
-    phone VARCHAR(50),                                  -- Телефон
-    additional_email VARCHAR(255),                      -- Дополнительная почта
-    comment TEXT,                                       -- Комментарий
-    role VARCHAR(50) NOT NULL DEFAULT 'user',           -- Роль пользователя
-    is_first_login BOOLEAN DEFAULT TRUE,                -- Первый вход (для смены пароля)
+    full_name VARCHAR(255) NOT NULL,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    password TEXT,
+    require_password_change BOOLEAN DEFAULT FALSE,
+    disable_password_change BOOLEAN DEFAULT FALSE,
+    show_in_selection BOOLEAN DEFAULT TRUE,
+    available_organizations JSONB DEFAULT '[]'::jsonb,
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    additional_email VARCHAR(255),
+    comment TEXT,
+    role VARCHAR(50) NOT NULL DEFAULT 'user',
+    is_first_login BOOLEAN DEFAULT TRUE,
+    is_online BOOLEAN DEFAULT FALSE,
+    last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -24,6 +26,8 @@ CREATE INDEX idx_users_full_name ON users(full_name);
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_users_show_in_selection ON users(show_in_selection);
+CREATE INDEX idx_users_is_online ON users(is_online);
+CREATE INDEX idx_users_last_seen ON users(last_seen);
 
 -- Создаем триггер для автоматического обновления updated_at
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -37,8 +41,3 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_users_updated_at 
     BEFORE UPDATE ON users 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Вставляем администратора по умолчанию (пароль: admin123)
-INSERT INTO users (full_name, username, password, role, require_password_change, is_first_login) 
-VALUES ('Системный администратор', 'admin', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', FALSE, FALSE)
-ON CONFLICT (username) DO NOTHING;

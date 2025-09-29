@@ -16,7 +16,7 @@ func Load() *Config {
 	godotenv.Load()
 
 	return &Config{
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://user:password@localhost/central-reporting?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:Qwerty123@localhost/central_reporting?sslmode=disable"),
 		JWTSecret:   getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		Port:        getEnv("PORT", "8080"),
 	}

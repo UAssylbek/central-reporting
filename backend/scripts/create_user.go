@@ -12,18 +12,26 @@ import (
 )
 
 func main() {
-	username := flag.String("username", "", "Username for the new user")
-	password := flag.String("password", "", "Password for the new user")
-	role := flag.String("role", "user", "Role for the new user (admin or user)")
+	fullName := flag.String("fullname", "", "Full name of the user (required)")
+	username := flag.String("username", "", "Username for login (required)")
+	password := flag.String("password", "", "Password (optional, can be empty)")
+	role := flag.String("role", "user", "Role: admin or user")
+	email := flag.String("email", "", "Email address (optional)")
+	phone := flag.String("phone", "", "Phone number (optional)")
 
 	flag.Parse()
 
-	if *username == "" || *password == "" {
-		log.Fatal("Username and password are required")
+	// Валидация обязательных полей
+	if *username == "" {
+		log.Fatal("❌ Username is required. Use -username flag")
+	}
+
+	if *fullName == "" {
+		log.Fatal("❌ Full name is required. Use -fullname flag")
 	}
 
 	if *role != "admin" && *role != "user" {
-		log.Fatal("Role must be either 'admin' or 'user'")
+		log.Fatal("❌ Role must be either 'admin' or 'user'")
 	}
 
 	// Load configuration
@@ -32,23 +40,63 @@ func main() {
 	// Connect to database
 	db, err := database.Connect(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatal("❌ Failed to connect to database:", err)
 	}
 	defer db.Close()
 
 	// Initialize repository
 	userRepo := repositories.NewUserRepository(db)
 
+	// Проверяем не существует ли уже такой пользователь
+	existingUser, _ := userRepo.GetByUsername(*username)
+	if existingUser != nil {
+		log.Fatalf("❌ User with username '%s' already exists (ID: %d)", *username, existingUser.ID)
+	}
+
+	// Создаем nullable строки для опциональных полей
+	createNullString := func(s string) models.NullString {
+		return models.NullString{
+			String: s,
+			Valid:  s != "",
+		}
+	}
+
 	// Create user
 	user := models.User{
-		Username: *username,
-		Password: *password,
-		Role:     models.UserRole(*role),
+		FullName:               *fullName,
+		Username:               *username,
+		Password:               createNullString(*password), // ИЗМЕНЕНО: используем NullString
+		Role:                   models.UserRole(*role),
+		RequirePasswordChange:  false,
+		DisablePasswordChange:  false,
+		ShowInSelection:        true,
+		IsFirstLogin:           false,
+		IsOnline:               false,
+		Email:                  createNullString(*email),
+		Phone:                  createNullString(*phone),
+		AvailableOrganizations: models.Organizations{},
 	}
 
 	if err := userRepo.Create(&user); err != nil {
-		log.Fatal("Failed to create user:", err)
+		log.Fatal("❌ Failed to create user:", err)
 	}
 
-	fmt.Printf("User '%s' created successfully with role '%s'\n", *username, *role)
+	fmt.Println("\n✅ User created successfully!")
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Printf("  ID:        %d\n", user.ID)
+	fmt.Printf("  Full Name: %s\n", *fullName)
+	fmt.Printf("  Username:  %s\n", *username)
+	if *password != "" {
+		fmt.Printf("  Password:  %s\n", *password)
+	} else {
+		fmt.Printf("  Password:  (empty - user can login without password)\n")
+	}
+	fmt.Printf("  Role:      %s\n", *role)
+	if *email != "" {
+		fmt.Printf("  Email:     %s\n", *email)
+	}
+	if *phone != "" {
+		fmt.Printf("  Phone:     %s\n", *phone)
+	}
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 }

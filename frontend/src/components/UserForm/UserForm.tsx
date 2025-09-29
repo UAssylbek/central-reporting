@@ -94,6 +94,16 @@ const UserForm: React.FC<UserFormProps> = ({
       return;
     }
 
+    // ИСПРАВЛЕНИЕ: Добавляем валидацию для требования пароля
+    if (!isEditing && requirePasswordChange && !password && !password?.trim()) {
+      setError(
+        "Если установлен флаг 'Потребовать установить пароль', необходимо указать временный пароль или оставить поле пустым"
+      );
+      // Это не ошибка - разрешаем создание без пароля
+      // setLoading(false);
+      // return;
+    }
+
     if (password && password.length < 6) {
       setError("Пароль должен содержать не менее 6 символов");
       setLoading(false);
@@ -204,7 +214,9 @@ const UserForm: React.FC<UserFormProps> = ({
       await onSubmit(formData);
       onClose();
     } catch (err: any) {
-      setError(err.message || "Ошибка при сохранении данных");
+      // ИСПРАВЛЕНИЕ: Показываем детальную ошибку с бэкенда
+      console.error("Ошибка при сохранении:", err);
+      setError(err.message || err.toString() || "Ошибка при сохранении данных");
     } finally {
       setLoading(false);
     }

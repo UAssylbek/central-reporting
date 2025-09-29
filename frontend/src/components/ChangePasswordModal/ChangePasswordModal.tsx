@@ -31,11 +31,14 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setError(null);
     setLoading(true);
 
-    // Валидация
-    if (!oldPassword.trim()) {
-      setError("Введите текущий пароль");
-      setLoading(false);
-      return;
+    // Для первого входа старый пароль может быть пустым
+    if (!isFirstLogin) {
+      // Обычная проверка старого пароля для не первого входа
+      if (!oldPassword.trim()) {
+        setError("Введите текущий пароль");
+        setLoading(false);
+        return;
+      }
     }
 
     if (!newPassword.trim()) {
@@ -58,7 +61,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
     try {
       const data: ChangePasswordRequest = {
-        old_password: oldPassword,
+        old_password: oldPassword, // Отправляем пустую строку если первый вход
         new_password: newPassword,
         confirm_password: confirmPassword,
       };
@@ -121,9 +124,11 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <div className="form-group">
               <label htmlFor="oldPassword" className="form-label">
                 <span className="label-text">
-                  {isFirstLogin ? "Временный пароль" : "Текущий пароль"}
+                  {isFirstLogin
+                    ? "Временный пароль (если был)"
+                    : "Текущий пароль"}
                 </span>
-                <span className="required-mark">*</span>
+                {!isFirstLogin && <span className="required-mark">*</span>}
               </label>
               <div className="input-wrapper">
                 <div className="input-icon">
@@ -143,12 +148,12 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   onChange={(e) => setOldPassword(e.target.value)}
                   placeholder={
                     isFirstLogin
-                      ? "Введите временный пароль"
+                      ? "Оставьте пустым если пароля не было"
                       : "Введите текущий пароль"
                   }
                   disabled={loading}
                   className="form-input"
-                  required
+                  required={!isFirstLogin} // Обязательно только если НЕ первый вход
                 />
                 <button
                   type="button"
@@ -183,6 +188,12 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   )}
                 </button>
               </div>
+              {isFirstLogin && (
+                <span className="field-hint">
+                  Если при создании аккаунта не был установлен пароль, оставьте
+                  это поле пустым
+                </span>
+              )}
             </div>
 
             {/* Новый пароль */}
@@ -348,7 +359,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className="submit-button"
                 disabled={
                   loading ||
-                  !oldPassword.trim() ||
+                  (!isFirstLogin && !oldPassword.trim()) || // Для не первого входа требуем старый пароль
                   !newPassword.trim() ||
                   !confirmPassword.trim()
                 }

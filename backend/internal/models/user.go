@@ -93,19 +93,21 @@ type User struct {
 	ID                     int           `json:"id" db:"id"`
 	FullName               string        `json:"full_name" db:"full_name"`
 	Username               string        `json:"username" db:"username"`
-	Password               string        `json:"-" db:"password"`
+	Password               NullString    `json:"-" db:"password"`
 	RequirePasswordChange  bool          `json:"require_password_change" db:"require_password_change"`
 	DisablePasswordChange  bool          `json:"disable_password_change" db:"disable_password_change"`
 	ShowInSelection        bool          `json:"show_in_selection" db:"show_in_selection"`
 	AvailableOrganizations Organizations `json:"available_organizations" db:"available_organizations"`
-	Email                  NullString    `json:"email" db:"email"`                       
-	Phone                  NullString    `json:"phone" db:"phone"`                       
-	AdditionalEmail        NullString    `json:"additional_email" db:"additional_email"` 
-	Comment                NullString    `json:"comment" db:"comment"`                   
+	Email                  NullString    `json:"email" db:"email"`
+	Phone                  NullString    `json:"phone" db:"phone"`
+	AdditionalEmail        NullString    `json:"additional_email" db:"additional_email"`
+	Comment                NullString    `json:"comment" db:"comment"`
 	Role                   UserRole      `json:"role" db:"role"`
 	IsFirstLogin           bool          `json:"is_first_login" db:"is_first_login"`
 	CreatedAt              time.Time     `json:"created_at" db:"created_at"`
 	UpdatedAt              time.Time     `json:"updated_at" db:"updated_at"`
+	IsOnline               bool          `json:"is_online" db:"is_online"`
+	LastSeen               time.Time     `json:"last_seen" db:"last_seen"`
 }
 
 type CreateUserRequest struct {
@@ -116,10 +118,10 @@ type CreateUserRequest struct {
 	DisablePasswordChange  bool          `json:"disable_password_change"`
 	ShowInSelection        bool          `json:"show_in_selection"`
 	AvailableOrganizations Organizations `json:"available_organizations"`
-	Email                  string        `json:"email,omitempty"`            
-	Phone                  string        `json:"phone,omitempty"`            
-	AdditionalEmail        string        `json:"additional_email,omitempty"` 
-	Comment                string        `json:"comment,omitempty"`          
+	Email                  string        `json:"email,omitempty"`
+	Phone                  string        `json:"phone,omitempty"`
+	AdditionalEmail        string        `json:"additional_email,omitempty"`
+	Comment                string        `json:"comment,omitempty"`
 	Role                   UserRole      `json:"role" binding:"required,oneof=admin user"`
 }
 
@@ -131,10 +133,10 @@ type UpdateUserRequest struct {
 	DisablePasswordChange  *bool         `json:"disable_password_change,omitempty"`
 	ShowInSelection        *bool         `json:"show_in_selection,omitempty"`
 	AvailableOrganizations Organizations `json:"available_organizations,omitempty"`
-	Email                  string        `json:"email,omitempty"`            
-	Phone                  string        `json:"phone,omitempty"`            
-	AdditionalEmail        string        `json:"additional_email,omitempty"` 
-	Comment                string        `json:"comment,omitempty"`          
+	Email                  string        `json:"email,omitempty"`
+	Phone                  string        `json:"phone,omitempty"`
+	AdditionalEmail        string        `json:"additional_email,omitempty"`
+	Comment                string        `json:"comment,omitempty"`
 	Role                   UserRole      `json:"role,omitempty" binding:"omitempty,oneof=admin user"`
 }
 
@@ -150,7 +152,7 @@ type LoginResponse struct {
 }
 
 type ChangePasswordRequest struct {
-	OldPassword     string `json:"old_password" binding:"required"`
+	OldPassword     string `json:"old_password"`
 	NewPassword     string `json:"new_password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
