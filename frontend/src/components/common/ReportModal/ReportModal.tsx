@@ -163,7 +163,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
   // Все функции валидации и обработчиков
   const validateCurrentStep = (): boolean => {
     if (currentStep === reportSelectionStep) {
-      return !!formData.selectedReportId;
+      return !!formData.selectedReportId && formData.selectedReportId !== "";
     }
 
     if (currentStep === organizationStep) {
@@ -720,6 +720,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
               }}
               required
             >
+              <option value="">-- Выберите отчет --</option>{" "}
+              {/* Добавить пустой option */}
               {config.reportOptions?.map((report) => (
                 <option key={report.id} value={report.id}>
                   {report.title}

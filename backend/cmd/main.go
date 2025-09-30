@@ -93,16 +93,3 @@ func main() {
 	log.Printf("Server starting on port %s", cfg.Port)
 	r.Run(":" + cfg.Port)
 }
-
-// startOfflineStatusUpdater обновляет статус неактивных пользователей каждую минуту
-func startOfflineStatusUpdater(userRepo *repositories.UserRepository) {
-	ticker := time.NewTicker(1 * time.Minute)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		// Помечаем пользователей как офлайн если они неактивны более 5 минут
-		if err := userRepo.UpdateOfflineUsers(5); err != nil {
-			log.Printf("Error updating offline users: %v", err)
-		}
-	}
-}

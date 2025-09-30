@@ -250,3 +250,9 @@
     min-width: 300px;
   }
 }
+
+/* Layout.css - добавить новый класс */
+.main-layout-dropdown-menu-center {
+  left: 50%;
+  transform: translateX(-50%);
+}

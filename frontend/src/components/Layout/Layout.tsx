@@ -1,5 +1,5 @@
 // src/components/Layout/Layout.tsx
-import React, { useState } from "react";
+import React, { useState, Suspense, lazy } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getUser, logout } from "../../utils/auth";
 import "./Layout.css";
@@ -21,12 +21,17 @@ interface NavigationTab {
   isIcon?: boolean;
 }
 
+const EmptyReportModal = lazy(
+  () => import("../modals/Universal/EmptyReportModal")
+);
+
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const user = getUser();
   const location = useLocation();
   const [hoveredTab, setHoveredTab] = useState<string | null>(null);
   const isAdmin = user?.role === "admin";
   const [searchQuery, setSearchQuery] = useState("");
+  const [showReportRequestModal, setShowReportRequestModal] = useState(false);
 
   const dropdownMenus: Record<string, DropdownGroup[]> = {
     "/dashboard": [
@@ -42,7 +47,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       },
       {
         title: "Создать",
-        items: [{ label: "Запрос отчета", path: "/dashboard/create-report" }],
+        items: [
+          {
+            label: "Запрос отчета",
+            action: () => setShowReportRequestModal(true), // Вместо path используем action
+          },
+        ],
       },
     ],
     "/centralization": [
@@ -325,12 +335,29 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       ]
     : baseNavigationTabs;
 
-  // Функция для определения, нужно ли показывать дропдаун слева
+  // В Layout.tsx
+
+  const getCenterTabIndex = () => {
+    const regularTabs = navigationTabs.filter((tab) => !tab.isIcon);
+    return Math.floor(regularTabs.length / 2);
+  };
+
   const shouldShowDropdownLeft = (tabPath: string) => {
-    const tabIndex = navigationTabs.findIndex((tab) => tab.path === tabPath);
-    const totalTabs = navigationTabs.length;
-    // Показывать слева для последних 3 табов (с учетом админских табов)
-    return tabIndex >= totalTabs - 3;
+    const regularTabs = navigationTabs.filter((tab) => !tab.isIcon);
+    const tabIndex = regularTabs.findIndex((tab) => tab.path === tabPath);
+    const centerIndex = getCenterTabIndex();
+
+    // Все табы ПОСЛЕ центрального - показываем слева
+    return tabIndex > centerIndex;
+  };
+
+  const shouldShowDropdownCenter = (tabPath: string) => {
+    const regularTabs = navigationTabs.filter((tab) => !tab.isIcon);
+    const tabIndex = regularTabs.findIndex((tab) => tab.path === tabPath);
+    const centerIndex = getCenterTabIndex();
+
+    // ТОЛЬКО центральный таб
+    return tabIndex === centerIndex;
   };
 
   return (
@@ -365,6 +392,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       className={`main-layout-dropdown-menu ${
                         shouldShowDropdownLeft(tab.path)
                           ? "main-layout-dropdown-menu-left"
+                          : shouldShowDropdownCenter(tab.path)
+                          ? "main-layout-dropdown-menu-center"
                           : ""
                       } ${
                         tab.path === "/payroll"
@@ -435,6 +464,14 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </nav>
       </header>
       <main>{children}</main>
+      {showReportRequestModal && (
+        <Suspense fallback={<div>Загрузка...</div>}>
+          <EmptyReportModal
+            isOpen={showReportRequestModal}
+            onClose={() => setShowReportRequestModal(false)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };
