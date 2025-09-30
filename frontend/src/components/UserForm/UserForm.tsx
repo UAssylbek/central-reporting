@@ -10,6 +10,99 @@ interface UserFormProps {
   initialData?: Partial<User>;
 }
 
+// Функция для форматирования телефонного номера
+const formatPhoneNumber = (value: string): string => {
+  // Удаляем все символы кроме цифр и +
+  const cleaned = value.replace(/[^\d+]/g, "");
+
+  // Если строка пустая, возвращаем пустую строку
+  if (!cleaned) return "";
+
+  // Определяем формат в зависимости от первого символа
+  let formatted = "";
+
+  if (cleaned.startsWith("+7")) {
+    // Формат: +7 (XXX) XXX-XX-XX
+    const digits = cleaned.substring(2); // убираем +7
+    if (digits.length === 0) {
+      formatted = "+7";
+    } else if (digits.length <= 3) {
+      formatted = `+7 (${digits}`;
+    } else if (digits.length <= 6) {
+      formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(3)}`;
+    } else if (digits.length <= 8) {
+      formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(
+        3,
+        6
+      )}-${digits.substring(6)}`;
+    } else {
+      formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(
+        3,
+        6
+      )}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`;
+    }
+  } else if (cleaned.startsWith("8")) {
+    // Формат: 8 (XXX) XXX-XX-XX
+    const digits = cleaned.substring(1); // убираем 8
+    if (digits.length === 0) {
+      formatted = "8";
+    } else if (digits.length <= 3) {
+      formatted = `8 (${digits}`;
+    } else if (digits.length <= 6) {
+      formatted = `8 (${digits.substring(0, 3)}) ${digits.substring(3)}`;
+    } else if (digits.length <= 8) {
+      formatted = `8 (${digits.substring(0, 3)}) ${digits.substring(
+        3,
+        6
+      )}-${digits.substring(6)}`;
+    } else {
+      formatted = `8 (${digits.substring(0, 3)}) ${digits.substring(
+        3,
+        6
+      )}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`;
+    }
+  } else if (cleaned.startsWith("7")) {
+    // Если начинается с 7, добавляем +
+    const digits = cleaned.substring(1);
+    if (digits.length === 0) {
+      formatted = "+7";
+    } else if (digits.length <= 3) {
+      formatted = `+7 (${digits}`;
+    } else if (digits.length <= 6) {
+      formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(3)}`;
+    } else if (digits.length <= 8) {
+      formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(
+        3,
+        6
+      )}-${digits.substring(6)}`;
+    } else {
+      formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(
+        3,
+        6
+      )}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`;
+    }
+  } else {
+    // Если номер начинается с других цифр, форматируем как есть
+    if (cleaned.length <= 3) {
+      formatted = cleaned;
+    } else if (cleaned.length <= 6) {
+      formatted = `${cleaned.substring(0, 3)} ${cleaned.substring(3)}`;
+    } else if (cleaned.length <= 8) {
+      formatted = `${cleaned.substring(0, 3)} ${cleaned.substring(
+        3,
+        6
+      )}-${cleaned.substring(6)}`;
+    } else {
+      formatted = `${cleaned.substring(0, 3)} ${cleaned.substring(
+        3,
+        6
+      )}-${cleaned.substring(6, 8)}-${cleaned.substring(8, 10)}`;
+    }
+  }
+
+  return formatted;
+};
+
 const UserForm: React.FC<UserFormProps> = ({
   onSubmit,
   onClose,
@@ -38,7 +131,9 @@ const UserForm: React.FC<UserFormProps> = ({
 
   // Контактная информация
   const [email, setEmail] = useState(initialData.email ?? "");
-  const [phone, setPhone] = useState(initialData.phone ?? "");
+  const [phone, setPhone] = useState(
+    initialData.phone ? formatPhoneNumber(initialData.phone) : ""
+  );
   const [additionalEmail, setAdditionalEmail] = useState(
     initialData.additional_email ?? ""
   );
@@ -703,7 +798,10 @@ const UserForm: React.FC<UserFormProps> = ({
                       id="phone"
                       type="tel"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        setPhone(formatted);
+                      }}
                       placeholder="+7 (777) 123-45-67"
                       disabled={loading}
                       className="userform-text-input"

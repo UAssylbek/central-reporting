@@ -77,6 +77,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// Устанавливаем пользователя как онлайн при успешном логине
+	log.Printf("Login: Setting user %d as online", user.ID)
+	err = h.userRepo.UpdateUserActivity(user.ID)
+	if err != nil {
+		log.Printf("Login: Failed to set user %d as online: %v", user.ID, err)
+	}
+
 	// Очищаем пароль перед отправкой
 	user.Password = models.NullString{}
 
@@ -106,8 +113,15 @@ func (h *AuthHandler) Me(c *gin.Context) {
 func (h *AuthHandler) Logout(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if exists {
-		// Помечаем пользователя как офлайн
-		h.userRepo.SetUserOffline(userID.(int))
+		log.Printf("Logout: Setting user %d as offline", userID.(int))
+		err := h.userRepo.SetUserOffline(userID.(int))
+		if err != nil {
+			log.Printf("Logout: Failed to set user %d offline: %v", userID.(int), err)
+		} else {
+			log.Printf("Logout: User %d successfully set offline", userID.(int))
+		}
+	} else {
+		log.Printf("Logout: user_id not found in context")
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Выход выполнен успешно"})
 }

@@ -81,8 +81,11 @@ func main() {
 		defer ticker.Stop()
 
 		for range ticker.C {
-			if err := userRepo.UpdateOfflineUsers(5); err != nil {
+			log.Printf("Running UpdateOfflineUsers check...")
+			if err := userRepo.UpdateOfflineUsers(10); err != nil {
 				log.Printf("Error updating offline users: %v", err)
+			} else {
+				log.Printf("UpdateOfflineUsers completed successfully")
 			}
 		}
 	}()

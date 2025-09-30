@@ -21,8 +21,29 @@ export const setUser = (user: User | null): void => {
 
 export const isAuthenticated = (): boolean => !!getToken();
 
-export const logout = (): void => {
+export const logout = async (): Promise<void> => {
+  const token = getToken();
+
+  // Если есть токен, вызываем API logout
+  if (token) {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (error) {
+      console.error("Logout API call failed:", error);
+      // Продолжаем выход даже если API запрос упал
+    }
+  }
+
+  // Очищаем локальное хранилище
   localStorage.removeItem("token");
   localStorage.removeItem("user");
+
+  // Перенаправляем на главную
   window.location.href = "/";
 };

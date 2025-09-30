@@ -422,7 +422,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
             {/* Кнопка выхода */}
             <div className="main-layout-nav-actions">
-              <button onClick={logout} className="main-layout-logout-btn">
+              <button
+                onClick={async () => {
+                  await logout();
+                }}
+                className="main-layout-logout-btn"
+              >
                 Выйти
               </button>
             </div>

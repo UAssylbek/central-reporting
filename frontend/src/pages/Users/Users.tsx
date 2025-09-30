@@ -19,12 +19,26 @@ const Users: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterRole, setFilterRole] = useState<"all" | "admin" | "user">("all");
   const [filterStatus, setFilterStatus] = useState<
-    "all" | "active" | "inactive"
+    "all" | "active" | "inactive" | "pending"
+  >("all");
+  const [filterOnline, setFilterOnline] = useState<
+    "all" | "online" | "offline"
   >("all");
   const [sortField, setSortField] = useState<keyof User>("id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+
+  // Функция для получения числового значения статуса для сортировки
+  const getStatusValue = (user: User): number => {
+    if (!user.show_in_selection) {
+      return 0; // Скрыт
+    }
+    if (user.is_first_login && user.require_password_change) {
+      return 1; // Ожидает пароль
+    }
+    return 2; // Активен
+  };
 
   const formatLastSeen = (lastSeen: string): string => {
     if (!lastSeen) return "Давно";
@@ -198,22 +212,37 @@ const Users: React.FC = () => {
 
     const matchesStatus =
       filterStatus === "all" ||
-      (filterStatus === "active" && user.show_in_selection) ||
-      (filterStatus === "inactive" && !user.show_in_selection);
+      (filterStatus === "active" &&
+        user.show_in_selection &&
+        !(user.is_first_login && user.require_password_change)) ||
+      (filterStatus === "inactive" && !user.show_in_selection) ||
+      (filterStatus === "pending" &&
+        user.is_first_login &&
+        user.require_password_change);
 
-    return matchesSearch && matchesRole && matchesStatus;
+    const matchesOnline =
+      filterOnline === "all" ||
+      (filterOnline === "online" && user.is_online) ||
+      (filterOnline === "offline" && !user.is_online);
+
+    return matchesSearch && matchesRole && matchesStatus && matchesOnline;
   });
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    let aVal = a[sortField];
-    let bVal = b[sortField];
+    let aVal: any = a[sortField];
+    let bVal: any = b[sortField];
 
-    if (sortField === "created_at" || sortField === "updated_at") {
+    if (sortField === "show_in_selection") {
+      aVal = getStatusValue(a);
+      bVal = getStatusValue(b);
+    } else if (sortField === "created_at" || sortField === "updated_at") {
       aVal = new Date(aVal as string).getTime();
       bVal = new Date(bVal as string).getTime();
-    }
-
-    if (typeof aVal === "string") {
+    } else if (typeof aVal === "boolean") {
+      // Обработка boolean полей (is_online)
+      aVal = aVal ? 1 : 0;
+      bVal = (bVal as boolean) ? 1 : 0;
+    } else if (typeof aVal === "string") {
       aVal = aVal.toLowerCase();
       bVal = (bVal as string).toLowerCase();
     }
@@ -412,7 +441,7 @@ const Users: React.FC = () => {
                 value={filterStatus}
                 onChange={(e) =>
                   setFilterStatus(
-                    e.target.value as "all" | "active" | "inactive"
+                    e.target.value as "all" | "active" | "inactive" | "pending"
                   )
                 }
                 className="users-page-filter-select"
@@ -420,6 +449,27 @@ const Users: React.FC = () => {
                 <option value="all">Все статусы</option>
                 <option value="active">Активные</option>
                 <option value="inactive">Скрытые</option>
+                <option value="pending">Ожидает пароль</option>
+              </select>
+            </div>
+
+            <div className="users-page-filter-wrapper">
+              <label htmlFor="onlineFilter" className="users-page-filter-label">
+                Активность:
+              </label>
+              <select
+                id="onlineFilter"
+                value={filterOnline}
+                onChange={(e) =>
+                  setFilterOnline(
+                    e.target.value as "all" | "online" | "offline"
+                  )
+                }
+                className="users-page-filter-select"
+              >
+                <option value="all">Все</option>
+                <option value="online">Онлайн</option>
+                <option value="offline">Офлайн</option>
               </select>
             </div>
           </div>
@@ -478,9 +528,13 @@ const Users: React.FC = () => {
                         {getSortIcon("full_name")}
                       </div>
                     </th>
-                    <th className="users-page-th-non-sortable">
+                    <th
+                      onClick={() => handleSort("is_online")}
+                      className="users-page-th-sortable"
+                    >
                       <div className="users-page-th-content">
                         <span>Статус активности</span>
+                        {getSortIcon("is_online")}
                       </div>
                     </th>
                     <th
@@ -506,9 +560,13 @@ const Users: React.FC = () => {
                         <span>Организации</span>
                       </div>
                     </th>
-                    <th className="users-page-th-non-sortable">
+                    <th
+                      onClick={() => handleSort("show_in_selection")}
+                      className="users-page-th-sortable"
+                    >
                       <div className="users-page-th-content">
                         <span>Статус</span>
+                        {getSortIcon("show_in_selection")}
                       </div>
                     </th>
                     <th

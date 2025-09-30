@@ -22,13 +22,13 @@ func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
 	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, email, phone, additional_email, 
-	          comment, role, is_first_login, created_at, updated_at 
+	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
 	          FROM users ORDER BY created_at DESC`
 
-	log.Printf("Executing query: %s", query) // Добавьте эту строку
+	log.Printf("Executing query: %s", query)
 	err := r.db.Select(&users, query)
 	if err != nil {
-		log.Printf("Database error in GetAll: %v", err) // И эту строку
+		log.Printf("Database error in GetAll: %v", err)
 	}
 	return users, err
 }
@@ -37,7 +37,7 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	var user models.User
 	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, email, phone, additional_email, 
-	          comment, role, is_first_login, created_at, updated_at 
+	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
 	          FROM users WHERE id = $1`
 	err := r.db.Get(&user, query, id)
 	if err != nil {
@@ -263,8 +263,15 @@ func (r *UserRepository) ChangePassword(userID int, newPassword string) error {
 // UpdateUserActivity обновляет время последней активности и статус онлайн
 func (r *UserRepository) UpdateUserActivity(userID int) error {
 	query := `UPDATE users SET is_online = TRUE, last_seen = NOW(), updated_at = NOW() WHERE id = $1`
-	_, err := r.db.Exec(query, userID)
-	return err
+	result, err := r.db.Exec(query, userID)
+	if err != nil {
+		log.Printf("UpdateUserActivity ERROR for user %d: %v", userID, err)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	log.Printf("UpdateUserActivity: user %d, rows affected: %d", userID, rowsAffected)
+	return nil
 }
 
 // SetUserOffline устанавливает пользователя в офлайн
@@ -280,6 +287,12 @@ func (r *UserRepository) UpdateOfflineUsers(inactiveMinutes int) error {
 	          SET is_online = FALSE 
 	          WHERE is_online = TRUE 
 	          AND last_seen < NOW() - INTERVAL '1 minute' * $1`
-	_, err := r.db.Exec(query, inactiveMinutes)
-	return err
+	result, err := r.db.Exec(query, inactiveMinutes)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	log.Printf("UpdateOfflineUsers: Set %d users as offline (inactive > %d mins)", rowsAffected, inactiveMinutes)
+	return nil
 }
