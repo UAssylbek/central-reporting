@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     disable_password_change BOOLEAN DEFAULT FALSE,
     show_in_selection BOOLEAN DEFAULT TRUE,
     available_organizations JSONB DEFAULT '[]'::jsonb,
+    accessible_users JSONB DEFAULT '[]'::jsonb,
     email VARCHAR(255),
     phone VARCHAR(50),
     additional_email VARCHAR(255),
@@ -16,9 +17,11 @@ CREATE TABLE IF NOT EXISTS users (
     is_first_login BOOLEAN DEFAULT TRUE,
     is_online BOOLEAN DEFAULT FALSE,
     last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    token_version INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
 
 -- Создаем индексы для оптимизации поиска
 CREATE INDEX idx_users_username ON users(username);

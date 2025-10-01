@@ -10,8 +10,9 @@ import (
 type UserRole string
 
 const (
-	RoleAdmin UserRole = "admin"
-	RoleUser  UserRole = "user"
+	RoleAdmin     UserRole = "admin"
+	RoleModerator UserRole = "moderator"
+	RoleUser      UserRole = "user"
 )
 
 // Список доступных организаций как JSON массив
@@ -38,6 +39,32 @@ func (o Organizations) Value() (driver.Value, error) {
 		return "[]", nil
 	}
 	return json.Marshal(o)
+}
+
+// Список доступных пользователей для модератора
+type AccessibleUsers []int
+
+func (a *AccessibleUsers) Scan(value interface{}) error {
+	if value == nil {
+		*a = AccessibleUsers{}
+		return nil
+	}
+
+	switch s := value.(type) {
+	case []byte:
+		return json.Unmarshal(s, a)
+	case string:
+		return json.Unmarshal([]byte(s), a)
+	default:
+		return errors.New("cannot scan AccessibleUsers")
+	}
+}
+
+func (a AccessibleUsers) Value() (driver.Value, error) {
+	if len(a) == 0 {
+		return "[]", nil
+	}
+	return json.Marshal(a)
 }
 
 // Добавляем тип для nullable строк
@@ -90,54 +117,58 @@ func (ns *NullString) UnmarshalJSON(data []byte) error {
 }
 
 type User struct {
-	ID                     int           `json:"id" db:"id"`
-	FullName               string        `json:"full_name" db:"full_name"`
-	Username               string        `json:"username" db:"username"`
-	Password               NullString    `json:"-" db:"password"`
-	RequirePasswordChange  bool          `json:"require_password_change" db:"require_password_change"`
-	DisablePasswordChange  bool          `json:"disable_password_change" db:"disable_password_change"`
-	ShowInSelection        bool          `json:"show_in_selection" db:"show_in_selection"`
-	AvailableOrganizations Organizations `json:"available_organizations" db:"available_organizations"`
-	Email                  NullString    `json:"email" db:"email"`
-	Phone                  NullString    `json:"phone" db:"phone"`
-	AdditionalEmail        NullString    `json:"additional_email" db:"additional_email"`
-	Comment                NullString    `json:"comment" db:"comment"`
-	Role                   UserRole      `json:"role" db:"role"`
-	IsFirstLogin           bool          `json:"is_first_login" db:"is_first_login"`
-	CreatedAt              time.Time     `json:"created_at" db:"created_at"`
-	UpdatedAt              time.Time     `json:"updated_at" db:"updated_at"`
-	IsOnline               bool          `json:"is_online" db:"is_online"`
-	LastSeen               time.Time     `json:"last_seen" db:"last_seen"`
+	ID                     int             `json:"id" db:"id"`
+	FullName               string          `json:"full_name" db:"full_name"`
+	Username               string          `json:"username" db:"username"`
+	Password               NullString      `json:"-" db:"password"`
+	RequirePasswordChange  bool            `json:"require_password_change" db:"require_password_change"`
+	DisablePasswordChange  bool            `json:"disable_password_change" db:"disable_password_change"`
+	ShowInSelection        bool            `json:"show_in_selection" db:"show_in_selection"`
+	AvailableOrganizations Organizations   `json:"available_organizations" db:"available_organizations"`
+	AccessibleUsers        AccessibleUsers `json:"accessible_users" db:"accessible_users"`
+	Email                  NullString      `json:"email" db:"email"`
+	Phone                  NullString      `json:"phone" db:"phone"`
+	AdditionalEmail        NullString      `json:"additional_email" db:"additional_email"`
+	Comment                NullString      `json:"comment" db:"comment"`
+	Role                   UserRole        `json:"role" db:"role"`
+	IsFirstLogin           bool            `json:"is_first_login" db:"is_first_login"`
+	CreatedAt              time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at" db:"updated_at"`
+	IsOnline               bool            `json:"is_online" db:"is_online"`
+	LastSeen               time.Time       `json:"last_seen" db:"last_seen"`
+	TokenVersion           int             `json:"token_version" db:"token_version"`
 }
-
 type CreateUserRequest struct {
-	FullName               string        `json:"full_name" binding:"required,min=2"`
-	Username               string        `json:"username" binding:"required,min=3"`
-	Password               string        `json:"password,omitempty"`
-	RequirePasswordChange  bool          `json:"require_password_change"`
-	DisablePasswordChange  bool          `json:"disable_password_change"`
-	ShowInSelection        bool          `json:"show_in_selection"`
-	AvailableOrganizations Organizations `json:"available_organizations"`
-	Email                  string        `json:"email,omitempty"`
-	Phone                  string        `json:"phone,omitempty"`
-	AdditionalEmail        string        `json:"additional_email,omitempty"`
-	Comment                string        `json:"comment,omitempty"`
-	Role                   UserRole      `json:"role" binding:"required,oneof=admin user"`
+	FullName               string          `json:"full_name" binding:"required,min=2"`
+	Username               string          `json:"username" binding:"required,min=3"`
+	Password               string          `json:"password,omitempty"`
+	RequirePasswordChange  bool            `json:"require_password_change"`
+	DisablePasswordChange  bool            `json:"disable_password_change"`
+	ShowInSelection        bool            `json:"show_in_selection"`
+	AvailableOrganizations Organizations   `json:"available_organizations"`
+	AccessibleUsers        AccessibleUsers `json:"accessible_users,omitempty"`
+	Email                  string          `json:"email,omitempty"`
+	Phone                  string          `json:"phone,omitempty"`
+	AdditionalEmail        string          `json:"additional_email,omitempty"`
+	Comment                string          `json:"comment,omitempty"`
+	Role                   UserRole        `json:"role" binding:"required,oneof=admin moderator user"`
 }
 
 type UpdateUserRequest struct {
-	FullName               string        `json:"full_name,omitempty" binding:"omitempty,min=2"`
-	Username               string        `json:"username,omitempty" binding:"omitempty,min=3"`
-	Password               string        `json:"password,omitempty"`
-	RequirePasswordChange  *bool         `json:"require_password_change,omitempty"`
-	DisablePasswordChange  *bool         `json:"disable_password_change,omitempty"`
-	ShowInSelection        *bool         `json:"show_in_selection,omitempty"`
-	AvailableOrganizations Organizations `json:"available_organizations,omitempty"`
-	Email                  string        `json:"email,omitempty"`
-	Phone                  string        `json:"phone,omitempty"`
-	AdditionalEmail        string        `json:"additional_email,omitempty"`
-	Comment                string        `json:"comment,omitempty"`
-	Role                   UserRole      `json:"role,omitempty" binding:"omitempty,oneof=admin user"`
+	FullName               string          `json:"full_name,omitempty"`
+	Username               string          `json:"username,omitempty"`
+	Password               string          `json:"password,omitempty"`
+	ResetPassword          bool            `json:"reset_password,omitempty"` // Флаг сброса
+	RequirePasswordChange  *bool           `json:"require_password_change,omitempty"`
+	DisablePasswordChange  *bool           `json:"disable_password_change,omitempty"`
+	ShowInSelection        *bool           `json:"show_in_selection,omitempty"`
+	AvailableOrganizations Organizations   `json:"available_organizations,omitempty"`
+	AccessibleUsers        AccessibleUsers `json:"accessible_users,omitempty"`
+	Email                  string          `json:"email,omitempty"`
+	Phone                  string          `json:"phone,omitempty"`
+	AdditionalEmail        string          `json:"additional_email,omitempty"`
+	Comment                string          `json:"comment,omitempty"`
+	Role                   UserRole        `json:"role,omitempty"`
 }
 
 type LoginRequest struct {

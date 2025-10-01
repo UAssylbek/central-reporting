@@ -9,19 +9,21 @@ import (
 )
 
 type Claims struct {
-	UserID   int             `json:"user_id"`
-	Username string          `json:"username"`
-	FullName string          `json:"full_name"` // Добавляем полное имя
-	Role     models.UserRole `json:"role"`
+	UserID       int             `json:"user_id"`
+	Username     string          `json:"username"`
+	FullName     string          `json:"full_name"`
+	Role         models.UserRole `json:"role"`
+	TokenVersion int             `json:"token_version"`
 	jwt.RegisteredClaims
 }
 
 func GenerateToken(user models.User, secret string) (string, error) {
 	claims := Claims{
-		UserID:   user.ID,
-		Username: user.Username,
-		FullName: user.FullName, // Добавляем полное имя в токен
-		Role:     user.Role,
+		UserID:       user.ID,
+		Username:     user.Username,
+		FullName:     user.FullName,
+		Role:         user.Role,
+		TokenVersion: user.TokenVersion,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

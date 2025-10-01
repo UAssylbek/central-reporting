@@ -7,6 +7,7 @@ import (
 
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,10 +19,11 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
+// GetAll возвращает список пользователей с учётом прав доступа
 func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
 	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, email, phone, additional_email, 
+	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
 	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
 	          FROM users ORDER BY created_at DESC`
 
@@ -33,10 +35,51 @@ func (r *UserRepository) GetAll() ([]models.User, error) {
 	return users, err
 }
 
+// GetAccessibleUsers возвращает список пользователей, доступных для модератора
+func (r *UserRepository) GetAccessibleUsers(moderatorID int) ([]models.User, error) {
+	// Сначала получаем самого модератора
+	moderator, err := r.GetByID(moderatorID)
+	if err != nil {
+		log.Printf("Error getting moderator %d: %v", moderatorID, err)
+		return nil, err
+	}
+
+	log.Printf("Moderator %d has accessible_users: %v", moderatorID, moderator.AccessibleUsers)
+
+	// Если нет доступных пользователей, возвращаем пустой список
+	if len(moderator.AccessibleUsers) == 0 {
+		log.Printf("Moderator %d has no accessible users", moderatorID)
+		return []models.User{}, nil
+	}
+
+	// Преобразуем []int в interface{} слайс для PostgreSQL
+	ids := make([]interface{}, len(moderator.AccessibleUsers))
+	for i, id := range moderator.AccessibleUsers {
+		ids[i] = id
+	}
+
+	// Формируем список ID для SQL запроса
+	var users []models.User
+	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
+	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
+	          FROM users WHERE id = ANY($1::int[]) ORDER BY created_at DESC`
+
+	// Используем pq.Array для правильной передачи массива
+	err = r.db.Select(&users, query, pq.Array(moderator.AccessibleUsers))
+	if err != nil {
+		log.Printf("Database error in GetAccessibleUsers: %v", err)
+		return nil, err
+	}
+
+	log.Printf("Found %d accessible users for moderator %d", len(users), moderatorID)
+	return users, nil
+}
+
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	var user models.User
 	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, email, phone, additional_email, 
+	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
 	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
 	          FROM users WHERE id = $1`
 	err := r.db.Get(&user, query, id)
@@ -49,7 +92,7 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
 	query := `SELECT id, full_name, username, password, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, email, phone, additional_email, 
+	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
 	          comment, role, is_first_login, created_at, updated_at 
 	          FROM users WHERE LOWER(username) = LOWER($1)`
 
@@ -109,14 +152,14 @@ func (r *UserRepository) Create(user *models.User) error {
 
 	query := `
         INSERT INTO users (full_name, username, password, require_password_change, disable_password_change, 
-                          show_in_selection, available_organizations, email, phone, additional_email, 
+                          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
                           comment, role, is_first_login) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
         RETURNING id, created_at, updated_at`
 
 	err := r.db.QueryRow(query,
 		user.FullName, user.Username, hashedPassword, user.RequirePasswordChange, user.DisablePasswordChange,
-		user.ShowInSelection, user.AvailableOrganizations, email, phone, additionalEmail,
+		user.ShowInSelection, user.AvailableOrganizations, user.AccessibleUsers, email, phone, additionalEmail,
 		comment, user.Role, user.IsFirstLogin).
 		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
@@ -134,6 +177,8 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 	args := []interface{}{}
 	argIndex := 1
 
+	shouldInvalidateToken := false
+
 	if updates.FullName != "" {
 		setParts = append(setParts, fmt.Sprintf("full_name = $%d", argIndex))
 		args = append(args, updates.FullName)
@@ -142,11 +187,12 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 
 	if updates.Username != "" {
 		setParts = append(setParts, fmt.Sprintf("username = $%d", argIndex))
-		args = append(args, updates.Username) // Сохраняем как есть
+		args = append(args, updates.Username)
 		argIndex++
 	}
 
 	if updates.Password != "" {
+		// Новый пароль установлен
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updates.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
@@ -154,17 +200,24 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		setParts = append(setParts, fmt.Sprintf("password = $%d", argIndex))
 		args = append(args, string(hashedPassword))
 		argIndex++
-
-		// При смене пароля сбрасываем флаг первого входа
-		setParts = append(setParts, fmt.Sprintf("is_first_login = $%d", argIndex))
-		args = append(args, false)
-		argIndex++
+		shouldInvalidateToken = true
+	} else if updates.ResetPassword {
+		// Пароль сброшен
+		setParts = append(setParts, "password = NULL")
+		shouldInvalidateToken = true
 	}
 
 	if updates.RequirePasswordChange != nil {
 		setParts = append(setParts, fmt.Sprintf("require_password_change = $%d", argIndex))
 		args = append(args, *updates.RequirePasswordChange)
 		argIndex++
+
+		if *updates.RequirePasswordChange {
+			setParts = append(setParts, fmt.Sprintf("is_first_login = $%d", argIndex))
+			args = append(args, true)
+			argIndex++
+			shouldInvalidateToken = true // Требуется смена пароля
+		}
 	}
 
 	if updates.DisablePasswordChange != nil {
@@ -185,7 +238,12 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		argIndex++
 	}
 
-	// Обработка строковых полей - проверяем не пустые ли они
+	if updates.AccessibleUsers != nil {
+		setParts = append(setParts, fmt.Sprintf("accessible_users = $%d", argIndex))
+		args = append(args, updates.AccessibleUsers)
+		argIndex++
+	}
+
 	if updates.Email != "" {
 		setParts = append(setParts, fmt.Sprintf("email = $%d", argIndex))
 		args = append(args, updates.Email)
@@ -210,18 +268,26 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		argIndex++
 	}
 
+	// РОЛЬ - КРИТИЧНО ДЛЯ БЕЗОПАСНОСТИ
 	if updates.Role != "" {
 		setParts = append(setParts, fmt.Sprintf("role = $%d", argIndex))
 		args = append(args, updates.Role)
 		argIndex++
+		shouldInvalidateToken = true // РОЛЬ ИЗМЕНЕНА - инвалидируем токен!
+		log.Printf("Role changed for user %d, invalidating token", id)
+	}
+
+	// Если нужно инвалидировать токен - увеличиваем версию
+	if shouldInvalidateToken {
+		setParts = append(setParts, "token_version = token_version + 1")
+		log.Printf("Invalidating token for user %d due to security changes", id)
 	}
 
 	if len(setParts) == 0 {
 		return nil
 	}
 
-	// Автоматически обновляем updated_at
-	setParts = append(setParts, fmt.Sprintf("updated_at = NOW()"))
+	setParts = append(setParts, "updated_at = NOW()")
 	args = append(args, id)
 
 	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d", strings.Join(setParts, ", "), argIndex)
@@ -295,4 +361,26 @@ func (r *UserRepository) UpdateOfflineUsers(inactiveMinutes int) error {
 	rowsAffected, _ := result.RowsAffected()
 	log.Printf("UpdateOfflineUsers: Set %d users as offline (inactive > %d mins)", rowsAffected, inactiveMinutes)
 	return nil
+}
+
+// CanModeratorAccessUser проверяет, может ли модератор управлять пользователем
+func (r *UserRepository) CanModeratorAccessUser(moderatorID int, targetUserID int) (bool, error) {
+	moderator, err := r.GetByID(moderatorID)
+	if err != nil {
+		return false, err
+	}
+
+	// Проверяем, что это действительно модератор
+	if moderator.Role != models.RoleModerator {
+		return false, nil
+	}
+
+	// Проверяем, есть ли targetUserID в списке доступных пользователей
+	for _, userID := range moderator.AccessibleUsers {
+		if userID == targetUserID {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }

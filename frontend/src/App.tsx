@@ -3,6 +3,8 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import RequireAdmin from "./components/RequireAdmin/RequireAdmin";
+import RequireModerator from "./components/RequireModerator/RequireModerator";
+import RequireAdminOrModerator from "./components/RequireAdminOrModerator/RequireAdminOrModerator";
 import Layout from "./components/Layout/Layout";
 import Login from "./pages/Login/Login";
 import Dashboard from "./pages/Dashboard/Dashboard";
@@ -43,8 +45,18 @@ function App() {
             <Route path="/nomenclature" element={<Nomenclature />} />
             <Route path="/bank-cash" element={<BankCash />} />
 
+            {/* ТОЛЬКО для администраторов */}
             <Route element={<RequireAdmin />}>
               <Route path="/administration" element={<Administration />} />
+            </Route>
+
+            {/* ТОЛЬКО для модераторов */}
+            <Route element={<RequireModerator />}>
+              {/* Пока пусто, потом добавите эксклюзивные маршруты модератора */}
+            </Route>
+
+            {/* Для ОБОИХ (админ И модератор) */}
+            <Route element={<RequireAdminOrModerator />}>
               <Route path="/users" element={<Users />} />
             </Route>
           </Route>

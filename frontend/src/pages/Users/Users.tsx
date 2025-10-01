@@ -9,15 +9,21 @@ import {
 import { User, UserFormData } from "../../types";
 import UserForm from "../../components/UserForm/UserForm";
 import "./Users.css";
+import { getUser, logout } from "../../utils/auth";
 
 const Users: React.FC = () => {
+  const currentUser = getUser();
+  const isAdmin = currentUser?.role === "admin";
+  const isModerator = currentUser?.role === "moderator";
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterRole, setFilterRole] = useState<"all" | "admin" | "user">("all");
+  const [filterRole, setFilterRole] = useState<
+    "all" | "admin" | "moderator" | "user"
+  >("all");
   const [filterStatus, setFilterStatus] = useState<
     "all" | "active" | "inactive" | "pending"
   >("all");
@@ -312,6 +318,19 @@ const Users: React.FC = () => {
     return `${organizations.length} организаций`;
   };
 
+  const getAccessibleUsersText = (accessibleUsers: number[]) => {
+    if (!accessibleUsers || accessibleUsers.length === 0) {
+      return "Нет доступа";
+    }
+    if (accessibleUsers.length === 1) {
+      return "1 пользователь";
+    }
+    if (accessibleUsers.length < 5) {
+      return `${accessibleUsers.length} пользователя`;
+    }
+    return `${accessibleUsers.length} пользователей`;
+  };
+
   if (loading) {
     return (
       <div className="users-page">
@@ -357,26 +376,30 @@ const Users: React.FC = () => {
               Управление пользователями
             </h1>
             <p className="users-page-subtitle">
-              Создание, редактирование и управление доступом пользователей
-              системы
+              {isAdmin
+                ? "Создание, редактирование и управление доступом пользователей системы"
+                : "Управление доступом пользователей к организациям"}
             </p>
           </div>
-          <button
-            onClick={openCreateModal}
-            className="users-page-create-button"
-          >
-            <svg
-              className="users-page-button-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
+          {/* ТОЛЬКО для админа */}
+          {isAdmin && (
+            <button
+              onClick={openCreateModal}
+              className="users-page-create-button"
             >
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="16"></line>
-              <line x1="8" y1="12" x2="16" y2="12"></line>
-            </svg>
-            <span>Создать пользователя</span>
-          </button>
+              <svg
+                className="users-page-button-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="16"></line>
+                <line x1="8" y1="12" x2="16" y2="12"></line>
+              </svg>
+              <span>Создать пользователя</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -422,12 +445,15 @@ const Users: React.FC = () => {
                 id="roleFilter"
                 value={filterRole}
                 onChange={(e) =>
-                  setFilterRole(e.target.value as "all" | "admin" | "user")
+                  setFilterRole(
+                    e.target.value as "all" | "admin" | "moderator" | "user"
+                  )
                 }
                 className="users-page-filter-select"
               >
                 <option value="all">Все роли</option>
                 <option value="admin">Администраторы</option>
+                <option value="moderator">Модераторы</option>
                 <option value="user">Пользователи</option>
               </select>
             </div>
@@ -560,6 +586,11 @@ const Users: React.FC = () => {
                         <span>Организации</span>
                       </div>
                     </th>
+                    <th className="users-page-th-non-sortable">
+                      <div className="users-page-th-content">
+                        <span>Управляет</span>
+                      </div>
+                    </th>
                     <th
                       onClick={() => handleSort("show_in_selection")}
                       className="users-page-th-sortable"
@@ -648,6 +679,11 @@ const Users: React.FC = () => {
                               <span className="users-page-role-icon">⚡</span>
                               Администратор
                             </>
+                          ) : user.role === "moderator" ? (
+                            <>
+                              <span className="users-page-role-icon">⚙️</span>
+                              Модератор
+                            </>
                           ) : (
                             <>
                               <span className="users-page-role-icon">👤</span>
@@ -724,6 +760,35 @@ const Users: React.FC = () => {
                         </div>
                       </td>
 
+                      <td className="users-page-accessible-users-cell">
+                        {user.role === "moderator" ? (
+                          <div className="users-page-accessible-users-info">
+                            <svg
+                              className="users-page-accessible-icon"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                              />
+                            </svg>
+                            <span>
+                              {getAccessibleUsersText(user.accessible_users)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span
+                            style={{ fontSize: "0.75rem", color: "#9ca3af" }}
+                          >
+                            —
+                          </span>
+                        )}
+                      </td>
+
                       <td className="users-page-status-cell">
                         {getStatusBadge(user)}
                       </td>
@@ -758,20 +823,23 @@ const Users: React.FC = () => {
                               />
                             </svg>
                           </button>
-                          <button
-                            onClick={() => handleDelete(user.id)}
-                            className="users-page-delete-button"
-                            data-title="Удалить пользователя"
-                          >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
+                          {/* ТОЛЬКО для админа */}
+                          {isAdmin && (
+                            <button
+                              onClick={() => handleDelete(user.id)}
+                              className="users-page-delete-button"
+                              data-title="Удалить пользователя"
                             >
-                              <polyline points="3,6 5,6 21,6"></polyline>
-                              <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
-                            </svg>
-                          </button>
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                              >
+                                <polyline points="3,6 5,6 21,6"></polyline>
+                                <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -1,5 +1,5 @@
 // src/services/api.ts
-import { getToken } from "../utils/auth";
+import { getToken, logout } from "../utils/auth";
 import {
   User,
   AuthResponse,
@@ -15,6 +15,28 @@ const getAuthHeaders = () => ({
   "Content-Type": "application/json",
   Authorization: `Bearer ${getToken()}`,
 });
+
+const handleApiResponse = async (response: Response) => {
+  if (response.status === 401) {
+    const data = await response.json().catch(() => ({}));
+
+    if (data.force_logout) {
+      alert(
+        data.reason ||
+          "Ваша сессия была завершена администратором. Войдите заново."
+      );
+      await logout();
+      throw new Error("Session invalidated");
+    }
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || "API Error");
+  }
+
+  return response;
+};
 
 export const login = async (
   credentials: LoginCredentials
@@ -38,10 +60,7 @@ export const changePassword = async (
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Не удалось изменить пароль");
-  }
+  await handleApiResponse(response);
 };
 
 export const getUsers = async (): Promise<User[]> => {
@@ -49,9 +68,7 @@ export const getUsers = async (): Promise<User[]> => {
     method: "GET",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) {
-    throw new Error("Не удалось загрузить пользователей");
-  }
+  await handleApiResponse(response);
   const data = await response.json();
   return data.users;
 };
@@ -74,10 +91,7 @@ export const createUser = async (data: UserFormData): Promise<User> => {
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Не удалось создать пользователя");
-  }
+  await handleApiResponse(response);
   const result = await response.json();
   return result.user;
 };
@@ -91,10 +105,7 @@ export const updateUser = async (
     headers: getAuthHeaders(),
     body: JSON.stringify(data),
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Не удалось обновить пользователя");
-  }
+  await handleApiResponse(response);
   const result = await response.json();
   return result.user;
 };
@@ -104,10 +115,7 @@ export const deleteUser = async (id: number): Promise<void> => {
     method: "DELETE",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Не удалось удалить пользователя");
-  }
+  await handleApiResponse(response);
 };
 
 export const getOrganizations = async (): Promise<Organization[]> => {
@@ -115,9 +123,7 @@ export const getOrganizations = async (): Promise<Organization[]> => {
     method: "GET",
     headers: getAuthHeaders(),
   });
-  if (!response.ok) {
-    throw new Error("Не удалось загрузить организации");
-  }
+  await handleApiResponse(response);
   const data = await response.json();
   return data.organizations;
 };
@@ -125,13 +131,10 @@ export const getOrganizations = async (): Promise<Organization[]> => {
 export const submitReport = async (reportType: string, data: any) => {
   const response = await fetch("/api/reports", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ reportType, data }),
   });
 
-  if (!response.ok) {
-    throw new Error("Ошибка отправки отчета");
-  }
-
+  await handleApiResponse(response);
   return response.json();
 };

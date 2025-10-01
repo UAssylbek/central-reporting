@@ -1,7 +1,8 @@
 // src/components/UserForm/UserForm.tsx
 import React, { useState, FormEvent, useEffect } from "react";
 import { UserFormData, User, Organization } from "../../types";
-import { getOrganizations } from "../../services/api";
+import { getOrganizations, getUsers } from "../../services/api";
+import { getUser } from "../../utils/auth";
 import "./UserForm.css";
 
 interface UserFormProps {
@@ -12,18 +13,13 @@ interface UserFormProps {
 
 // Функция для форматирования телефонного номера
 const formatPhoneNumber = (value: string): string => {
-  // Удаляем все символы кроме цифр и +
   const cleaned = value.replace(/[^\d+]/g, "");
-
-  // Если строка пустая, возвращаем пустую строку
   if (!cleaned) return "";
 
-  // Определяем формат в зависимости от первого символа
   let formatted = "";
 
   if (cleaned.startsWith("+7")) {
-    // Формат: +7 (XXX) XXX-XX-XX
-    const digits = cleaned.substring(2); // убираем +7
+    const digits = cleaned.substring(2);
     if (digits.length === 0) {
       formatted = "+7";
     } else if (digits.length <= 3) {
@@ -42,8 +38,7 @@ const formatPhoneNumber = (value: string): string => {
       )}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`;
     }
   } else if (cleaned.startsWith("8")) {
-    // Формат: 8 (XXX) XXX-XX-XX
-    const digits = cleaned.substring(1); // убираем 8
+    const digits = cleaned.substring(1);
     if (digits.length === 0) {
       formatted = "8";
     } else if (digits.length <= 3) {
@@ -62,7 +57,6 @@ const formatPhoneNumber = (value: string): string => {
       )}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`;
     }
   } else if (cleaned.startsWith("7")) {
-    // Если начинается с 7, добавляем +
     const digits = cleaned.substring(1);
     if (digits.length === 0) {
       formatted = "+7";
@@ -82,7 +76,6 @@ const formatPhoneNumber = (value: string): string => {
       )}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`;
     }
   } else {
-    // Если номер начинается с других цифр, форматируем как есть
     if (cleaned.length <= 3) {
       formatted = cleaned;
     } else if (cleaned.length <= 6) {
@@ -108,11 +101,15 @@ const UserForm: React.FC<UserFormProps> = ({
   onClose,
   initialData = {},
 }) => {
+  const currentUser = getUser();
+  const isModerator = currentUser?.role === "moderator";
+  const isEditing = Boolean(initialData.id);
+
   // Основные поля
   const [fullName, setFullName] = useState(initialData.full_name ?? "");
   const [username, setUsername] = useState(initialData.username ?? "");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "user">(
+  const [role, setRole] = useState<"admin" | "moderator" | "user">(
     initialData.role ?? "user"
   );
 
@@ -147,12 +144,18 @@ const UserForm: React.FC<UserFormProps> = ({
   const [showOrganizationsModal, setShowOrganizationsModal] = useState(false);
   const [loadingOrganizations, setLoadingOrganizations] = useState(false);
 
+  // Доступные пользователи для модераторов
+  const [accessibleUsers, setAccessibleUsers] = useState<number[]>(
+    initialData.accessible_users ?? []
+  );
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [showUsersModal, setShowUsersModal] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   // Состояние формы
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const isEditing = Boolean(initialData.id);
 
   // Загрузка списка организаций
   useEffect(() => {
@@ -171,12 +174,47 @@ const UserForm: React.FC<UserFormProps> = ({
     loadOrganizations();
   }, []);
 
+  // Загрузка списка пользователей (только для админов при создании модераторов)
+  useEffect(() => {
+    if (!isModerator && role === "moderator") {
+      const loadUsers = async () => {
+        setLoadingUsers(true);
+        try {
+          const users = await getUsers();
+          setAllUsers(users.filter((u) => u.role === "user"));
+        } catch (err) {
+          console.error("Не удалось загрузить пользователей:", err);
+        } finally {
+          setLoadingUsers(false);
+        }
+      };
+
+      loadUsers();
+    }
+  }, [role, isModerator]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
+    setError(null);
 
-    // Валидация обязательных полей
+    // Если модератор - может менять только организации
+    if (isModerator) {
+      try {
+        const formData: Partial<UserFormData> = {
+          available_organizations: availableOrganizations,
+        };
+        await onSubmit(formData);
+        onClose();
+      } catch (err: any) {
+        setError(err.message || "Ошибка при сохранении данных");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Валидация для админа
     if (!fullName.trim()) {
       setError("Полное имя обязательно для заполнения");
       setLoading(false);
@@ -189,17 +227,7 @@ const UserForm: React.FC<UserFormProps> = ({
       return;
     }
 
-    // ИСПРАВЛЕНИЕ: Добавляем валидацию для требования пароля
-    if (!isEditing && requirePasswordChange && !password && !password?.trim()) {
-      setError(
-        "Если установлен флаг 'Потребовать установить пароль', необходимо указать временный пароль или оставить поле пустым"
-      );
-      // Это не ошибка - разрешаем создание без пароля
-      // setLoading(false);
-      // return;
-    }
-
-    if (password && password.length < 6) {
+    if (password && password.length > 0 && password.length < 6) {
       setError("Пароль должен содержать не менее 6 символов");
       setLoading(false);
       return;
@@ -224,25 +252,35 @@ const UserForm: React.FC<UserFormProps> = ({
     // Собираем данные для отправки
     const formData: Partial<UserFormData> = {};
 
-    // Основные поля
     if (fullName !== (initialData.full_name ?? "")) {
       formData.full_name = fullName;
     }
     if (username !== (initialData.username ?? "")) {
       formData.username = username;
     }
-    if (password) {
+    if (password !== "") {
+      // Админ ввел пароль
       formData.password = password;
+    } else if (isEditing && requirePasswordChange) {
+      // Галочка включена + поле пустое = сброс пароля
+      formData.reset_password = true;
+    }
+    if (
+      requirePasswordChange !== (initialData.require_password_change ?? false)
+    ) {
+      formData.require_password_change = requirePasswordChange;
     }
     if (role !== initialData.role) {
       formData.role = role;
     }
 
-    // Настройки пароля
     if (
       requirePasswordChange !== (initialData.require_password_change ?? false)
     ) {
       formData.require_password_change = requirePasswordChange;
+    }
+    if (isEditing && requirePasswordChange) {
+      formData.require_password_change = true;
     }
     if (
       disablePasswordChange !== (initialData.disable_password_change ?? false)
@@ -250,12 +288,10 @@ const UserForm: React.FC<UserFormProps> = ({
       formData.disable_password_change = disablePasswordChange;
     }
 
-    // Дополнительные настройки
     if (showInSelection !== (initialData.show_in_selection ?? true)) {
       formData.show_in_selection = showInSelection;
     }
 
-    // Контактная информация
     if (email !== (initialData.email ?? "")) {
       formData.email = email;
     }
@@ -269,7 +305,6 @@ const UserForm: React.FC<UserFormProps> = ({
       formData.comment = comment;
     }
 
-    // Организации
     const orgArraysEqual = (a: number[], b: number[]) =>
       a.length === b.length && a.every((val, i) => val === b[i]);
 
@@ -282,6 +317,32 @@ const UserForm: React.FC<UserFormProps> = ({
       formData.available_organizations = availableOrganizations;
     }
 
+    // Доступные пользователи (только для модераторов)
+    if (role === "moderator") {
+      if (
+        !orgArraysEqual(accessibleUsers, initialData.accessible_users ?? [])
+      ) {
+        formData.accessible_users = accessibleUsers;
+      }
+    }
+
+    // ЛОГИКА ПАРОЛЯ
+    if (isEditing) {
+      // При редактировании
+      if (password !== "") {
+        formData.password = password;
+      } else if (requirePasswordChange) {
+        formData.reset_password = true;
+      }
+    }
+
+    // Галочка require_password_change
+    if (
+      requirePasswordChange !== (initialData.require_password_change ?? false)
+    ) {
+      formData.require_password_change = requirePasswordChange;
+    }
+
     // Проверяем есть ли изменения
     if (isEditing && Object.keys(formData).length === 0) {
       setError("Изменений не обнаружено");
@@ -289,7 +350,6 @@ const UserForm: React.FC<UserFormProps> = ({
       return;
     }
 
-    // Для создания пользователя всегда включаем обязательные поля
     if (!isEditing) {
       formData.full_name = fullName;
       formData.username = username;
@@ -298,7 +358,12 @@ const UserForm: React.FC<UserFormProps> = ({
       formData.disable_password_change = disablePasswordChange;
       formData.show_in_selection = showInSelection;
       formData.available_organizations = availableOrganizations;
-      if (password) formData.password = password;
+      if (role === "moderator") {
+        formData.accessible_users = accessibleUsers;
+      }
+      if (password) {
+        formData.password = password;
+      }
       if (email) formData.email = email;
       if (phone) formData.phone = phone;
       if (additionalEmail) formData.additional_email = additionalEmail;
@@ -309,7 +374,6 @@ const UserForm: React.FC<UserFormProps> = ({
       await onSubmit(formData);
       onClose();
     } catch (err: any) {
-      // ИСПРАВЛЕНИЕ: Показываем детальную ошибку с бэкенда
       console.error("Ошибка при сохранении:", err);
       setError(err.message || err.toString() || "Ошибка при сохранении данных");
     } finally {
@@ -322,6 +386,14 @@ const UserForm: React.FC<UserFormProps> = ({
       prev.includes(orgId)
         ? prev.filter((id) => id !== orgId)
         : [...prev, orgId]
+    );
+  };
+
+  const handleUserToggle = (userId: number) => {
+    setAccessibleUsers((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
     );
   };
 
@@ -341,6 +413,312 @@ const UserForm: React.FC<UserFormProps> = ({
     return `Выбрано организаций: ${availableOrganizations.length}`;
   };
 
+  const getSelectedUsersText = () => {
+    if (accessibleUsers.length === 0) {
+      return "Пользователи не выбраны";
+    }
+    if (accessibleUsers.length === allUsers.length) {
+      return "Все пользователи";
+    }
+    if (accessibleUsers.length <= 3) {
+      return accessibleUsers
+        .map((id) => allUsers.find((user) => user.id === id)?.full_name)
+        .filter(Boolean)
+        .join(", ");
+    }
+    return `Выбрано пользователей: ${accessibleUsers.length}`;
+  };
+
+  // Если модератор - показываем только поле с организациями
+  if (isModerator) {
+    return (
+      <div className="userform-overlay-container" onClick={onClose}>
+        <div
+          className="userform-modal-wrapper"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="userform-header-section">
+            <div className="userform-title-group">
+              <div className="userform-icon-badge">✏️</div>
+              <div>
+                <h2 className="userform-main-title">
+                  Редактировать доступ к организациям
+                </h2>
+                <p className="userform-subtitle-text">
+                  Вы можете изменить только доступные организации для
+                  пользователя
+                </p>
+              </div>
+            </div>
+            <button
+              className="userform-close-btn"
+              onClick={onClose}
+              type="button"
+            >
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="userform-main-container">
+            <div className="userform-content-area">
+              <div className="userform-section-block">
+                <h3 className="userform-section-header">
+                  Информация о пользователе
+                </h3>
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">Полное имя:</span>
+                  </label>
+                  <div style={{ padding: "0.5rem", color: "#6b7280" }}>
+                    {initialData.full_name}
+                  </div>
+                </div>
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">Логин:</span>
+                  </label>
+                  <div style={{ padding: "0.5rem", color: "#6b7280" }}>
+                    {initialData.username}
+                  </div>
+                </div>
+              </div>
+
+              <div className="userform-section-block">
+                <h3 className="userform-section-header">
+                  Доступные организации
+                </h3>
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">
+                      Выбор организаций
+                    </span>
+                  </label>
+                  <div className="userform-organizations-selector">
+                    <button
+                      type="button"
+                      className="userform-organizations-trigger-btn"
+                      onClick={() => setShowOrganizationsModal(true)}
+                      disabled={loading || loadingOrganizations}
+                    >
+                      <div className="userform-organizations-btn-icon">
+                        <svg
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                          />
+                        </svg>
+                      </div>
+                      <span className="userform-organizations-btn-text">
+                        {loadingOrganizations
+                          ? "Загрузка..."
+                          : getSelectedOrganizationsText()}
+                      </span>
+                      <div className="userform-organizations-btn-arrow">
+                        <svg
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </button>
+                  </div>
+                  <span className="userform-field-hint-text">
+                    Выберите организации, к которым пользователь будет иметь
+                    доступ
+                  </span>
+                </div>
+              </div>
+
+              {error && (
+                <div className="userform-error-notification">
+                  <div className="userform-error-warning-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <span>{error}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="userform-footer-area">
+              <div className="userform-button-actions">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="userform-cancel-action-btn"
+                  disabled={loading}
+                >
+                  Отмена
+                </button>
+                <button
+                  type="submit"
+                  className="userform-submit-action-btn"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="userform-loading-spinner-icon"></div>
+                      <span>Сохранение...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Сохранить изменения</span>
+                      <svg
+                        className="userform-submit-right-arrow"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 7l5 5m0 0l-5 5m5-5H6"
+                        />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {showOrganizationsModal && (
+            <div
+              className="userform-organizations-modal-backdrop"
+              onClick={() => setShowOrganizationsModal(false)}
+            >
+              <div
+                className="userform-organizations-modal-box"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="userform-organizations-modal-top">
+                  <h3>Выбор доступных организаций</h3>
+                  <button
+                    className="userform-close-btn"
+                    onClick={() => setShowOrganizationsModal(false)}
+                    type="button"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="userform-organizations-modal-content">
+                  <div className="userform-organizations-bulk-actions">
+                    <button
+                      type="button"
+                      className="userform-select-all-orgs-btn"
+                      onClick={() =>
+                        setAvailableOrganizations(
+                          organizations.map((org) => org.id)
+                        )
+                      }
+                    >
+                      Выбрать все
+                    </button>
+                    <button
+                      type="button"
+                      className="userform-clear-all-orgs-btn"
+                      onClick={() => setAvailableOrganizations([])}
+                    >
+                      Очистить все
+                    </button>
+                  </div>
+
+                  <div className="userform-organizations-listing">
+                    {organizations.map((org) => (
+                      <label
+                        key={org.id}
+                        className="userform-organization-entry"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={availableOrganizations.includes(org.id)}
+                          onChange={() => handleOrganizationToggle(org.id)}
+                          className="userform-org-native-checkbox"
+                        />
+                        <div className="userform-org-custom-checkbox">
+                          <svg
+                            className="userform-checkbox-check-icon"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={3}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+                        <span className="userform-organization-title">
+                          {org.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {organizations.length === 0 && !loadingOrganizations && (
+                    <div className="userform-organizations-empty-state">
+                      <div className="userform-empty-state-icon">📋</div>
+                      <p>Организации не найдены</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="userform-organizations-modal-bottom">
+                  <div className="userform-selected-orgs-counter">
+                    Выбрано: {availableOrganizations.length} из{" "}
+                    {organizations.length}
+                  </div>
+                  <button
+                    className="userform-organizations-done-btn"
+                    onClick={() => setShowOrganizationsModal(false)}
+                  >
+                    Готово
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Полная форма для админа
   return (
     <div className="userform-overlay-container" onClick={onClose}>
       <div
@@ -481,12 +859,13 @@ const UserForm: React.FC<UserFormProps> = ({
                     id="role"
                     value={role}
                     onChange={(e) =>
-                      setRole(e.target.value as "admin" | "user")
+                      setRole(e.target.value as "admin" | "moderator" | "user")
                     }
                     disabled={loading}
                     className="userform-dropdown-select"
                   >
                     <option value="user">Пользователь</option>
+                    <option value="moderator">Модератор</option>
                     <option value="admin">Администратор</option>
                   </select>
                   <div className="userform-select-arrow-icon">
@@ -503,10 +882,72 @@ const UserForm: React.FC<UserFormProps> = ({
                 <span className="userform-field-hint-text">
                   {role === "admin"
                     ? "Полный доступ ко всем функциям системы"
+                    : role === "moderator"
+                    ? "Может управлять доступом пользователей к организациям"
                     : "Доступ к просмотру и созданию отчётов"}
                 </span>
               </div>
             </div>
+
+            {/* Доступные пользователи (только для модераторов) */}
+            {role === "moderator" && (
+              <div className="userform-section-block">
+                <h3 className="userform-section-header">
+                  Управляемые пользователи
+                </h3>
+
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">
+                      Доступные пользователи для управления
+                    </span>
+                  </label>
+                  <div className="userform-organizations-selector">
+                    <button
+                      type="button"
+                      className="userform-organizations-trigger-btn"
+                      onClick={() => setShowUsersModal(true)}
+                      disabled={loading || loadingUsers}
+                    >
+                      <div className="userform-organizations-btn-icon">
+                        <svg
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                          />
+                        </svg>
+                      </div>
+                      <span className="userform-organizations-btn-text">
+                        {loadingUsers ? "Загрузка..." : getSelectedUsersText()}
+                      </span>
+                      <div className="userform-organizations-btn-arrow">
+                        <svg
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </button>
+                  </div>
+                  <span className="userform-field-hint-text">
+                    Выберите пользователей, которыми сможет управлять модератор
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Настройки пароля */}
             <div className="userform-section-block">
@@ -516,8 +957,11 @@ const UserForm: React.FC<UserFormProps> = ({
               <div className="userform-field-group">
                 <label htmlFor="password" className="userform-input-label">
                   <span className="userform-label-content">
-                    {isEditing ? "Новый пароль" : "Пароль"}
+                    {isEditing ? "Новый пароль (опционально)" : "Пароль"}
                   </span>
+                  {!isEditing && (
+                    <span className="userform-required-asterisk">*</span>
+                  )}
                 </label>
                 <div className="userform-input-container">
                   <div className="userform-input-svg">
@@ -535,9 +979,14 @@ const UserForm: React.FC<UserFormProps> = ({
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Оставьте пустым если пароль не нужен"
-                    disabled={loading}
+                    placeholder={
+                      isEditing
+                        ? "Оставьте пустым, если не хотите менять пароль"
+                        : "Введите пароль для пользователя"
+                    }
+                    disabled={loading || isModerator}
                     className="userform-text-input"
+                    required={!isEditing}
                   />
                   <button
                     type="button"
@@ -581,7 +1030,9 @@ const UserForm: React.FC<UserFormProps> = ({
                   </button>
                 </div>
                 <span className="userform-field-hint-text">
-                  Если пароль не установлен, пользователь может войти без пароля
+                  {isEditing
+                    ? "Если установите новый пароль и включите 'Потребовать смену пароля', пользователь должен будет войти с этим паролем и сразу установить свой собственный"
+                    : "Минимум 6 символов. Если оставите пустым и включите 'Потребовать смену пароля', пользователь сможет войти без пароля"}
                 </span>
               </div>
 
@@ -592,7 +1043,7 @@ const UserForm: React.FC<UserFormProps> = ({
                     type="checkbox"
                     checked={requirePasswordChange}
                     onChange={(e) => setRequirePasswordChange(e.target.checked)}
-                    disabled={loading}
+                    disabled={loading || isModerator}
                     className="userform-native-checkbox"
                   />
                   <div className="userform-custom-checkbox-box">
@@ -608,13 +1059,14 @@ const UserForm: React.FC<UserFormProps> = ({
                       />
                     </svg>
                   </div>
-                  <span className="userform-checkbox-text-content">
-                    Потребовать установить пароль
+                  <div className="userform-checkbox-text-content">
+                    <span>Потребовать смену пароля при входе</span>
                     <span className="userform-checkbox-hint-text">
-                      Пользователю будет предложено установить пароль при первом
-                      входе
+                      {isEditing
+                        ? "При следующем входе пользователь должен будет установить новый пароль. Если оставите поле пароля пустым, пользователь сможет войти без пароля и установить его самостоятельно."
+                        : "При первом входе пользователь должен будет установить пароль"}
                     </span>
-                  </span>
+                  </div>
                 </label>
 
                 <label className="userform-checkbox-item-label">
@@ -1038,6 +1490,109 @@ const UserForm: React.FC<UserFormProps> = ({
                 <button
                   className="userform-organizations-done-btn"
                   onClick={() => setShowOrganizationsModal(false)}
+                >
+                  Готово
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Users Modal (для модераторов) */}
+        {showUsersModal && role === "moderator" && (
+          <div
+            className="userform-organizations-modal-backdrop"
+            onClick={() => setShowUsersModal(false)}
+          >
+            <div
+              className="userform-organizations-modal-box"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="userform-organizations-modal-top">
+                <h3>Выбор управляемых пользователей</h3>
+                <button
+                  className="userform-close-btn"
+                  onClick={() => setShowUsersModal(false)}
+                  type="button"
+                >
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="userform-organizations-modal-content">
+                <div className="userform-organizations-bulk-actions">
+                  <button
+                    type="button"
+                    className="userform-select-all-orgs-btn"
+                    onClick={() =>
+                      setAccessibleUsers(allUsers.map((user) => user.id))
+                    }
+                  >
+                    Выбрать всех
+                  </button>
+                  <button
+                    type="button"
+                    className="userform-clear-all-orgs-btn"
+                    onClick={() => setAccessibleUsers([])}
+                  >
+                    Очистить все
+                  </button>
+                </div>
+
+                <div className="userform-organizations-listing">
+                  {allUsers.map((user) => (
+                    <label
+                      key={user.id}
+                      className="userform-organization-entry"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={accessibleUsers.includes(user.id)}
+                        onChange={() => handleUserToggle(user.id)}
+                        className="userform-org-native-checkbox"
+                      />
+                      <div className="userform-org-custom-checkbox">
+                        <svg
+                          className="userform-checkbox-check-icon"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={3}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <span className="userform-organization-title">
+                        {user.full_name} (@{user.username})
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                {allUsers.length === 0 && !loadingUsers && (
+                  <div className="userform-organizations-empty-state">
+                    <div className="userform-empty-state-icon">👥</div>
+                    <p>Пользователи не найдены</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="userform-organizations-modal-bottom">
+                <div className="userform-selected-orgs-counter">
+                  Выбрано: {accessibleUsers.length} из {allUsers.length}
+                </div>
+                <button
+                  className="userform-organizations-done-btn"
+                  onClick={() => setShowUsersModal(false)}
                 >
                   Готово
                 </button>

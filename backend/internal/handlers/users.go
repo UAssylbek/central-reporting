@@ -23,7 +23,21 @@ func NewUserHandler(userRepo *repositories.UserRepository) *UserHandler {
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	log.Println("GetUsers handler called")
 
-	users, err := h.userRepo.GetAll()
+	role, _ := c.Get("role")
+	userID, _ := c.Get("user_id")
+
+	var users []models.User
+	var err error
+
+	// Если модератор - показываем только доступных ему пользователей
+	if role == models.RoleModerator {
+		log.Printf("Moderator %d requesting accessible users", userID.(int))
+		users, err = h.userRepo.GetAccessibleUsers(userID.(int))
+	} else {
+		// Для админа - показываем всех пользователей
+		users, err = h.userRepo.GetAll()
+	}
+
 	if err != nil {
 		log.Printf("Error in GetUsers handler: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось получить список пользователей"})
@@ -42,6 +56,22 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
+	userID, _ := c.Get("user_id")
+
+	// Если модератор - проверяем доступ
+	if role == models.RoleModerator {
+		canAccess, err := h.userRepo.CanModeratorAccessUser(userID.(int), id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки доступа"})
+			return
+		}
+		if !canAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
+			return
+		}
+	}
+
 	user, err := h.userRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Пользователь не найден"})
@@ -58,12 +88,20 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
+
+	// Модераторы не могут создавать пользователей
+	if role == models.RoleModerator {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Модераторы не могут создавать пользователей"})
+		return
+	}
+
 	// Если роль не указана, ставим "user" по умолчанию
 	if req.Role == "" {
 		req.Role = models.RoleUser
 	}
 
-	// ДОБАВИТЬ: Проверяем существует ли пользователь с таким username
+	// Проверяем существует ли пользователь с таким username
 	existingUser, _ := h.userRepo.GetByUsername(req.Username)
 	if existingUser != nil {
 		c.JSON(http.StatusConflict, gin.H{
@@ -88,6 +126,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		DisablePasswordChange:  req.DisablePasswordChange,
 		ShowInSelection:        req.ShowInSelection,
 		AvailableOrganizations: req.AvailableOrganizations,
+		AccessibleUsers:        req.AccessibleUsers,
 		Email:                  createNullString(req.Email),
 		Phone:                  createNullString(req.Phone),
 		AdditionalEmail:        createNullString(req.AdditionalEmail),
@@ -103,7 +142,6 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 
 	if err := h.userRepo.Create(&user); err != nil {
 		log.Printf("Failed to create user: %v", err)
-		// Проверяем тип ошибки для более информативного сообщения
 		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": fmt.Sprintf("Пользователь с логином '%s' уже существует", req.Username),
@@ -135,7 +173,29 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	// ДОБАВИТЬ: Если меняется username, проверяем что он не занят
+	role, _ := c.Get("role")
+	userID, _ := c.Get("user_id")
+
+	// Если модератор - проверяем доступ и ограничиваем возможности
+	if role == models.RoleModerator {
+		canAccess, err := h.userRepo.CanModeratorAccessUser(userID.(int), id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки доступа"})
+			return
+		}
+		if !canAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
+			return
+		}
+
+		// Модератор может изменять ТОЛЬКО доступные организации
+		// Очищаем все остальные поля
+		req = models.UpdateUserRequest{
+			AvailableOrganizations: req.AvailableOrganizations,
+		}
+	}
+
+	// Если меняется username, проверяем что он не занят
 	if req.Username != "" {
 		existingUser, _ := h.userRepo.GetByUsername(req.Username)
 		if existingUser != nil && existingUser.ID != id {
@@ -181,9 +241,17 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
+	role, _ := c.Get("role")
+	userID, _ := c.Get("user_id")
+
+	// Модераторы не могут удалять пользователей
+	if role == models.RoleModerator {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Модераторы не могут удалять пользователей"})
+		return
+	}
+
 	// Проверяем что пользователь не пытается удалить сам себя
-	currentUserID, _ := c.Get("user_id")
-	if currentUserID.(int) == id {
+	if userID.(int) == id {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Нельзя удалить самого себя"})
 		return
 	}
@@ -196,7 +264,6 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Пользователь удален успешно"})
 }
 
-// Новый метод для получения списка организаций (заглушка)
 func (h *UserHandler) GetOrganizations(c *gin.Context) {
 	// TODO: Реализовать получение списка организаций из БД
 	// Пока возвращаем заглушку

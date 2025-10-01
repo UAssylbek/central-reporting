@@ -52,8 +52,7 @@ func main() {
 
 	// Protected routes
 	protected := r.Group("/api")
-	protected.Use(auth.JWTMiddleware(cfg.JWTSecret))
-
+	protected.Use(auth.JWTMiddleware(cfg.JWTSecret, userRepo))
 	protected.Use(auth.ActivityMiddleware(userRepo))
 	{
 		// Auth routes
@@ -63,19 +62,27 @@ func main() {
 
 		// User routes (доступны всем авторизованным пользователям)
 		protected.GET("/users/organizations", userHandler.GetOrganizations) // Список организаций
-
-		// Admin only routes
-		adminOnly := protected.Group("/")
-		adminOnly.Use(auth.AdminMiddleware())
-		{
-			adminOnly.GET("/users", userHandler.GetUsers)
-			adminOnly.GET("/users/:id", userHandler.GetUser)
-			adminOnly.POST("/users", userHandler.CreateUser)
-			adminOnly.PUT("/users/:id", userHandler.UpdateUser)
-			adminOnly.DELETE("/users/:id", userHandler.DeleteUser)
-		}
 	}
 
+	// Routes for Admin and Moderator
+	adminOrModerator := protected.Group("/")
+	adminOrModerator.Use(auth.AdminOrModeratorMiddleware())
+	{
+		// Модераторы могут просматривать своих пользователей и обновлять только организации
+		adminOrModerator.GET("/users", userHandler.GetUsers)
+		adminOrModerator.GET("/users/:id", userHandler.GetUser)
+		adminOrModerator.PUT("/users/:id", userHandler.UpdateUser) // Модератор может изменять только организации
+	}
+
+	// Admin only routes
+	adminOnly := protected.Group("/")
+	adminOnly.Use(auth.AdminMiddleware())
+	{
+		adminOnly.POST("/users", userHandler.CreateUser)
+		adminOnly.DELETE("/users/:id", userHandler.DeleteUser)
+	}
+
+	// Background task для обновления статусов офлайн
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()

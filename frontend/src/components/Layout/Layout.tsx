@@ -30,6 +30,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const [hoveredTab, setHoveredTab] = useState<string | null>(null);
   const isAdmin = user?.role === "admin";
+  const isModerator = user?.role === "moderator";
   const [searchQuery, setSearchQuery] = useState("");
   const [showReportRequestModal, setShowReportRequestModal] = useState(false);
 
@@ -327,13 +328,26 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { path: "/bank-cash", label: "Банк и касса" },
   ];
 
-  const navigationTabs: NavigationTab[] = isAdmin
-    ? [
-        ...baseNavigationTabs,
-        { path: "/centralization", label: "Централизация" },
-        { path: "/administration", label: "Администрирование" },
-      ]
-    : baseNavigationTabs;
+  // Табы ТОЛЬКО для администраторов
+  const adminTabs: NavigationTab[] = [
+    { path: "/centralization", label: "Централизация" },
+    { path: "/administration", label: "Администрирование" },
+  ];
+
+  // Табы ТОЛЬКО для модераторов
+  const moderatorTabs: NavigationTab[] = [
+    { path: "/centralization", label: "Централизация" },
+    { path: "/administration", label: "Администрирование" }, // Временно, потом уберете
+  ];
+
+  // Формируем финальный массив в зависимости от роли
+  let navigationTabs = [...baseNavigationTabs];
+
+  if (isAdmin) {
+    navigationTabs = [...navigationTabs, ...adminTabs];
+  } else if (isModerator) {
+    navigationTabs = [...navigationTabs, ...moderatorTabs];
+  }
 
   // В Layout.tsx
 
