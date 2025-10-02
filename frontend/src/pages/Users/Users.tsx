@@ -102,13 +102,11 @@ const Users: React.FC = () => {
     fetchUsers();
   };
 
-  // Добавьте новое состояние в компонент
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     show: boolean;
     user: User | null;
   }>({ show: false, user: null });
 
-  // Замените функцию handleDelete
   const handleDelete = async (id: number) => {
     const user = users.find((u) => u.id === id);
     if (user) {
@@ -245,7 +243,6 @@ const Users: React.FC = () => {
       aVal = new Date(aVal as string).getTime();
       bVal = new Date(bVal as string).getTime();
     } else if (typeof aVal === "boolean") {
-      // Обработка boolean полей (is_online)
       aVal = aVal ? 1 : 0;
       bVal = (bVal as boolean) ? 1 : 0;
     } else if (typeof aVal === "string") {
@@ -381,7 +378,6 @@ const Users: React.FC = () => {
                 : "Управление доступом пользователей к организациям"}
             </p>
           </div>
-          {/* ТОЛЬКО для админа */}
           {isAdmin && (
             <button
               onClick={openCreateModal}
@@ -521,14 +517,17 @@ const Users: React.FC = () => {
                 ? "Попробуйте изменить параметры поиска или фильтрации"
                 : "В системе пока нет пользователей. Создайте первого пользователя."}
             </p>
-            {!searchQuery && filterRole === "all" && filterStatus === "all" && (
-              <button
-                onClick={openCreateModal}
-                className="users-page-empty-action-button"
-              >
-                Создать первого пользователя
-              </button>
-            )}
+            {!searchQuery &&
+              filterRole === "all" &&
+              filterStatus === "all" &&
+              isAdmin && (
+                <button
+                  onClick={openCreateModal}
+                  className="users-page-empty-action-button"
+                >
+                  Создать первого пользователя
+                </button>
+              )}
           </div>
         ) : (
           <>
@@ -586,11 +585,14 @@ const Users: React.FC = () => {
                         <span>Организации</span>
                       </div>
                     </th>
-                    <th className="users-page-th-non-sortable">
-                      <div className="users-page-th-content">
-                        <span>Управляет</span>
-                      </div>
-                    </th>
+                    {/* Колонка "Управляет" только для админов */}
+                    {isAdmin && (
+                      <th className="users-page-th-non-sortable">
+                        <div className="users-page-th-content">
+                          <span>Управляет</span>
+                        </div>
+                      </th>
+                    )}
                     <th
                       onClick={() => handleSort("show_in_selection")}
                       className="users-page-th-sortable"
@@ -600,15 +602,7 @@ const Users: React.FC = () => {
                         {getSortIcon("show_in_selection")}
                       </div>
                     </th>
-                    <th
-                      onClick={() => handleSort("created_at")}
-                      className="users-page-th-sortable"
-                    >
-                      <div className="users-page-th-content">
-                        <span>Создан</span>
-                        {getSortIcon("created_at")}
-                      </div>
-                    </th>
+                    {/* УБРАЛИ КОЛОНКУ "Создан" */}
                     <th className="users-page-th-non-sortable">
                       <div className="users-page-th-content">
                         <span>Действия</span>
@@ -760,48 +754,43 @@ const Users: React.FC = () => {
                         </div>
                       </td>
 
-                      <td className="users-page-accessible-users-cell">
-                        {user.role === "moderator" ? (
-                          <div className="users-page-accessible-users-info">
-                            <svg
-                              className="users-page-accessible-icon"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
+                      {/* Колонка "Управляет" только для админов */}
+                      {isAdmin && (
+                        <td className="users-page-accessible-users-cell">
+                          {user.role === "moderator" ? (
+                            <div className="users-page-accessible-users-info">
+                              <svg
+                                className="users-page-accessible-icon"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                                />
+                              </svg>
+                              <span>
+                                {getAccessibleUsersText(user.accessible_users)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span
+                              style={{ fontSize: "0.75rem", color: "#9ca3af" }}
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                              />
-                            </svg>
-                            <span>
-                              {getAccessibleUsersText(user.accessible_users)}
+                              —
                             </span>
-                          </div>
-                        ) : (
-                          <span
-                            style={{ fontSize: "0.75rem", color: "#9ca3af" }}
-                          >
-                            —
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </td>
+                      )}
 
                       <td className="users-page-status-cell">
                         {getStatusBadge(user)}
                       </td>
 
-                      <td className="users-page-date-cell">
-                        {new Date(user.created_at).toLocaleString("ru-RU", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </td>
+                      {/* УБРАЛИ ЯЧЕЙКУ С ДАТОЙ СОЗДАНИЯ */}
 
                       <td className="users-page-actions-cell">
                         <div className="users-page-action-buttons">
@@ -823,7 +812,6 @@ const Users: React.FC = () => {
                               />
                             </svg>
                           </button>
-                          {/* ТОЛЬКО для админа */}
                           {isAdmin && (
                             <button
                               onClick={() => handleDelete(user.id)}

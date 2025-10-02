@@ -19,6 +19,28 @@ export const setUser = (user: User | null): void => {
   }
 };
 
+export const validateToken = async (): Promise<boolean> => {
+  const token = getToken();
+  if (!token) return false;
+
+  try {
+    const response = await fetch("/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 401) {
+      await logout();
+      return false;
+    }
+
+    return response.ok;
+  } catch (error) {
+    return false;
+  }
+};
+
 export const isAuthenticated = (): boolean => !!getToken();
 
 export const logout = async (): Promise<void> => {

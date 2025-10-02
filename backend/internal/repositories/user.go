@@ -24,7 +24,7 @@ func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
 	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
+	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at, token_version 
 	          FROM users ORDER BY created_at DESC`
 
 	log.Printf("Executing query: %s", query)
@@ -62,7 +62,7 @@ func (r *UserRepository) GetAccessibleUsers(moderatorID int) ([]models.User, err
 	var users []models.User
 	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
+	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at, token_version 
 	          FROM users WHERE id = ANY($1::int[]) ORDER BY created_at DESC`
 
 	// Используем pq.Array для правильной передачи массива
@@ -79,9 +79,9 @@ func (r *UserRepository) GetAccessibleUsers(moderatorID int) ([]models.User, err
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	var user models.User
 	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at 
-	          FROM users WHERE id = $1`
+          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
+          comment, role, is_first_login, is_online, last_seen, created_at, updated_at, token_version 
+          FROM users WHERE id = $1`
 	err := r.db.Get(&user, query, id)
 	if err != nil {
 		return nil, err
@@ -93,7 +93,7 @@ func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
 	query := `SELECT id, full_name, username, password, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-	          comment, role, is_first_login, created_at, updated_at 
+	          comment, role, is_first_login, created_at, updated_at, token_version 
 	          FROM users WHERE LOWER(username) = LOWER($1)`
 
 	log.Printf("Looking for user with username: %s", username)

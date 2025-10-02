@@ -1,5 +1,5 @@
 // src/App.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import RequireAdmin from "./components/RequireAdmin/RequireAdmin";
@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import Home from "./pages/Home/Home";
 import Welcome from "./pages/Welcome/Welcome";
 import Users from "./pages/Users/Users";
+import { isAuthenticated, validateToken } from "./utils/auth";
 
 // Новые страницы-заглушки
 import Centralization from "./pages/Centralization/Centralization";
@@ -23,6 +24,11 @@ import Administration from "./pages/Administration/Administration";
 import "./App.css";
 
 function App() {
+  useEffect(() => {
+    if (isAuthenticated()) {
+      validateToken();
+    }
+  }, []);
   return (
     <BrowserRouter>
       <Routes>

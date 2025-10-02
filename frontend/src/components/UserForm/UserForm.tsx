@@ -96,6 +96,19 @@ const formatPhoneNumber = (value: string): string => {
   return formatted;
 };
 
+// Функция форматирования даты
+const formatDateTime = (dateString: string): string => {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  return date.toLocaleString("ru-RU", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const UserForm: React.FC<UserFormProps> = ({
   onSubmit,
   onClose,
@@ -227,6 +240,19 @@ const UserForm: React.FC<UserFormProps> = ({
       return;
     }
 
+    // ИСПРАВЛЕНИЕ: Пароль обязателен только если НЕ стоит галочка "Потребовать смену пароля"
+    if (
+      !isEditing &&
+      !requirePasswordChange &&
+      (!password || password.length < 6)
+    ) {
+      setError(
+        "Пароль должен содержать не менее 6 символов или включите 'Потребовать смену пароля'"
+      );
+      setLoading(false);
+      return;
+    }
+
     if (password && password.length > 0 && password.length < 6) {
       setError("Пароль должен содержать не менее 6 символов");
       setLoading(false);
@@ -259,10 +285,8 @@ const UserForm: React.FC<UserFormProps> = ({
       formData.username = username;
     }
     if (password !== "") {
-      // Админ ввел пароль
       formData.password = password;
     } else if (isEditing && requirePasswordChange) {
-      // Галочка включена + поле пустое = сброс пароля
       formData.reset_password = true;
     }
     if (
@@ -274,14 +298,6 @@ const UserForm: React.FC<UserFormProps> = ({
       formData.role = role;
     }
 
-    if (
-      requirePasswordChange !== (initialData.require_password_change ?? false)
-    ) {
-      formData.require_password_change = requirePasswordChange;
-    }
-    if (isEditing && requirePasswordChange) {
-      formData.require_password_change = true;
-    }
     if (
       disablePasswordChange !== (initialData.disable_password_change ?? false)
     ) {
@@ -326,23 +342,6 @@ const UserForm: React.FC<UserFormProps> = ({
       }
     }
 
-    // ЛОГИКА ПАРОЛЯ
-    if (isEditing) {
-      // При редактировании
-      if (password !== "") {
-        formData.password = password;
-      } else if (requirePasswordChange) {
-        formData.reset_password = true;
-      }
-    }
-
-    // Галочка require_password_change
-    if (
-      requirePasswordChange !== (initialData.require_password_change ?? false)
-    ) {
-      formData.require_password_change = requirePasswordChange;
-    }
-
     // Проверяем есть ли изменения
     if (isEditing && Object.keys(formData).length === 0) {
       setError("Изменений не обнаружено");
@@ -361,6 +360,7 @@ const UserForm: React.FC<UserFormProps> = ({
       if (role === "moderator") {
         formData.accessible_users = accessibleUsers;
       }
+      // ИСПРАВЛЕНИЕ: Пароль опционален если стоит галочка requirePasswordChange
       if (password) {
         formData.password = password;
       }
@@ -429,7 +429,7 @@ const UserForm: React.FC<UserFormProps> = ({
     return `Выбрано пользователей: ${accessibleUsers.length}`;
   };
 
-  // Если модератор - показываем только поле с организациями
+  // Если модератор - показываем расширенную форму с read-only полями
   if (isModerator) {
     return (
       <div className="userform-overlay-container" onClick={onClose}>
@@ -468,28 +468,112 @@ const UserForm: React.FC<UserFormProps> = ({
 
           <form onSubmit={handleSubmit} className="userform-main-container">
             <div className="userform-content-area">
+              {/* Информация о датах создания и обновления */}
+              {isEditing && (
+                <div className="userform-section-block userform-info-section">
+                  <div className="userform-info-grid">
+                    <div className="userform-info-item">
+                      <span className="userform-info-label">Создан:</span>
+                      <span className="userform-info-value">
+                        {formatDateTime(initialData.created_at || "")}
+                      </span>
+                    </div>
+                    <div className="userform-info-item">
+                      <span className="userform-info-label">
+                        Последнее обновление:
+                      </span>
+                      <span className="userform-info-value">
+                        {formatDateTime(initialData.updated_at || "")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Основная информация - READ ONLY */}
               <div className="userform-section-block">
                 <h3 className="userform-section-header">
                   Информация о пользователе
                 </h3>
+
                 <div className="userform-field-group">
                   <label className="userform-input-label">
                     <span className="userform-label-content">Полное имя:</span>
                   </label>
-                  <div style={{ padding: "0.5rem", color: "#6b7280" }}>
+                  <div className="userform-readonly-value">
                     {initialData.full_name}
                   </div>
                 </div>
+
                 <div className="userform-field-group">
                   <label className="userform-input-label">
                     <span className="userform-label-content">Логин:</span>
                   </label>
-                  <div style={{ padding: "0.5rem", color: "#6b7280" }}>
+                  <div className="userform-readonly-value">
                     {initialData.username}
+                  </div>
+                </div>
+
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">Роль:</span>
+                  </label>
+                  <div className="userform-readonly-value">
+                    {initialData.role === "admin"
+                      ? "Администратор"
+                      : initialData.role === "moderator"
+                      ? "Модератор"
+                      : "Пользователь"}
                   </div>
                 </div>
               </div>
 
+              {/* Контактная информация - READ ONLY */}
+              <div className="userform-section-block">
+                <h3 className="userform-section-header">
+                  Контактная информация
+                </h3>
+
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">Email:</span>
+                  </label>
+                  <div className="userform-readonly-value">
+                    {initialData.email || "Не указан"}
+                  </div>
+                </div>
+
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">Телефон:</span>
+                  </label>
+                  <div className="userform-readonly-value">
+                    {initialData.phone || "Не указан"}
+                  </div>
+                </div>
+
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">
+                      Дополнительный email:
+                    </span>
+                  </label>
+                  <div className="userform-readonly-value">
+                    {initialData.additional_email || "Не указан"}
+                  </div>
+                </div>
+
+                <div className="userform-field-group">
+                  <label className="userform-input-label">
+                    <span className="userform-label-content">Комментарий:</span>
+                  </label>
+                  <div className="userform-readonly-value">
+                    {initialData.comment || "Нет комментария"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Доступные организации - EDITABLE */}
               <div className="userform-section-block">
                 <h3 className="userform-section-header">
                   Доступные организации
@@ -761,6 +845,28 @@ const UserForm: React.FC<UserFormProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="userform-main-container">
           <div className="userform-content-area">
+            {/* Информация о датах создания и обновления */}
+            {isEditing && (
+              <div className="userform-section-block userform-info-section">
+                <div className="userform-info-grid">
+                  <div className="userform-info-item">
+                    <span className="userform-info-label">Создан:</span>
+                    <span className="userform-info-value">
+                      {formatDateTime(initialData.created_at || "")}
+                    </span>
+                  </div>
+                  <div className="userform-info-item">
+                    <span className="userform-info-label">
+                      Последнее обновление:
+                    </span>
+                    <span className="userform-info-value">
+                      {formatDateTime(initialData.updated_at || "")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Основная информация */}
             <div className="userform-section-block">
               <h3 className="userform-section-header">Основная информация</h3>
@@ -959,7 +1065,7 @@ const UserForm: React.FC<UserFormProps> = ({
                   <span className="userform-label-content">
                     {isEditing ? "Новый пароль (опционально)" : "Пароль"}
                   </span>
-                  {!isEditing && (
+                  {!isEditing && !requirePasswordChange && (
                     <span className="userform-required-asterisk">*</span>
                   )}
                 </label>
@@ -982,11 +1088,12 @@ const UserForm: React.FC<UserFormProps> = ({
                     placeholder={
                       isEditing
                         ? "Оставьте пустым, если не хотите менять пароль"
+                        : requirePasswordChange
+                        ? "Оставьте пустым, если требуется смена пароля"
                         : "Введите пароль для пользователя"
                     }
                     disabled={loading || isModerator}
                     className="userform-text-input"
-                    required={!isEditing}
                   />
                   <button
                     type="button"
@@ -1032,7 +1139,9 @@ const UserForm: React.FC<UserFormProps> = ({
                 <span className="userform-field-hint-text">
                   {isEditing
                     ? "Если установите новый пароль и включите 'Потребовать смену пароля', пользователь должен будет войти с этим паролем и сразу установить свой собственный"
-                    : "Минимум 6 символов. Если оставите пустым и включите 'Потребовать смену пароля', пользователь сможет войти без пароля"}
+                    : requirePasswordChange
+                    ? "Пароль опционален. Если оставите пустым, пользователь сможет войти без пароля и установить его самостоятельно"
+                    : "Минимум 6 символов"}
                 </span>
               </div>
 
@@ -1064,7 +1173,7 @@ const UserForm: React.FC<UserFormProps> = ({
                     <span className="userform-checkbox-hint-text">
                       {isEditing
                         ? "При следующем входе пользователь должен будет установить новый пароль. Если оставите поле пароля пустым, пользователь сможет войти без пароля и установить его самостоятельно."
-                        : "При первом входе пользователь должен будет установить пароль"}
+                        : "При первом входе пользователь должен будет установить пароль. Если поле пароля пустое, пользователь сможет войти без пароля."}
                     </span>
                   </div>
                 </label>

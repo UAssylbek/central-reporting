@@ -21,10 +21,6 @@ const handleApiResponse = async (response: Response) => {
     const data = await response.json().catch(() => ({}));
 
     if (data.force_logout) {
-      alert(
-        data.reason ||
-          "Ваша сессия была завершена администратором. Войдите заново."
-      );
       await logout();
       throw new Error("Session invalidated");
     }
