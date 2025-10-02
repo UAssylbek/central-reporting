@@ -273,7 +273,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		setParts = append(setParts, fmt.Sprintf("role = $%d", argIndex))
 		args = append(args, updates.Role)
 		argIndex++
-		shouldInvalidateToken = true // РОЛЬ ИЗМЕНЕНА - инвалидируем токен!
+		shouldInvalidateToken = true
 		log.Printf("Role changed for user %d, invalidating token", id)
 	}
 

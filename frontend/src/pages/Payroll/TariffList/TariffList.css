@@ -1,0 +1,377 @@
+/* src/pages/Payroll/TariffList/TariffList.css */
+
+.tariff-list-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* Header */
+.tariff-list-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 12px 20px;
+}
+
+.tariff-list-title-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tariff-list-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.tariff-list-navigate-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #f0f0f0;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  color: #0066cc;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tariff-list-navigate-btn:hover {
+  background-color: #e5e5e5;
+  border-color: #0066cc;
+}
+
+/* Toolbar */
+.tariff-list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 20px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tariff-list-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tariff-list-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tariff-list-btn-primary {
+  padding: 6px 16px;
+  background-color: #0066cc;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tariff-list-btn-primary:hover {
+  background-color: #0052a3;
+}
+
+.tariff-list-btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tariff-list-btn-secondary:hover {
+  background-color: #f5f5f5;
+  border-color: #b0b0b0;
+}
+
+.tariff-list-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tariff-list-btn-icon:hover {
+  background-color: #f5f5f5;
+  border-color: #0066cc;
+}
+
+.tariff-list-btn-help {
+  width: 28px;
+  height: 28px;
+  background-color: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 50%;
+  color: #0066cc;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tariff-list-btn-help:hover {
+  background-color: #0066cc;
+  color: white;
+}
+
+.tariff-list-search {
+  padding: 6px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 13px;
+  min-width: 200px;
+}
+
+.tariff-list-search:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+/* Help Panel */
+.tariff-list-help-panel {
+  position: relative;
+  background-color: #fffbea;
+  border: 1px solid #ffd966;
+  padding: 16px 20px;
+  margin: 0 20px 12px 20px;
+  border-radius: 4px;
+}
+
+.tariff-list-help-content h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.tariff-list-help-content p {
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #555;
+}
+
+.tariff-list-help-content ul {
+  margin: 8px 0 8px 20px;
+  font-size: 13px;
+  color: #555;
+}
+
+.tariff-list-help-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tariff-list-help-close:hover {
+  color: #333;
+}
+
+/* Main Content */
+.tariff-list-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tariff-list-report-area {
+  flex: 1;
+  background-color: white;
+  margin: 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  overflow: auto;
+  transition: margin-right 0.3s;
+}
+
+.tariff-list-report-area.with-settings {
+  margin-right: 0;
+}
+
+.tariff-list-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+}
+
+.tariff-list-placeholder p {
+  color: #999;
+  font-size: 14px;
+  text-align: center;
+  max-width: 400px;
+}
+
+.tariff-list-report-result {
+  padding: 20px;
+}
+
+/* Settings Panel */
+.tariff-list-settings-panel {
+  width: 340px;
+  background-color: white;
+  border-left: 1px solid #d0d0d0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tariff-list-settings-content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.tariff-list-form-group {
+  margin-bottom: 16px;
+}
+
+.tariff-list-form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.tariff-list-input-group {
+  display: flex;
+  gap: 4px;
+}
+
+.tariff-list-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.tariff-list-input:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+.tariff-list-calendar-btn,
+.tariff-list-select-btn,
+.tariff-list-clear-btn {
+  width: 32px;
+  padding: 6px;
+  background-color: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tariff-list-calendar-btn:hover,
+.tariff-list-select-btn:hover,
+.tariff-list-clear-btn:hover {
+  background-color: #f5f5f5;
+  border-color: #0066cc;
+}
+
+.tariff-list-select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tariff-list-select:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+/* Actions */
+.tariff-list-actions {
+  margin-top: 20px;
+}
+
+.tariff-list-btn-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background-color: white;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tariff-list-btn-action:hover {
+  background-color: #f5f5f5;
+  border-color: #0066cc;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .tariff-list-settings-panel {
+    width: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .tariff-list-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tariff-list-toolbar-left,
+  .tariff-list-toolbar-right {
+    justify-content: center;
+  }
+
+  .tariff-list-content {
+    flex-direction: column;
+  }
+
+  .tariff-list-settings-panel {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid #d0d0d0;
+    max-height: 400px;
+  }
+}

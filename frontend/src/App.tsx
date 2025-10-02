@@ -21,6 +21,10 @@ import Nomenclature from "./pages/Nomenclature/Nomenclature";
 import BankCash from "./pages/BankCash/BankCash";
 import Administration from "./pages/Administration/Administration";
 
+// Страницы тарификационных списков
+import ConsolidatedTariff from "./pages/Payroll/ConsolidatedTariff/ConsolidatedTariff";
+import TariffList from "./pages/Payroll/TariffList/TariffList";
+
 import "./App.css";
 
 function App() {
@@ -29,6 +33,7 @@ function App() {
       validateToken();
     }
   }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -50,6 +55,13 @@ function App() {
             <Route path="/payroll" element={<Payroll />} />
             <Route path="/nomenclature" element={<Nomenclature />} />
             <Route path="/bank-cash" element={<BankCash />} />
+
+            {/* Тарификационные списки */}
+            <Route
+              path="/payroll/consolidated-tariff"
+              element={<ConsolidatedTariff />}
+            />
+            <Route path="/payroll/tariff-list" element={<TariffList />} />
 
             {/* ТОЛЬКО для администраторов */}
             <Route element={<RequireAdmin />}>
