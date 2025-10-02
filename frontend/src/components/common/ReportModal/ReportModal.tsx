@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import "./ReportModal.css";
 import {
   Organization,
@@ -19,6 +20,7 @@ interface SearchModalProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   placeholder: string;
+  colorScheme?: string; // ДОБАВИТЬ
 }
 
 const SearchModal: React.FC<SearchModalProps> = ({
@@ -30,8 +32,11 @@ const SearchModal: React.FC<SearchModalProps> = ({
   searchTerm,
   onSearchChange,
   placeholder,
+  colorScheme = "blue",
 }) => {
   const [filteredOptions, setFilteredOptions] = useState<SearchOption[]>([]);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
@@ -45,44 +50,49 @@ const SearchModal: React.FC<SearchModalProps> = ({
     }
   }, [searchTerm, options]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      setTimeout(() => setIsAnimating(true), 10);
+    } else {
+      setIsAnimating(false);
+      const timer = setTimeout(() => setShouldRender(false), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!shouldRender) return null;
 
   return (
-    <div className="rm-search-modal-overlay" onClick={onClose}>
+    <div
+      className={`rm-search-modal-overlay rm-theme-${colorScheme} ${
+        isAnimating ? "rm-search-open" : ""
+      }`}
+      onClick={onClose}
+    >
       <div
-        className="rm-search-modal-content"
+        className={`rm-search-modal-content ${
+          isAnimating ? "rm-search-open" : ""
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="rm-search-modal-header">
-          <h3>{title}</h3>
-          <div className="rm-search-modal-actions">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rm-btn rm-btn-secondary"
-            >
-              Назад
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rm-btn rm-btn-primary"
-              disabled
-            >
-              Выбрать
-            </button>
-          </div>
+        <div className="rm-modal-header">
+          <h2>{title}</h2>
+          <button className="rm-modal-close" onClick={onClose} type="button">
+            ×
+          </button>
         </div>
 
-        <div className="rm-search-modal-body">
-          <div className="rm-search-input-section">
-            <label>Наименование</label>
+        <div className="rm-modal-body">
+          <div className="rm-form-group">
+            <label htmlFor="search-input">Наименование</label>
             <input
+              id="search-input"
               type="text"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={placeholder}
-              className="rm-search-input"
+              autoFocus
             />
           </div>
 
@@ -94,7 +104,6 @@ const SearchModal: React.FC<SearchModalProps> = ({
                   className="rm-search-option"
                   onClick={() => {
                     onSelect(option);
-                    onClose();
                   }}
                 >
                   <div className="rm-search-option-name">{option.name}</div>
@@ -110,6 +119,19 @@ const SearchModal: React.FC<SearchModalProps> = ({
                 Ничего не найдено по запросу "{searchTerm}"
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="rm-modal-actions">
+          <div className="rm-actions-left"></div>
+          <div className="rm-actions-right">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rm-btn rm-btn-secondary"
+            >
+              Закрыть
+            </button>
           </div>
         </div>
       </div>
@@ -522,6 +544,14 @@ const ReportModal: React.FC<ReportModalProps> = ({
       case "search":
         if (!field.searchConfig) return null;
 
+        // Получаем отфильтрованные опции для показа подсказок
+        const currentSearchTerm = value || "";
+        const filteredSuggestions = (searchData[field.name]?.options || [])
+          .filter((option) =>
+            option.name.toLowerCase().includes(currentSearchTerm.toLowerCase())
+          )
+          .slice(0, 5); // Показываем только первые 5 результатов
+
         return (
           <div className="rm-form-group" key={field.name}>
             <label htmlFor={field.name}>{field.label}:</label>
@@ -531,7 +561,30 @@ const ReportModal: React.FC<ReportModalProps> = ({
                   id={field.name}
                   type="text"
                   value={value || ""}
-                  onChange={(e) => updateFormData(field.name, e.target.value)}
+                  onChange={async (e) => {
+                    const inputValue = e.target.value;
+                    updateFormData(field.name, inputValue);
+
+                    // Автоматически загружаем опции при первом вводе БЕЗ открытия модалки
+                    if (
+                      !searchData[field.name] &&
+                      inputValue.length > 0 &&
+                      field.searchConfig
+                    ) {
+                      try {
+                        const options = await field.searchConfig.loadOptions();
+                        setSearchData((prev) => ({
+                          ...prev,
+                          [field.name]: {
+                            options: Array.isArray(options) ? options : [],
+                            searchTerm: "",
+                          },
+                        }));
+                      } catch (error) {
+                        console.error("Ошибка загрузки опций поиска:", error);
+                      }
+                    }
+                  }}
                   placeholder={field.searchConfig.searchPlaceholder}
                   required={field.required}
                   className="rm-search-text-input"
@@ -544,6 +597,29 @@ const ReportModal: React.FC<ReportModalProps> = ({
                   ▼
                 </button>
               </div>
+
+              {/* Показываем подсказки при вводе */}
+              {currentSearchTerm.length > 0 &&
+                filteredSuggestions.length > 0 && (
+                  <div className="rm-search-suggestions">
+                    {filteredSuggestions.map((option) => (
+                      <div
+                        key={option.id}
+                        className="rm-search-suggestion-item"
+                        onClick={() => handleSearchSelect(field.name, option)}
+                      >
+                        <div className="rm-search-option-name">
+                          {option.name}
+                        </div>
+                        {option.description && (
+                          <div className="rm-search-option-description">
+                            {option.description}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
 
               {(!value || value.trim() === "") && (
                 <div className="rm-search-helper">
@@ -560,22 +636,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
                 </div>
               )}
             </div>
-
-            <SearchModal
-              isOpen={searchModals[field.name] || false}
-              onClose={() => closeSearchModal(field.name)}
-              onSelect={(option) => handleSearchSelect(field.name, option)}
-              title={field.searchConfig.modalTitle}
-              options={searchData[field.name]?.options || []}
-              searchTerm={searchData[field.name]?.searchTerm || ""}
-              onSearchChange={(value) =>
-                handleSearchTermChange(field.name, value)
-              }
-              placeholder={field.searchConfig.searchPlaceholder}
-            />
           </div>
         );
-
       case "select":
         return (
           <div className="rm-form-group" key={field.name}>
@@ -708,12 +770,13 @@ const ReportModal: React.FC<ReportModalProps> = ({
               onChange={(e) => {
                 const newReportId = e.target.value;
                 updateFormData("selectedReportId", newReportId);
-                const clearedFormData = {
-                  selectedOrganizations: formData.selectedOrganizations,
-                  emails: formData.emails,
-                  selectedReportId: newReportId,
-                };
-                setFormData(clearedFormData);
+
+                config.steps
+                  .flatMap((step) => step.fields)
+                  .forEach((field) => {
+                    updateFormData(field.name, undefined);
+                  });
+
                 if (onReportChange) {
                   onReportChange(newReportId);
                 }
@@ -1056,6 +1119,28 @@ const ReportModal: React.FC<ReportModalProps> = ({
         {showSuccessNotification && <SuccessNotification />}
         {showCloseConfirmation && <CloseConfirmation />}
       </div>
+      {/* ВЫНЕСТИ ВСЕ SearchModal СЮДА ЧЕРЕЗ ПОРТАЛ */}
+      {config.steps
+        .flatMap((step) => step.fields)
+        .filter((field) => field.type === "search" && field.searchConfig)
+        .map((field) =>
+          createPortal(
+            <SearchModal
+              key={field.name}
+              isOpen={searchModals[field.name] || false}
+              onClose={() => closeSearchModal(field.name)}
+              onSelect={(option) => handleSearchSelect(field.name, option)}
+              title={field.searchConfig!.modalTitle}
+              options={searchData[field.name]?.options || []}
+              searchTerm={searchData[field.name]?.searchTerm || ""}
+              onSearchChange={(value) =>
+                handleSearchTermChange(field.name, value)
+              }
+              placeholder={field.searchConfig!.searchPlaceholder}
+            />,
+            document.body
+          )
+        )}
     </div>
   );
 };
