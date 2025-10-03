@@ -3,15 +3,33 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./TariffList.css";
 
+interface Element {
+  id: number;
+  type: string;
+  label: string;
+  selected: boolean;
+}
+
 const TariffList: React.FC = () => {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
+  const [activeTab, setActiveTab] = useState<"data" | "settings">("data");
   const [month, setMonth] = useState("");
   const [organization, setOrganization] = useState("");
   const [reportVariant, setReportVariant] = useState("Общий");
   const [searchQuery, setSearchQuery] = useState("");
   const [reportGenerated, setReportGenerated] = useState(false);
+
+  // Настройки отчета
+  const [settingsTab, setSettingsTab] = useState<"formatting" | "selection">(
+    "formatting"
+  );
+  const [fontSize, setFontSize] = useState("");
+  const [fontSizeValue, setFontSizeValue] = useState(0);
+  const [selectedElements, setSelectedElements] = useState<Element[]>([
+    { id: 1, type: "Представление", label: "Отбор", selected: true },
+  ]);
 
   const handleGenerateReport = () => {
     setReportGenerated(true);
@@ -24,6 +42,24 @@ const TariffList: React.FC = () => {
     "Педагогический персонал",
     "Хозяйственный персонал",
   ];
+
+  const addNewElement = () => {
+    const newElement: Element = {
+      id: selectedElements.length + 1,
+      type: "Представление",
+      label: `Новый элемент ${selectedElements.length + 1}`,
+      selected: false,
+    };
+    setSelectedElements([...selectedElements, newElement]);
+  };
+
+  const toggleElement = (id: number) => {
+    setSelectedElements(
+      selectedElements.map((el) =>
+        el.id === id ? { ...el, selected: !el.selected } : el
+      )
+    );
+  };
 
   return (
     <div className="tariff-list-page">
@@ -211,7 +247,8 @@ const TariffList: React.FC = () => {
         >
           {!reportGenerated ? (
             <div className="tariff-list-placeholder">
-              <p>
+              <div className="tariff-list-placeholder-icon">📋</div>
+              <p className="tariff-list-placeholder-text">
                 Требуется получение данных. Нажмите "Обновить данные" для
                 получения отчета.
               </p>
@@ -226,68 +263,189 @@ const TariffList: React.FC = () => {
         {/* Settings Panel */}
         {showSettings && (
           <div className="tariff-list-settings-panel">
-            <div className="tariff-list-settings-content">
-              <div className="tariff-list-form-group">
-                <label>Месяц начисления:</label>
-                <div className="tariff-list-input-group">
-                  <input
-                    type="text"
-                    value={month}
-                    onChange={(e) => setMonth(e.target.value)}
-                    className="tariff-list-input"
-                    placeholder="Выберите месяц"
-                  />
-                  <button className="tariff-list-calendar-btn">📅</button>
-                  <button className="tariff-list-clear-btn">↻</button>
+            <div className="tariff-list-tabs">
+              <button
+                className={`tariff-list-tab ${
+                  activeTab === "data" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("data")}
+              >
+                Данные
+              </button>
+              <button
+                className={`tariff-list-tab ${
+                  activeTab === "settings" ? "active" : ""
+                }`}
+                onClick={() => setActiveTab("settings")}
+              >
+                Настройки отчета
+              </button>
+            </div>
+
+            <div className="tariff-list-tab-content">
+              {activeTab === "data" && (
+                <div className="tariff-list-settings-content">
+                  <div className="tariff-list-form-group">
+                    <label>Месяц начисления:</label>
+                    <div className="tariff-list-input-group">
+                      <input
+                        type="text"
+                        value={month}
+                        onChange={(e) => setMonth(e.target.value)}
+                        className="tariff-list-input"
+                        placeholder="Выберите месяц"
+                      />
+                      <button className="tariff-list-calendar-btn">📅</button>
+                      <button className="tariff-list-clear-btn">↻</button>
+                    </div>
+                  </div>
+
+                  <div className="tariff-list-form-group">
+                    <label>Организация:</label>
+                    <div className="tariff-list-input-group">
+                      <input
+                        type="text"
+                        value={organization}
+                        onChange={(e) => setOrganization(e.target.value)}
+                        className="tariff-list-input"
+                        placeholder="Выберите организацию"
+                      />
+                      <button className="tariff-list-select-btn">...</button>
+                      <button className="tariff-list-clear-btn">↻</button>
+                    </div>
+                  </div>
+
+                  <div className="tariff-list-form-group">
+                    <label>Вариант отчета:</label>
+                    <select
+                      value={reportVariant}
+                      onChange={(e) => setReportVariant(e.target.value)}
+                      className="tariff-list-select"
+                    >
+                      {reportVariants.map((variant) => (
+                        <option key={variant} value={variant}>
+                          {variant}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="tariff-list-actions">
+                    <button className="tariff-list-btn-action">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Обновить данные
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="tariff-list-form-group">
-                <label>Организация:</label>
-                <div className="tariff-list-input-group">
-                  <input
-                    type="text"
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    className="tariff-list-input"
-                    placeholder="Выберите организацию"
-                  />
-                  <button className="tariff-list-select-btn">...</button>
-                  <button className="tariff-list-clear-btn">↻</button>
+              {activeTab === "settings" && (
+                <div className="tariff-list-settings-content">
+                  <div className="tariff-list-settings-tabs">
+                    <button
+                      className={`tariff-list-settings-tab-btn ${
+                        settingsTab === "formatting" ? "active" : ""
+                      }`}
+                      onClick={() => setSettingsTab("formatting")}
+                    >
+                      Оформление
+                    </button>
+                    <button
+                      className={`tariff-list-settings-tab-btn ${
+                        settingsTab === "selection" ? "active" : ""
+                      }`}
+                      onClick={() => setSettingsTab("selection")}
+                    >
+                      Отборы
+                    </button>
+                  </div>
+
+                  {settingsTab === "formatting" && (
+                    <div className="tariff-list-formatting-content">
+                      <div className="tariff-list-form-group">
+                        <label>Шрифт:</label>
+                        <div className="tariff-list-font-input-group">
+                          <select
+                            value={fontSize}
+                            onChange={(e) => setFontSize(e.target.value)}
+                            className="tariff-list-font-select"
+                          >
+                            <option value="">Выберите шрифт</option>
+                            <option value="Arial">Arial</option>
+                            <option value="Times New Roman">
+                              Times New Roman
+                            </option>
+                            <option value="Calibri">Calibri</option>
+                          </select>
+                          <div className="tariff-list-font-size-group">
+                            <label className="tariff-list-font-size-label">
+                              Размер:
+                            </label>
+                            <input
+                              type="number"
+                              value={fontSizeValue}
+                              onChange={(e) =>
+                                setFontSizeValue(Number(e.target.value))
+                              }
+                              className="tariff-list-font-size-input"
+                              min="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {settingsTab === "selection" && (
+                    <div className="tariff-list-selection-content">
+                      <button
+                        onClick={addNewElement}
+                        className="tariff-list-add-element-btn"
+                      >
+                        ➕ Добавить новый элемент
+                      </button>
+
+                      <div className="tariff-list-elements-list">
+                        <div className="tariff-list-elements-header">
+                          <span className="tariff-list-elements-header-text">
+                            Представление
+                          </span>
+                          <button className="tariff-list-more-options-btn">
+                            Еще ▼
+                          </button>
+                        </div>
+
+                        {selectedElements.map((element) => (
+                          <div
+                            key={element.id}
+                            className={`tariff-list-element-row ${
+                              element.selected ? "selected" : ""
+                            }`}
+                            onClick={() => toggleElement(element.id)}
+                          >
+                            <div className="tariff-list-element-icon">
+                              {element.selected ? "✓" : "□"}
+                            </div>
+                            <span className="tariff-list-element-label">
+                              {element.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="tariff-list-form-group">
-                <label>Вариант отчета:</label>
-                <select
-                  value={reportVariant}
-                  onChange={(e) => setReportVariant(e.target.value)}
-                  className="tariff-list-select"
-                >
-                  {reportVariants.map((variant) => (
-                    <option key={variant} value={variant}>
-                      {variant}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="tariff-list-actions">
-                <button className="tariff-list-btn-action">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Обновить данные
-                </button>
-              </div>
+              )}
             </div>
           </div>
         )}

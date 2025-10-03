@@ -3,6 +3,13 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./ConsolidatedTariff.css";
 
+interface Element {
+  id: number;
+  type: string;
+  label: string;
+  selected: boolean;
+}
+
 const ConsolidatedTariff: React.FC = () => {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(true);
@@ -15,6 +22,16 @@ const ConsolidatedTariff: React.FC = () => {
   const [detailedInfo, setDetailedInfo] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [reportGenerated, setReportGenerated] = useState(false);
+
+  // Настройки отчета
+  const [settingsTab, setSettingsTab] = useState<"formatting" | "selection">(
+    "formatting"
+  );
+  const [fontSize, setFontSize] = useState("");
+  const [fontSizeValue, setFontSizeValue] = useState(0);
+  const [selectedElements, setSelectedElements] = useState<Element[]>([
+    { id: 1, type: "Представление", label: "Отбор", selected: true },
+  ]);
 
   const handleGenerateReport = () => {
     setReportGenerated(true);
@@ -30,6 +47,24 @@ const ConsolidatedTariff: React.FC = () => {
     "Педагогический персонал",
     "Хозяйственный персонал",
   ];
+
+  const addNewElement = () => {
+    const newElement: Element = {
+      id: selectedElements.length + 1,
+      type: "Представление",
+      label: `Новый элемент ${selectedElements.length + 1}`,
+      selected: false,
+    };
+    setSelectedElements([...selectedElements, newElement]);
+  };
+
+  const toggleElement = (id: number) => {
+    setSelectedElements(
+      selectedElements.map((el) =>
+        el.id === id ? { ...el, selected: !el.selected } : el
+      )
+    );
+  };
 
   return (
     <div className="consolidated-tariff-page">
@@ -227,7 +262,8 @@ const ConsolidatedTariff: React.FC = () => {
         >
           {!reportGenerated ? (
             <div className="consolidated-tariff-placeholder">
-              <p>
+              <div className="consolidated-tariff-placeholder-icon">📊</div>
+              <p className="consolidated-tariff-placeholder-text">
                 Отчет не сформирован. Нажмите "Сформировать" для получения
                 отчета.
               </p>
@@ -379,9 +415,99 @@ const ConsolidatedTariff: React.FC = () => {
 
             {activeTab === "settings" && (
               <div className="consolidated-tariff-tab-content">
-                <p className="consolidated-tariff-settings-empty">
-                  Дополнительные настройки отчета
-                </p>
+                <div className="consolidated-tariff-settings-tabs">
+                  <button
+                    className={`consolidated-tariff-settings-tab-btn ${
+                      settingsTab === "formatting" ? "active" : ""
+                    }`}
+                    onClick={() => setSettingsTab("formatting")}
+                  >
+                    Оформление
+                  </button>
+                  <button
+                    className={`consolidated-tariff-settings-tab-btn ${
+                      settingsTab === "selection" ? "active" : ""
+                    }`}
+                    onClick={() => setSettingsTab("selection")}
+                  >
+                    Отборы
+                  </button>
+                </div>
+
+                {settingsTab === "formatting" && (
+                  <div className="consolidated-tariff-settings-content">
+                    <div className="consolidated-tariff-form-group">
+                      <label>Шрифт:</label>
+                      <div className="consolidated-tariff-font-input-group">
+                        <select
+                          value={fontSize}
+                          onChange={(e) => setFontSize(e.target.value)}
+                          className="consolidated-tariff-font-select"
+                        >
+                          <option value="">Выберите шрифт</option>
+                          <option value="Arial">Arial</option>
+                          <option value="Times New Roman">
+                            Times New Roman
+                          </option>
+                          <option value="Calibri">Calibri</option>
+                        </select>
+                        <div className="consolidated-tariff-font-size-group">
+                          <label className="consolidated-tariff-font-size-label">
+                            Размер:
+                          </label>
+                          <input
+                            type="number"
+                            value={fontSizeValue}
+                            onChange={(e) =>
+                              setFontSizeValue(Number(e.target.value))
+                            }
+                            className="consolidated-tariff-font-size-input"
+                            min="0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === "selection" && (
+                  <div className="consolidated-tariff-settings-content">
+                    <button
+                      onClick={addNewElement}
+                      className="consolidated-tariff-add-element-btn"
+                    >
+                      ➕ Добавить новый элемент
+                    </button>
+
+                    <div className="consolidated-tariff-elements-list">
+                      <div className="consolidated-tariff-elements-header">
+                        <span className="consolidated-tariff-elements-header-text">
+                          Представление
+                        </span>
+                        <button className="consolidated-tariff-more-options-btn">
+                          Еще ▼
+                        </button>
+                      </div>
+
+                      {selectedElements.map((element) => (
+                        <div
+                          key={element.id}
+                          className={`consolidated-tariff-element-row ${
+                            element.selected ? "selected" : ""
+                          }`}
+                          onClick={() => toggleElement(element.id)}
+                        >
+                          <div className="consolidated-tariff-element-icon">
+                            {element.selected ? "✓" : "□"}
+                          </div>
+                          <span className="consolidated-tariff-element-label">
+                            {element.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
