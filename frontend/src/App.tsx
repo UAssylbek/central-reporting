@@ -1,85 +1,11 @@
-// src/App.tsx
-import React, { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
-import RequireAdmin from "./components/RequireAdmin/RequireAdmin";
-import RequireModerator from "./components/RequireModerator/RequireModerator";
-import RequireAdminOrModerator from "./components/RequireAdminOrModerator/RequireAdminOrModerator";
-import Layout from "./components/Layout/Layout";
-import Login from "./pages/Login/Login";
-import Dashboard from "./pages/Dashboard/Dashboard";
-import Home from "./pages/Home/Home";
-import Welcome from "./pages/Welcome/Welcome";
-import Users from "./pages/Users/Users";
-import { isAuthenticated, validateToken } from "./utils/auth";
-
-// Новые страницы-заглушки
-import Centralization from "./pages/Centralization/Centralization";
-import LongTermAssets from "./pages/LongTermAssets/LongTermAssets";
-import Payroll from "./pages/Payroll/Payroll";
-import Nomenclature from "./pages/Nomenclature/Nomenclature";
-import BankCash from "./pages/BankCash/BankCash";
-import Administration from "./pages/Administration/Administration";
-
-// Страницы тарификационных списков
-import ConsolidatedTariff from "./pages/Payroll/ConsolidatedTariff/ConsolidatedTariff";
-import TariffList from "./pages/Payroll/TariffList/TariffList";
-
-import "./App.css";
+// frontend/src/App.tsx
+import { BrowserRouter } from "react-router-dom";
+import { AppRouter } from "./app/router/AppRouter";
 
 function App() {
-  useEffect(() => {
-    if (isAuthenticated()) {
-      validateToken();
-    }
-  }, []);
-
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Welcome />} />
-        <Route path="/login" element={<Login />} />
-
-        <Route element={<ProtectedRoute />}>
-          <Route
-            element={
-              <Layout>
-                <Outlet />
-              </Layout>
-            }
-          >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/centralization" element={<Centralization />} />
-            <Route path="/long-term-assets" element={<LongTermAssets />} />
-            <Route path="/payroll" element={<Payroll />} />
-            <Route path="/nomenclature" element={<Nomenclature />} />
-            <Route path="/bank-cash" element={<BankCash />} />
-
-            {/* Тарификационные списки */}
-            <Route
-              path="/payroll/consolidated-tariff"
-              element={<ConsolidatedTariff />}
-            />
-            <Route path="/payroll/tariff-list" element={<TariffList />} />
-
-            {/* ТОЛЬКО для администраторов */}
-            <Route element={<RequireAdmin />}>
-              <Route path="/administration" element={<Administration />} />
-            </Route>
-
-            {/* ТОЛЬКО для модераторов */}
-            <Route element={<RequireModerator />}>
-              {/* Пока пусто, потом добавите эксклюзивные маршруты модератора */}
-            </Route>
-
-            {/* Для ОБОИХ (админ И модератор) */}
-            <Route element={<RequireAdminOrModerator />}>
-              <Route path="/users" element={<Users />} />
-            </Route>
-          </Route>
-        </Route>
-      </Routes>
+      <AppRouter />
     </BrowserRouter>
   );
 }
