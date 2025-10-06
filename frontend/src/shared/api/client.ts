@@ -1,7 +1,20 @@
 // frontend/src/shared/api/client.ts
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+// frontend/src/shared/api/client.ts
+const getApiUrl = () => {
+  // Если есть ENV переменная - используем её
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Иначе используем текущий хост с портом 8080
+  const host = window.location.hostname;
+  return `http://${host}:8080/api`;
+};
+
+const API_BASE_URL = getApiUrl();
+//                                                      ^^^^
+// Убираем localhost:8080, оставляем только /api
 
 /**
  * Базовый API клиент с автоматической обработкой токенов
@@ -11,6 +24,7 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
+    console.log("🔍 ApiClient initialized with baseUrl:", this.baseUrl); // ← И эту
   }
 
   /**

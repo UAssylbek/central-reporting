@@ -35,8 +35,21 @@ func main() {
 
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "http://localhost:3000")
-		c.Header("Access-Control-Allow-Credentials", "true")
+		origin := c.Request.Header.Get("Origin")
+
+		// Список разрешённых доменов
+		allowedOrigins := map[string]bool{
+			"http://localhost:3000":       true, // Локальная разработка
+			"http://192.168.110.129:3000": true, // Ваш IP в сети
+			"https://your-production.com": true, // Продакшен домен
+			// Добавьте другие нужные домены
+		}
+
+		if allowedOrigins[origin] {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+		}
+
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
 		c.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
 
