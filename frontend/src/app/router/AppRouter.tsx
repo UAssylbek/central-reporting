@@ -15,6 +15,14 @@ import { DashboardPage } from "../../pages/DashboardPage/DashboardPage";
 import { UsersPage } from "../../pages/UsersPage/UsersPage";
 import { NotFoundPage } from "../../pages/NotFoundPage/NotFoundPage";
 
+// Новые страницы-заглушки
+import { CentralizationPage } from "../../pages/CentralizationPage/CentralizationPage";
+import { LongTermAssetsPage } from "../../pages/LongTermAssetsPage/LongTermAssetsPage";
+import { PayrollPage } from "../../pages/PayrollPage/PayrollPage";
+import { NomenclaturePage } from "../../pages/NomenclaturePage/NomenclaturePage";
+import { BankCashPage } from "../../pages/BankCashPage/BankCashPage";
+import { AdministrationPage } from "../../pages/AdministrationPage/AdministrationPage";
+
 export function AppRouter() {
   return (
     <Routes>
@@ -30,9 +38,21 @@ export function AppRouter() {
           <Route path="/home" element={<HomePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
 
+          {/* Новые страницы-заглушки (доступны всем авторизованным) */}
+          <Route path="/centralization" element={<CentralizationPage />} />
+          <Route path="/long-term-assets" element={<LongTermAssetsPage />} />
+          <Route path="/payroll" element={<PayrollPage />} />
+          <Route path="/nomenclature" element={<NomenclaturePage />} />
+          <Route path="/bank-cash" element={<BankCashPage />} />
+
           {/* Управление пользователями - для admin и moderator */}
           <Route element={<RoleGuard allowedRoles={["admin", "moderator"]} />}>
             <Route path="/users" element={<UsersPage />} />
+          </Route>
+
+          {/* Администрирование - только для admin */}
+          <Route element={<RoleGuard allowedRoles={["admin"]} />}>
+            <Route path="/administration" element={<AdministrationPage />} />
           </Route>
         </Route>
       </Route>
