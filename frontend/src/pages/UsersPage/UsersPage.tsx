@@ -36,8 +36,12 @@ export function UsersPage() {
       setLoading(true);
       const data = await usersApi.getUsers();
       setUsers(data);
-    } catch (err: any) {
-      showError(err.message || "Не удалось загрузить пользователей");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Не удалось загрузить пользователей";
+      showError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -65,8 +69,10 @@ export function UsersPage() {
       await usersApi.deleteUser(deletingUser.id);
       success(`Пользователь "${deletingUser.full_name}" успешно удалён`);
       await loadUsers();
-    } catch (err: any) {
-      showError(err.message || "Не удалось удалить пользователя");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Не удалось удалить пользователя";
+      showError(errorMessage);
     } finally {
       setIsDeleting(false);
       setDeletingUser(null);
@@ -116,7 +122,9 @@ export function UsersPage() {
             Управление пользователями
           </h1>
           <p className="mt-2 text-gray-600 dark:text-zinc-400">
-            {isAdmin ? "Полный доступ к управлению пользователями" : "Ограниченный доступ"}
+            {isAdmin
+              ? "Полный доступ к управлению пользователями"
+              : "Ограниченный доступ"}
           </p>
         </div>
         {isAdmin && (
@@ -158,8 +166,12 @@ export function UsersPage() {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-zinc-400">Всего пользователей</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{users.length}</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">
+                Всего пользователей
+              </p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                {users.length}
+              </p>
             </div>
             <span className="text-3xl">👥</span>
           </div>
@@ -178,7 +190,9 @@ export function UsersPage() {
         <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-zinc-400">Администраторы</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">
+                Администраторы
+              </p>
               <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                 {users.filter((u) => u.role === "admin").length}
               </p>
@@ -246,17 +260,25 @@ export function UsersPage() {
                       </div>
                     </td>
                     <td className="px-4 py-4">{getRoleBadge(user.role)}</td>
-                    <td className="px-4 py-4">{getStatusBadge(user.is_online)}</td>
+                    <td className="px-4 py-4">
+                      {getStatusBadge(user.is_online)}
+                    </td>
                     <td className="px-4 py-4">
                       <div className="text-sm">
                         {user.email && (
-                          <div className="text-gray-900 dark:text-white">{user.email}</div>
+                          <div className="text-gray-900 dark:text-white">
+                            {user.email}
+                          </div>
                         )}
                         {user.phone && (
-                          <div className="text-gray-500 dark:text-zinc-400">{user.phone}</div>
+                          <div className="text-gray-500 dark:text-zinc-400">
+                            {user.phone}
+                          </div>
                         )}
                         {!user.email && !user.phone && (
-                          <span className="text-gray-400 dark:text-zinc-500">Не указаны</span>
+                          <span className="text-gray-400 dark:text-zinc-500">
+                            Не указаны
+                          </span>
                         )}
                       </div>
                     </td>

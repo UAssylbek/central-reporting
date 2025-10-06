@@ -5,7 +5,7 @@ import type { ReportType } from "../types/reports";
 
 export interface UseReportFormReturn {
   formData: ReportFormData;
-  updateField: (field: string, value: any) => void;
+  updateField: (field: string, value: unknown) => void;
   updateFields: (fields: Partial<ReportFormData>) => void;
   resetForm: (reportType: ReportType) => void;
   isValid: boolean;
@@ -20,13 +20,15 @@ const getInitialFormData = (reportType: ReportType): ReportFormData => ({
   recipients: [],
 });
 
-export function useReportForm(initialReportType: ReportType): UseReportFormReturn {
+export function useReportForm(
+  initialReportType: ReportType
+): UseReportFormReturn {
   const [formData, setFormData] = useState<ReportFormData>(
     getInitialFormData(initialReportType)
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const updateField = useCallback((field: string, value: any) => {
+  const updateField = useCallback((field: string, value: unknown) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,

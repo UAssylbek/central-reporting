@@ -10,14 +10,15 @@ import type { ReportType } from "../../shared/types/reports";
 export function HomePage() {
   const { toasts, hideToast, success, error: showError } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
+  const [selectedReportType, setSelectedReportType] =
+    useState<ReportType | null>(null);
 
   const handleReportClick = (reportId: ReportType, title: string) => {
     const config = getReportConfig(reportId);
-    
+
     if (!config) {
       showError(`Конфигурация для отчёта "${title}" ещё не реализована`);
       return;
@@ -32,25 +33,28 @@ export function HomePage() {
     setSelectedReportType(null);
   };
 
-  const handleReportSubmit = async (formData: any) => {
+  const handleReportSubmit = async (formData: Record<string, unknown>) => {
     // TODO: Вызов API для генерации отчёта
     console.log("Report data:", formData);
-    
+
     // Имитация API вызова
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     success("Запрос на формирование отчёта создан!");
   };
 
   // Получаем конфиг выбранного отчёта
-  const selectedConfig = selectedReportType ? getReportConfig(selectedReportType) : null;
+  const selectedConfig = selectedReportType
+    ? getReportConfig(selectedReportType)
+    : null;
 
   // Фильтрация отчётов
   const filteredReports = REPORTS_LIST.filter(
     (report) =>
       report.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (report.category?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      (report.category?.toLowerCase().includes(searchQuery.toLowerCase()) ??
+        false)
   );
 
   // Группировка по категориям
@@ -112,7 +116,9 @@ export function HomePage() {
                 {categoryReports.map((report) => (
                   <button
                     key={report.id}
-                    onClick={() => handleReportClick(report.id as ReportType, report.title)}
+                    onClick={() =>
+                      handleReportClick(report.id as ReportType, report.title)
+                    }
                     className="group p-6 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all text-left"
                   >
                     <div className="flex items-start gap-4">

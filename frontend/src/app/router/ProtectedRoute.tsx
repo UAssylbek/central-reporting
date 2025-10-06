@@ -29,6 +29,7 @@ export function ProtectedRoute() {
       await authApi.me();
       setIsAuthenticated(true);
     } catch (error) {
+      console.error("Auth validation error:", error);
       // Токен невалиден - очищаем и редиректим
       localStorage.removeItem("token");
       localStorage.removeItem("user");

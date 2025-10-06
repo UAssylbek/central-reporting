@@ -1,10 +1,16 @@
 // frontend/src/features/reports/steps/ConfirmationStep.tsx
 import type { ReportModalConfig } from "../../../shared/types/reportConfig";
 
+interface ReportFormData {
+  [key: string]: unknown;
+  emailNotification?: boolean;
+  recipients?: string[];
+}
+
 export interface ConfirmationStepProps {
   reportTitle: string;
   config: ReportModalConfig;
-  formData: any;
+  formData: ReportFormData;
   organizationCount: number;
 }
 
@@ -36,7 +42,8 @@ export function ConfirmationStep({
               Подтверждение создания запроса
             </h3>
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              Ввод параметров завершен. Нажмите "Создать запрос" для завершения работы помощника.
+              Ввод параметров завершен. Нажмите "Создать запрос" для завершения
+              работы помощника.
             </p>
           </div>
         </div>
@@ -59,21 +66,29 @@ export function ConfirmationStep({
             </span>
           </div>
 
-          {config.steps.flatMap((step) => step.fields).map((field) => {
-            const value = formData[field.name];
-            if (!value) return null;
+          {config.steps
+            .flatMap((step) => step.fields)
+            .map((field) => {
+              const value = formData[field.name];
+              if (!value) return null;
 
-            return (
-              <div key={field.name} className="flex items-start gap-2">
-                <span className="font-medium text-gray-700 dark:text-zinc-300 min-w-[180px]">
-                  {field.label}:
-                </span>
-                <span className="text-gray-900 dark:text-white">
-                  {typeof value === 'boolean' ? (value ? 'Да' : 'Нет') : value}
-                </span>
-              </div>
-            );
-          })}
+              return (
+                <div key={field.name} className="flex items-start gap-2">
+                  <span className="font-medium text-gray-700 dark:text-zinc-300 min-w-[180px]">
+                    {field.label}:
+                  </span>
+                  <span className="text-gray-900 dark:text-white">
+                    {typeof value === "boolean"
+                      ? value
+                        ? "Да"
+                        : "Нет"
+                      : typeof value === "string" || typeof value === "number"
+                      ? value
+                      : JSON.stringify(value)}
+                  </span>
+                </div>
+              );
+            })}
 
           {formData.emailNotification && (
             <div className="flex items-start gap-2">

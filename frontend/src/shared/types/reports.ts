@@ -57,7 +57,7 @@ export interface BaseReportParams {
  */
 export interface GenerateReportRequest {
   reportType: ReportType;
-  params: BaseReportParams & Record<string, any>;
+  params: BaseReportParams & Record<string, unknown>;
 }
 
 /**

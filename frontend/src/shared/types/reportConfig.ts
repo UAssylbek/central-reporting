@@ -35,8 +35,11 @@ export interface ReportFieldConfig {
   placeholder?: string;
   description?: string;
   options?: string[] | FieldOption[];
-  validation?: (value: any, formData?: any) => boolean | string;
-  defaultValue?: any;
+  validation?: (
+    value: unknown,
+    formData?: Record<string, unknown>
+  ) => boolean | string;
+  defaultValue?: unknown;
 }
 
 /**
@@ -69,5 +72,5 @@ export interface ReportFormData {
   organizationIds: number[];
   emailNotification: boolean;
   recipients: string[];
-  [key: string]: any; // Дополнительные поля из steps
+  [key: string]: unknown; // Дополнительные поля из steps
 }

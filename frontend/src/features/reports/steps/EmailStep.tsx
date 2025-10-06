@@ -5,7 +5,10 @@ import { Input } from "../../../shared/ui/Input/Input";
 export interface EmailStepProps {
   emailNotification: boolean;
   recipients: string[];
-  onChange: (field: "emailNotification" | "recipients", value: any) => void;
+  onChange: (
+    field: "emailNotification" | "recipients",
+    value: boolean | string[]
+  ) => void;
 }
 
 export function EmailStep({

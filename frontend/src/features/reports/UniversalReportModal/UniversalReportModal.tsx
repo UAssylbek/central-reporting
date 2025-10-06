@@ -13,13 +13,27 @@ import type { ReportModalConfig } from "../../../shared/types/reportConfig";
 import { REPORTS_LIST } from "../../../shared/config/reportsList";
 
 // Временные компоненты для отсутствующих шагов
-function ReportSelectionStep({ selectedReport }: { selectedReport: ReportType; onChange: (type: ReportType) => void }) {
+function ReportSelectionStep({
+  selectedReport,
+}: {
+  selectedReport: ReportType;
+  onChange: (type: ReportType) => void;
+}) {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Выбор отчёта</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        Выбор отчёта
+      </h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {REPORTS_LIST.map((report) => (
-          <div key={report.id} className={`p-4 border rounded-lg ${selectedReport === report.id ? 'border-blue-500' : 'border-gray-200'}`}>
+          <div
+            key={report.id}
+            className={`p-4 border rounded-lg ${
+              selectedReport === report.id
+                ? "border-blue-500"
+                : "border-gray-200"
+            }`}
+          >
             <span className="text-2xl">{report.icon}</span>
             <h4 className="font-semibold mt-2">{report.title}</h4>
             <p className="text-sm text-gray-600 mt-1">{report.description}</p>
@@ -30,16 +44,23 @@ function ReportSelectionStep({ selectedReport }: { selectedReport: ReportType; o
   );
 }
 
-function ConfirmationStep({ reportTitle, config, formData, organizationCount }: { 
-  reportTitle: string; 
-  config: ReportModalConfig; 
-  formData: any; 
-  organizationCount: number 
+function ConfirmationStep({
+  reportTitle,
+  config,
+  formData,
+  organizationCount,
+}: {
+  reportTitle: string;
+  config: ReportModalConfig;
+  formData: Record<string, unknown>;
+  organizationCount: number;
 }) {
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Подтверждение</h3>
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+          Подтверждение
+        </h3>
         <p className="text-sm text-blue-800 dark:text-blue-200">
           Проверьте параметры запроса перед отправкой
         </p>
@@ -53,27 +74,42 @@ function ConfirmationStep({ reportTitle, config, formData, organizationCount }: 
           <span className="font-medium min-w-[180px]">Организаций:</span>
           <span>{organizationCount}</span>
         </div>
-        {config.steps.flatMap(s => s.fields).map(field => (
-          formData[field.name] && (
-            <div key={field.name} className="flex gap-2">
-              <span className="font-medium min-w-[180px]">{field.label}:</span>
-              <span>{formData[field.name]}</span>
-            </div>
-          )
-        ))}
+        {config.steps
+          .flatMap((s) => s.fields)
+          .map((field) => {
+            const value = formData[field.name];
+            if (!value) return null;
+
+            return (
+              <div key={field.name} className="flex gap-2">
+                <span className="font-medium min-w-[180px]">
+                  {field.label}:
+                </span>
+                <span>
+                  {typeof value === "boolean"
+                    ? value
+                      ? "Да"
+                      : "Нет"
+                    : typeof value === "string" || typeof value === "number"
+                    ? value
+                    : JSON.stringify(value)}
+                </span>
+              </div>
+            );
+          })}
       </div>
     </div>
   );
 }
 
 export interface UniversalReportModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  reportType: ReportType;
-  config: ReportModalConfig;
-  onSubmit?: (formData: any) => Promise<void>;
-  startStep?: number;
-  allowReportChange?: boolean;
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly reportType: ReportType;
+  readonly config: ReportModalConfig;
+  readonly onSubmit?: (formData: Record<string, unknown>) => Promise<void>;
+  readonly startStep?: number;
+  readonly allowReportChange?: boolean;
 }
 
 export function UniversalReportModal({
@@ -86,25 +122,25 @@ export function UniversalReportModal({
   allowReportChange = false,
 }: UniversalReportModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Локальное состояние для динамической смены отчёта
   const [currentReportType, setCurrentReportType] = useState(initialReportType);
   const [currentConfig, setCurrentConfig] = useState(initialConfig);
 
   // 5 СТРАНИЦ: Выбор отчета + Организации + Параметры + Email + Подтверждение
   const totalSteps = 1 + 1 + currentConfig.steps.length + 1 + 1;
-  
-  const { 
-    currentStep, 
-    isFirstStep, 
-    isLastStep, 
-    nextStep, 
-    prevStep, 
+
+  const {
+    currentStep,
+    isFirstStep,
+    isLastStep,
+    nextStep,
+    prevStep,
     resetSteps,
-    goToStep 
+    goToStep,
   } = useModalSteps(totalSteps);
 
-  const { formData, updateField, updateFields, resetForm, errors, setErrors } =
+  const { formData, updateField, resetForm, errors, setErrors } =
     useReportForm(currentReportType);
 
   // Названия шагов для навигации
@@ -113,7 +149,7 @@ export function UniversalReportModal({
     "Организации",
     ...currentConfig.steps.map((s) => s.title),
     "Email уведомления",
-    "Подтверждение"
+    "Подтверждение",
   ];
 
   // Индексы шагов для удобства
@@ -136,7 +172,16 @@ export function UniversalReportModal({
         goToStep(startStep);
       }
     }
-  }, [isOpen, initialReportType, initialConfig, resetForm, resetSteps, startStep, goToStep, totalSteps]);
+  }, [
+    isOpen,
+    initialReportType,
+    initialConfig,
+    resetForm,
+    resetSteps,
+    startStep,
+    goToStep,
+    totalSteps,
+  ]);
 
   // Обработчик смены отчёта на первой странице
   const handleReportChange = (newReportType: ReportType) => {
@@ -172,13 +217,15 @@ export function UniversalReportModal({
     if (currentStep >= STEP_PARAMS_START && currentStep <= STEP_PARAMS_END) {
       const stepIndex = currentStep - STEP_PARAMS_START;
       const stepConfig = currentConfig.steps[stepIndex]; // ✅ ИСПРАВЛЕНО: было config.steps
-      
+
       stepConfig.fields.forEach((field) => {
         const value = formData[field.name];
 
         // Проверка обязательных полей
         if (field.required && !value) {
-          newErrors[field.name] = `Поле "${field.label}" обязательно для заполнения`;
+          newErrors[
+            field.name
+          ] = `Поле "${field.label}" обязательно для заполнения`;
         }
 
         // Кастомная валидация
@@ -234,8 +281,10 @@ export function UniversalReportModal({
 
       // Успешно - закрываем модалку
       onClose();
-    } catch (error: any) {
-      setErrors({ submit: error.message || "Ошибка при создании запроса" });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Ошибка при создании запроса";
+      setErrors({ submit: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -247,7 +296,7 @@ export function UniversalReportModal({
       return (
         <ReportSelectionStep
           selectedReport={currentReportType}
-          onChange={allowReportChange ? handleReportChange : (_type: ReportType) => {}}
+          onChange={allowReportChange ? handleReportChange : () => {}}
         />
       );
     }
@@ -315,9 +364,6 @@ export function UniversalReportModal({
         <StepNavigation
           steps={stepLabels}
           currentStep={currentStep}
-          onStepClick={(step) => {
-            // Можно добавить логику перехода между шагами
-          }}
           allowJump={false}
         />
 
@@ -348,11 +394,7 @@ export function UniversalReportModal({
           </div>
 
           <div className="flex gap-3">
-            <Button
-              variant="ghost"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
+            <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
               Отмена
             </Button>
 

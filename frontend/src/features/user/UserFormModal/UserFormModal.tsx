@@ -5,7 +5,11 @@ import { Modal } from "../../../shared/ui/Modal/Modal";
 import { Button } from "../../../shared/ui/Button/Button";
 import { Input } from "../../../shared/ui/Input/Input";
 import type { User } from "../../../shared/api/auth.api";
-import type { CreateUserRequest, UpdateUserRequest, Organization } from "../../../shared/api/users.api";
+import type {
+  CreateUserRequest,
+  UpdateUserRequest,
+  Organization,
+} from "../../../shared/api/users.api";
 import { usersApi } from "../../../shared/api/users.api";
 import { authApi } from "../../../shared/api/auth.api";
 
@@ -16,7 +20,12 @@ export interface UserFormModalProps {
   user?: User | null;
 }
 
-export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModalProps) {
+export function UserFormModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  user,
+}: UserFormModalProps) {
   const currentUser = authApi.getCurrentUser();
   const isEditing = !!user;
   const isModerator = currentUser?.role === "moderator";
@@ -34,11 +43,13 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
     show_in_selection: true,
   });
 
-  const [availableOrganizations, setAvailableOrganizations] = useState<number[]>([]);
+  const [availableOrganizations, setAvailableOrganizations] = useState<
+    number[]
+  >([]);
   const [accessibleUsers, setAccessibleUsers] = useState<number[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showOrganizationsModal, setShowOrganizationsModal] = useState(false);
   const [showUsersModal, setShowUsersModal] = useState(false);
@@ -132,7 +143,7 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
           updateData.role = formData.role;
           updateData.available_organizations = availableOrganizations;
           updateData.accessible_users = accessibleUsers;
-          
+
           if (formData.password) {
             updateData.password = formData.password;
           }
@@ -161,8 +172,10 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
       onSuccess();
       onClose();
       resetForm();
-    } catch (err: any) {
-      setError(err.message || "Произошла ошибка");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Произошла ошибка";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -170,20 +183,28 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
 
   const toggleOrganization = (orgId: number) => {
     setAvailableOrganizations((prev) =>
-      prev.includes(orgId) ? prev.filter((id) => id !== orgId) : [...prev, orgId]
+      prev.includes(orgId)
+        ? prev.filter((id) => id !== orgId)
+        : [...prev, orgId]
     );
   };
 
   const toggleUser = (userId: number) => {
     setAccessibleUsers((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
     );
   };
 
   // Moderator view - limited fields
   if (isModerator && isEditing) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Редактировать пользователя">
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Редактировать пользователя"
+      >
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm">
@@ -197,20 +218,28 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                 Полное имя
               </label>
-              <div className="text-gray-900 dark:text-white font-medium">{user?.full_name}</div>
+              <div className="text-gray-900 dark:text-white font-medium">
+                {user?.full_name}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                 Логин
               </label>
-              <div className="text-gray-900 dark:text-white font-medium">{user?.username}</div>
+              <div className="text-gray-900 dark:text-white font-medium">
+                {user?.username}
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300 mb-1">
                 Роль
               </label>
               <div className="text-gray-900 dark:text-white font-medium">
-                {user?.role === "admin" ? "Администратор" : user?.role === "moderator" ? "Модератор" : "Пользователь"}
+                {user?.role === "admin"
+                  ? "Администратор"
+                  : user?.role === "moderator"
+                  ? "Модератор"
+                  : "Пользователь"}
               </div>
             </div>
           </div>
@@ -220,14 +249,18 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
             label="Email"
             type="email"
             value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, email: e.target.value })
+            }
           />
 
           <Input
             label="Телефон"
             type="tel"
             value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, phone: e.target.value })
+            }
           />
 
           <div className="space-y-3">
@@ -235,7 +268,12 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               <input
                 type="checkbox"
                 checked={formData.require_password_change}
-                onChange={(e) => setFormData({ ...formData, require_password_change: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    require_password_change: e.target.checked,
+                  })
+                }
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-zinc-300">
@@ -247,7 +285,12 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               <input
                 type="checkbox"
                 checked={formData.disable_password_change}
-                onChange={(e) => setFormData({ ...formData, disable_password_change: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    disable_password_change: e.target.checked,
+                  })
+                }
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-zinc-300">
@@ -257,7 +300,12 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
           </div>
 
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-zinc-700">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={isLoading}
+            >
               Отмена
             </Button>
             <Button type="submit" disabled={isLoading}>
@@ -272,7 +320,13 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
   // Full admin form
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? "Редактировать пользователя" : "Создать пользователя"}>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={
+          isEditing ? "Редактировать пользователя" : "Создать пользователя"
+        }
+      >
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm">
@@ -290,7 +344,9 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               label="Полное имя"
               required
               value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, full_name: e.target.value })
+              }
               placeholder="Иванов Иван Иванович"
             />
 
@@ -298,7 +354,9 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               label="Логин"
               required
               value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
               placeholder="ivanov"
             />
 
@@ -308,8 +366,14 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
                 type={showPassword ? "text" : "password"}
                 required={!isEditing}
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder={isEditing ? "Оставьте пустым, чтобы не менять" : "Введите пароль"}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                placeholder={
+                  isEditing
+                    ? "Оставьте пустым, чтобы не менять"
+                    : "Введите пароль"
+                }
               />
               <button
                 type="button"
@@ -327,7 +391,12 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               <select
                 required
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    role: e.target.value as "admin" | "moderator" | "user",
+                  })
+                }
                 className="w-full px-4 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
               >
                 <option value="user">Пользователь</option>
@@ -347,7 +416,9 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               label="Email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               placeholder="ivanov@example.com"
             />
 
@@ -355,7 +426,9 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               label="Телефон"
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
               placeholder="+7 (700) 123-45-67"
             />
           </div>
@@ -402,7 +475,12 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               <input
                 type="checkbox"
                 checked={formData.require_password_change}
-                onChange={(e) => setFormData({ ...formData, require_password_change: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    require_password_change: e.target.checked,
+                  })
+                }
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-zinc-300">
@@ -414,7 +492,12 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               <input
                 type="checkbox"
                 checked={formData.disable_password_change}
-                onChange={(e) => setFormData({ ...formData, disable_password_change: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    disable_password_change: e.target.checked,
+                  })
+                }
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-zinc-300">
@@ -426,7 +509,12 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
               <input
                 type="checkbox"
                 checked={formData.show_in_selection}
-                onChange={(e) => setFormData({ ...formData, show_in_selection: e.target.checked })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    show_in_selection: e.target.checked,
+                  })
+                }
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-zinc-300">
@@ -436,11 +524,20 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
           </div>
 
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-zinc-700">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={isLoading}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              disabled={isLoading}
+            >
               Отмена
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Сохранение..." : isEditing ? "Сохранить" : "Создать"}
+              {isLoading
+                ? "Сохранение..."
+                : isEditing
+                ? "Сохранить"
+                : "Создать"}
             </Button>
           </div>
         </form>
@@ -464,7 +561,9 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
                 onChange={() => toggleOrganization(org.id)}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-900 dark:text-white">{org.name}</span>
+              <span className="text-sm text-gray-900 dark:text-white">
+                {org.name}
+              </span>
             </label>
           ))}
           {organizations.length === 0 && (
@@ -477,7 +576,9 @@ export function UserFormModal({ isOpen, onClose, onSuccess, user }: UserFormModa
           <span className="text-sm text-gray-600 dark:text-zinc-400">
             Выбрано: {availableOrganizations.length} из {organizations.length}
           </span>
-          <Button onClick={() => setShowOrganizationsModal(false)}>Готово</Button>
+          <Button onClick={() => setShowOrganizationsModal(false)}>
+            Готово
+          </Button>
         </div>
       </Modal>
 

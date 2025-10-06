@@ -16,6 +16,7 @@ export function MainLayout() {
       await authApi.logout();
       navigate("/login");
     } catch (error) {
+      console.error("Logout error:", error);
       // В случае ошибки всё равно редиректим на login
       navigate("/login");
     }

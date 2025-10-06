@@ -27,8 +27,10 @@ export function OrganizationStep({
       setLoading(true);
       const data = await usersApi.getOrganizations();
       setOrganizations(data);
-    } catch (err: any) {
-      setError(err.message || "Не удалось загрузить организации");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Не удалось загрузить организации";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

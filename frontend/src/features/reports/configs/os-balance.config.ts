@@ -24,9 +24,12 @@ export const osBalanceConfig: ReportModalConfig = {
           label: "Конец периода",
           type: "date",
           required: true,
-          validation: (value: string, formData: any) => {
-            if (!value || !formData.startPeriod) return true;
-            return new Date(value) >= new Date(formData.startPeriod);
+          validation: (value: unknown, formData?: Record<string, unknown>) => {
+            if (typeof value !== "string" || !formData?.startPeriod)
+              return true;
+            const startPeriod = formData.startPeriod;
+            if (typeof startPeriod !== "string") return true;
+            return new Date(value) >= new Date(startPeriod);
           },
         },
       ],
