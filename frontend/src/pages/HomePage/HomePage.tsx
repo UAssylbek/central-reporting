@@ -119,7 +119,7 @@ export function HomePage() {
                     onClick={() =>
                       handleReportClick(report.id as ReportType, report.title)
                     }
-                    className="group p-6 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all text-left"
+                    className="group p-6 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg hover:shadow-lg hover:border-blue-500 dark:hover:border-blue-400 transition-all text-left cursor-pointer"
                   >
                     <div className="flex items-start gap-4">
                       <span className="text-3xl">{report.icon}</span>

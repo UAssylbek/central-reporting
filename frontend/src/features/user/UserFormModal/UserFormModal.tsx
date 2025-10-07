@@ -370,7 +370,7 @@ export function UserFormModal({
                 type="button"
                 variant="secondary"
                 onClick={() => setShowOrganizationsModal(true)}
-                className="w-full justify-between"
+                className="w-full justify-between cursor-pointer"
               >
                 <span>
                   {loadingOrganizations
@@ -398,12 +398,13 @@ export function UserFormModal({
               <Button
                 type="button"
                 variant="secondary"
+                className="cursor-pointer"
                 onClick={onClose}
                 disabled={isLoading}
               >
                 Отмена
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} className="cursor-pointer">
                 {isLoading ? "Сохранение..." : "Сохранить"}
               </Button>
             </div>
@@ -490,7 +491,7 @@ export function UserFormModal({
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 cursor-pointer"
               >
                 {showPassword ? (
                   <svg
@@ -595,7 +596,7 @@ export function UserFormModal({
                 type="button"
                 variant="secondary"
                 onClick={() => setShowOrganizationsModal(true)}
-                className="w-full justify-between"
+                className="w-full justify-between cursor-pointer"
               >
                 <span>
                   {loadingOrganizations
@@ -637,7 +638,7 @@ export function UserFormModal({
                   type="button"
                   variant="secondary"
                   onClick={() => setShowUsersModal(true)}
-                  className="w-full justify-between"
+                  className="w-full justify-between cursor-pointer"
                 >
                   <span>
                     {loadingUsers ? "Загрузка..." : getSelectedUsersText()}
@@ -680,7 +681,7 @@ export function UserFormModal({
                       require_password_change: e.target.checked,
                     })
                   }
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 />
                 <span className="text-sm text-gray-700 dark:text-zinc-300">
                   Требовать смену пароля при следующем входе
@@ -697,7 +698,7 @@ export function UserFormModal({
                       disable_password_change: e.target.checked,
                     })
                   }
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 />
                 <span className="text-sm text-gray-700 dark:text-zinc-300">
                   Запретить смену пароля пользователем
@@ -714,7 +715,7 @@ export function UserFormModal({
                       show_in_selection: e.target.checked,
                     })
                   }
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 />
                 <span className="text-sm text-gray-700 dark:text-zinc-300">
                   Показывать в выборе пользователей
@@ -728,12 +729,13 @@ export function UserFormModal({
             <Button
               type="button"
               variant="secondary"
+              className="cursor-pointer"
               onClick={onClose}
               disabled={isLoading}
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="cursor-pointer">
               {isLoading
                 ? "Сохранение..."
                 : isEditing

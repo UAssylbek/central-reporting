@@ -34,6 +34,7 @@ export function PayrollPage() {
               </p>
               <Button
                 size="sm"
+                className="cursor-pointer"
                 onClick={() => navigate("/payroll/consolidated-tariff")}
               >
                 Открыть →
@@ -56,6 +57,7 @@ export function PayrollPage() {
               </p>
               <Button
                 size="sm"
+                className="cursor-pointer"
                 onClick={() => navigate("/payroll/tariff-list")}
               >
                 Открыть →

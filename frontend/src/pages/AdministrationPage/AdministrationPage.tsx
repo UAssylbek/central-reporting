@@ -32,7 +32,11 @@ export function AdministrationPage() {
               <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4">
                 Создание, редактирование и управление правами пользователей
               </p>
-              <Button size="sm" onClick={() => navigate("/users")}>
+              <Button
+                size="sm"
+                onClick={() => navigate("/users")}
+                className="cursor-pointer"
+              >
                 Перейти →
               </Button>
             </div>

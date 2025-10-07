@@ -136,6 +136,7 @@ export function UserSelectModal({
             <Button
               variant="ghost"
               size="sm"
+              className="cursor-pointer"
               onClick={selectAll}
               disabled={filteredUsers.length === 0}
             >
@@ -144,6 +145,7 @@ export function UserSelectModal({
             <Button
               variant="ghost"
               size="sm"
+              className="cursor-pointer"
               onClick={deselectAll}
               disabled={filteredUsers.length === 0}
             >
@@ -183,7 +185,7 @@ export function UserSelectModal({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleUser(user.id)}
-                    className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                    className="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -215,10 +217,10 @@ export function UserSelectModal({
 
         {/* Actions */}
         <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-zinc-700">
-          <Button variant="secondary" onClick={handleCancel}>
+          <Button variant="secondary" onClick={handleCancel} className="cursor-pointer">
             Отмена
           </Button>
-          <Button onClick={handleConfirm}>
+          <Button onClick={handleConfirm} className="cursor-pointer">
             Применить ({localSelectedIds.length})
           </Button>
         </div>

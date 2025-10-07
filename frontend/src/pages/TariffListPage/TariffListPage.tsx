@@ -96,6 +96,7 @@ export function TariffListPage() {
         <Button
           variant="ghost"
           size="sm"
+          className="cursor-pointer"
           onClick={() => setShowHelp(!showHelp)}
         >
           <svg
@@ -159,7 +160,7 @@ export function TariffListPage() {
               <div className="flex border-b border-gray-200 dark:border-zinc-700 mb-4">
                 <button
                   onClick={() => setActiveTab("data")}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                     activeTab === "data"
                       ? "border-orange-600 text-orange-600 dark:text-orange-400"
                       : "border-transparent text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white"
@@ -169,7 +170,7 @@ export function TariffListPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab("settings")}
-                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                     activeTab === "settings"
                       ? "border-orange-600 text-orange-600 dark:text-orange-400"
                       : "border-transparent text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-white"
@@ -199,7 +200,7 @@ export function TariffListPage() {
                     <select
                       value={organization}
                       onChange={(e) => setOrganization(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent cursor-pointer"
                     >
                       <option value="">Выберите организацию...</option>
                       {organizations.map((org) => (
@@ -218,7 +219,7 @@ export function TariffListPage() {
                     <select
                       value={reportVariant}
                       onChange={(e) => setReportVariant(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent cursor-pointer"
                     >
                       {reportVariants.map((variant) => (
                         <option key={variant} value={variant}>
@@ -237,7 +238,7 @@ export function TariffListPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSettingsTab("formatting")}
-                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
                         settingsTab === "formatting"
                           ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
                           : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400"
@@ -247,7 +248,7 @@ export function TariffListPage() {
                     </button>
                     <button
                       onClick={() => setSettingsTab("selection")}
-                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors cursor-pointer ${
                         settingsTab === "selection"
                           ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
                           : "bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-400"
@@ -286,7 +287,7 @@ export function TariffListPage() {
                         <span className="text-sm font-medium text-gray-700 dark:text-zinc-300">
                           Элементы отбора
                         </span>
-                        <Button size="sm" onClick={addNewElement}>
+                        <Button size="sm" onClick={addNewElement} className="cursor-pointer">
                           + Добавить
                         </Button>
                       </div>
@@ -318,7 +319,7 @@ export function TariffListPage() {
                             </div>
                             <button
                               onClick={() => deleteElement(element.id)}
-                              className="text-red-600 hover:text-red-700 dark:text-red-400 p-1"
+                              className="text-red-600 hover:text-red-700 dark:text-red-400 p-1 cursor-pointer"
                             >
                               <svg
                                 className="w-4 h-4"
@@ -346,6 +347,7 @@ export function TariffListPage() {
               <div className="pt-4 border-t border-gray-200 dark:border-zinc-700 mt-6">
                 <Button
                   fullWidth
+                  className="cursor-pointer"
                   onClick={handleGenerateReport}
                   disabled={!month || !organization}
                   variant="accent"
@@ -366,6 +368,7 @@ export function TariffListPage() {
                 <Button
                   variant="secondary"
                   size="sm"
+                  className="cursor-pointer"
                   onClick={() => setShowSettings(true)}
                 >
                   <svg
@@ -583,7 +586,7 @@ export function TariffListPage() {
 
                 {/* Actions */}
                 <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-zinc-700">
-                  <Button variant="secondary">
+                  <Button variant="secondary" className="cursor-pointer">
                     <svg
                       className="w-5 h-5 mr-2"
                       fill="none"
@@ -599,7 +602,7 @@ export function TariffListPage() {
                     </svg>
                     Печать
                   </Button>
-                  <Button variant="accent">
+                  <Button variant="accent" className="cursor-pointer">
                     <svg
                       className="w-5 h-5 mr-2"
                       fill="none"

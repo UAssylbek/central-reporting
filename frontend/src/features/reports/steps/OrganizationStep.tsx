@@ -69,7 +69,7 @@ export function OrganizationStep({
         <p className="text-red-800 dark:text-red-200">{error}</p>
         <button
           onClick={loadOrganizations}
-          className="mt-2 text-sm text-red-600 dark:text-red-400 hover:underline"
+          className="mt-2 text-sm text-red-600 dark:text-red-400 hover:underline cursor-pointer"
         >
           Попробовать снова
         </button>
@@ -92,14 +92,14 @@ export function OrganizationStep({
         <div className="flex gap-2">
           <button
             onClick={selectAll}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
           >
             Выбрать все
           </button>
           <span className="text-gray-400">|</span>
           <button
             onClick={deselectAll}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
           >
             Снять все
           </button>
@@ -148,7 +148,7 @@ export function OrganizationStep({
                 type="checkbox"
                 checked={selectedOrganizations.includes(org.id)}
                 onChange={() => toggleOrganization(org.id)}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-sm text-gray-900 dark:text-white flex-1">
                 {org.name}

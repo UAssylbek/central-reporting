@@ -1,5 +1,5 @@
 // frontend/src/pages/LoginPage/LoginPage.tsx
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../shared/ui/Button/Button";
 import { Input } from "../../shared/ui/Input/Input";
@@ -22,7 +22,6 @@ export function LoginPage() {
     e.preventDefault();
     setError("");
 
-    // ✅ ИСПРАВЛЕНИЕ: Проверяем только логин, пароль может быть пустым
     if (!formData.username.trim()) {
       setError("Введите логин");
       return;
@@ -64,15 +63,30 @@ export function LoginPage() {
     navigate("/home");
   };
 
+  useEffect(() => {
+    if (showPasswordModal) {
+      // Удаляем токен, чтобы при "Назад" нельзя было попасть в систему
+      localStorage.removeItem("token");
+
+      // Блокируем кнопку "Назад"
+      const handlePopState = () => {
+        window.history.pushState(null, "", window.location.href);
+      };
+      window.history.pushState(null, "", window.location.href);
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+      };
+    }
+  }, [showPasswordModal]);
+
   return (
     <>
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-4">
-              <span className="text-white text-3xl font-bold">Ц</span>
-            </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Вход в систему
             </h1>
@@ -115,7 +129,12 @@ export function LoginPage() {
                 helperText="Оставьте пустым, если пароль не установлен"
               />
 
-              <Button type="submit" fullWidth disabled={isLoading}>
+              <Button
+                type="submit"
+                fullWidth
+                disabled={isLoading}
+                className="cursor-pointer"
+              >
                 {isLoading ? "Вход..." : "Войти"}
               </Button>
             </form>

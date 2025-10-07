@@ -63,7 +63,7 @@ export function Modal({
             </h3>
             <button
               onClick={onClose}
-              className="p-1 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors"
+              className="p-1 rounded-lg text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
             >
               <svg
                 className="w-5 h-5"

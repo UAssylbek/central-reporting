@@ -16,10 +16,6 @@ export function WelcomePage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-6">
-            <span className="text-white text-4xl font-bold">Ц</span>
-          </div>
-
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Централизация отчётности
           </h1>
@@ -59,6 +55,7 @@ export function WelcomePage() {
         <div className="flex justify-center">
           <Button
             size="lg"
+            className="cursor-pointer"
             onClick={() => navigate("/login")}
             rightIcon={
               <svg

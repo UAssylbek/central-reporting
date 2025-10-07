@@ -28,7 +28,7 @@ export function ReportSelectionStep({
             key={report.id}
             onClick={() => onChange(report.id as ReportType)}
             className={`
-              p-4 rounded-lg border-2 text-left transition-all
+              p-4 rounded-lg border-2 text-left transition-all cursor-pointer
               ${
                 selectedReport === report.id
                   ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"

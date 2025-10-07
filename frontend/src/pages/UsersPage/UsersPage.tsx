@@ -128,7 +128,7 @@ export function UsersPage() {
           </p>
         </div>
         {isAdmin && (
-          <Button onClick={handleCreateUser}>
+          <Button onClick={handleCreateUser} className="cursor-pointer">
             <span className="mr-2">➕</span>
             Создать пользователя
           </Button>
@@ -286,7 +286,7 @@ export function UsersPage() {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEditUser(user)}
-                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
                           title="Редактировать"
                         >
                           ✏️
@@ -294,7 +294,7 @@ export function UsersPage() {
                         {isAdmin && user.id !== currentUser?.id && (
                           <button
                             onClick={() => handleDeleteClick(user)}
-                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
                             title="Удалить"
                           >
                             🗑️

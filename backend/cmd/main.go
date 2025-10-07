@@ -40,7 +40,7 @@ func main() {
 		// Список разрешённых доменов
 		allowedOrigins := map[string]bool{
 			"http://localhost:3000":       true, // Локальная разработка
-			"http://192.168.110.129:3000": true, // Ваш IP в сети
+			"http://192.168.110.36:3000": true, // Ваш IP в сети
 			"https://your-production.com": true, // Продакшен домен
 			// Добавьте другие нужные домены
 		}

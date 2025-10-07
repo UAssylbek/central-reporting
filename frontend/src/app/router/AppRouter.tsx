@@ -14,6 +14,7 @@ import { HomePage } from "../../pages/HomePage/HomePage";
 import { DashboardPage } from "../../pages/DashboardPage/DashboardPage";
 import { UsersPage } from "../../pages/UsersPage/UsersPage";
 import { NotFoundPage } from "../../pages/NotFoundPage/NotFoundPage";
+import { ProfilePage } from "../../pages/ProfilePage";
 
 // Новые страницы-заглушки
 import { CentralizationPage } from "../../pages/CentralizationPage/CentralizationPage";
@@ -48,6 +49,7 @@ export function AppRouter() {
           <Route path="/payroll" element={<PayrollPage />} />
           <Route path="/nomenclature" element={<NomenclaturePage />} />
           <Route path="/bank-cash" element={<BankCashPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
 
           {/* Специальные страницы отчётов */}
           <Route

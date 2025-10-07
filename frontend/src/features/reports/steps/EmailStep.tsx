@@ -78,7 +78,7 @@ export function EmailStep({
           type="checkbox"
           checked={emailNotification}
           onChange={(e) => onChange("emailNotification", e.target.checked)}
-          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
         />
         <div className="flex-1">
           <span className="text-sm font-medium text-gray-900 dark:text-white">
@@ -111,7 +111,7 @@ export function EmailStep({
               />
               <button
                 onClick={addEmail}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors whitespace-nowrap cursor-pointer"
               >
                 Добавить
               </button>
@@ -135,7 +135,7 @@ export function EmailStep({
                     </span>
                     <button
                       onClick={() => removeEmail(email)}
-                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                      className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors cursor-pointer"
                       title="Удалить"
                     >
                       <svg

@@ -28,7 +28,7 @@ function ReportSelectionStep({
         {REPORTS_LIST.map((report) => (
           <div
             key={report.id}
-            className={`p-4 border rounded-lg ${
+            className={`p-4 border rounded-lg cursor-pointer ${
               selectedReport === report.id
                 ? "border-blue-500"
                 : "border-gray-200"
@@ -216,7 +216,7 @@ export function UniversalReportModal({
     // Шаги параметров отчёта
     if (currentStep >= STEP_PARAMS_START && currentStep <= STEP_PARAMS_END) {
       const stepIndex = currentStep - STEP_PARAMS_START;
-      const stepConfig = currentConfig.steps[stepIndex]; // ✅ ИСПРАВЛЕНО: было config.steps
+      const stepConfig = currentConfig.steps[stepIndex];
 
       stepConfig.fields.forEach((field) => {
         const value = formData[field.name];
@@ -355,7 +355,7 @@ export function UniversalReportModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={currentConfig.title} // ✅ ИСПРАВЛЕНО: было config.title
+      title={currentConfig.title}
       size="xl"
       closeOnOverlayClick={false}
     >
@@ -385,6 +385,7 @@ export function UniversalReportModal({
             {!isFirstStep && (
               <Button
                 variant="secondary"
+                className="cursor-pointer"
                 onClick={prevStep}
                 disabled={isSubmitting}
               >
@@ -394,17 +395,18 @@ export function UniversalReportModal({
           </div>
 
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
+            <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="cursor-pointer">
               Отмена
             </Button>
 
             {!isLastStep ? (
-              <Button onClick={handleNext} disabled={isSubmitting}>
+              <Button onClick={handleNext} disabled={isSubmitting} className="cursor-pointer">
                 Далее →
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
+                className="cursor-pointer"
                 disabled={isSubmitting}
                 loading={isSubmitting}
               >
