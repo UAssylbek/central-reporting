@@ -22,8 +22,9 @@ export function LoginPage() {
     e.preventDefault();
     setError("");
 
-    if (!formData.username.trim() || !formData.password.trim()) {
-      setError("Заполните все поля");
+    // ✅ ИСПРАВЛЕНИЕ: Проверяем только логин, пароль может быть пустым
+    if (!formData.username.trim()) {
+      setError("Введите логин");
       return;
     }
 
@@ -101,16 +102,17 @@ export function LoginPage() {
                 autoComplete="username"
               />
 
+              {/* ✅ ИСПРАВЛЕНИЕ: Убрали required с пароля */}
               <Input
                 label="Пароль"
                 type="password"
-                required
                 value={formData.password}
                 onChange={(e) =>
                   setFormData({ ...formData, password: e.target.value })
                 }
-                placeholder="Введите пароль"
+                placeholder="Введите пароль (если есть)"
                 autoComplete="current-password"
+                helperText="Оставьте пустым, если пароль не установлен"
               />
 
               <Button type="submit" fullWidth disabled={isLoading}>
@@ -120,17 +122,20 @@ export function LoginPage() {
 
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-700 text-center">
               <p className="text-sm text-gray-600 dark:text-zinc-400">
-                Забыли пароль? Обратитесь к администратору
+                Забыли пароль?{" "}
+                <span className="text-gray-400 dark:text-zinc-500">
+                  Обратитесь к администратору
+                </span>
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Change Password Modal */}
+      {/* Password Change Modal */}
       <ChangePasswordModal
         isOpen={showPasswordModal}
-        onClose={() => {}} // Закрытие запрещено при первом входе
+        onClose={() => {}} // Запрещаем закрытие при первом входе
         onSuccess={handlePasswordChangeSuccess}
         isFirstLogin={true}
       />

@@ -80,11 +80,22 @@ export function ChangePasswordModal({
     setIsLoading(true);
 
     try {
-      await authApi.changePassword({
-        old_password: formData.old_password,
+      // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Отправляем old_password только если он заполнен
+      const requestData: {
+        old_password?: string;
+        new_password: string;
+        confirm_password: string;
+      } = {
         new_password: formData.new_password,
         confirm_password: formData.confirm_password,
-      });
+      };
+
+      // Отправляем old_password только если он не пустой
+      if (formData.old_password && formData.old_password.trim()) {
+        requestData.old_password = formData.old_password;
+      }
+
+      await authApi.changePassword(requestData);
 
       // Сброс формы
       setFormData({
@@ -272,6 +283,44 @@ export function ChangePasswordModal({
           </button>
         </div>
 
+        {/* Password strength indicator */}
+        {formData.new_password && (
+          <div className="space-y-2">
+            <div className="flex gap-1">
+              <div
+                className={`h-1 flex-1 rounded ${
+                  formData.new_password.length >= 6
+                    ? "bg-green-500"
+                    : "bg-gray-300 dark:bg-zinc-600"
+                }`}
+              />
+              <div
+                className={`h-1 flex-1 rounded ${
+                  formData.new_password.length >= 8
+                    ? "bg-green-500"
+                    : "bg-gray-300 dark:bg-zinc-600"
+                }`}
+              />
+              <div
+                className={`h-1 flex-1 rounded ${
+                  formData.new_password.length >= 12
+                    ? "bg-green-500"
+                    : "bg-gray-300 dark:bg-zinc-600"
+                }`}
+              />
+            </div>
+            <p className="text-xs text-gray-600 dark:text-zinc-400">
+              {formData.new_password.length < 6
+                ? "Слабый пароль"
+                : formData.new_password.length < 8
+                ? "Средний пароль"
+                : formData.new_password.length < 12
+                ? "Хороший пароль"
+                : "Отличный пароль"}
+            </p>
+          </div>
+        )}
+
         {/* Confirm password */}
         <div className="relative">
           <Input
@@ -326,44 +375,6 @@ export function ChangePasswordModal({
             )}
           </button>
         </div>
-
-        {/* Password strength indicator */}
-        {formData.new_password && (
-          <div className="space-y-2">
-            <div className="flex gap-1">
-              <div
-                className={`h-1 flex-1 rounded ${
-                  formData.new_password.length >= 6
-                    ? "bg-green-500"
-                    : "bg-gray-300 dark:bg-zinc-600"
-                }`}
-              />
-              <div
-                className={`h-1 flex-1 rounded ${
-                  formData.new_password.length >= 8
-                    ? "bg-green-500"
-                    : "bg-gray-300 dark:bg-zinc-600"
-                }`}
-              />
-              <div
-                className={`h-1 flex-1 rounded ${
-                  formData.new_password.length >= 12
-                    ? "bg-green-500"
-                    : "bg-gray-300 dark:bg-zinc-600"
-                }`}
-              />
-            </div>
-            <p className="text-xs text-gray-600 dark:text-zinc-400">
-              {formData.new_password.length < 6
-                ? "Слабый пароль"
-                : formData.new_password.length < 8
-                ? "Средний пароль"
-                : formData.new_password.length < 12
-                ? "Хороший пароль"
-                : "Отличный пароль"}
-            </p>
-          </div>
-        )}
 
         {/* Actions */}
         <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-zinc-700">

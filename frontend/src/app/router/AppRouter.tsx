@@ -23,6 +23,10 @@ import { NomenclaturePage } from "../../pages/NomenclaturePage/NomenclaturePage"
 import { BankCashPage } from "../../pages/BankCashPage/BankCashPage";
 import { AdministrationPage } from "../../pages/AdministrationPage/AdministrationPage";
 
+// Специальные страницы отчётов
+import { ConsolidatedTariffPage } from "../../pages/ConsolidatedTariffPage/ConsolidatedTariffPage";
+import { TariffListPage } from "../../pages/TariffListPage/TariffListPage";
+
 export function AppRouter() {
   return (
     <Routes>
@@ -44,6 +48,13 @@ export function AppRouter() {
           <Route path="/payroll" element={<PayrollPage />} />
           <Route path="/nomenclature" element={<NomenclaturePage />} />
           <Route path="/bank-cash" element={<BankCashPage />} />
+
+          {/* Специальные страницы отчётов */}
+          <Route
+            path="/payroll/consolidated-tariff"
+            element={<ConsolidatedTariffPage />}
+          />
+          <Route path="/payroll/tariff-list" element={<TariffListPage />} />
 
           {/* Управление пользователями - для admin и moderator */}
           <Route element={<RoleGuard allowedRoles={["admin", "moderator"]} />}>
