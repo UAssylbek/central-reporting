@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# Frontend — Централизованная отчетность
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Клиентская часть системы **Централизованная отчетность** разработана на **React + TypeScript** с использованием **Vite** и **TailwindCSS**.
+Приложение реализует защищённую маршрутизацию, контроль ролей пользователей и модульную структуру компонентов.
 
-Currently, two official plugins are available:
+## Основные технологии
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** — основа интерфейса
+- **TypeScript** — строгая типизация
+- **Vite 7** — сборка и разработка
+- **TailwindCSS 4** — стилизация без использования CSS-файлов
+- **React Router DOM 7** — маршрутизация и защита роутов
+- **ESLint** — проверка качества кода
+- **Без Prettier** — форматирование частично выполняется ESLint
 
-## React Compiler
+## Архитектура
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Приложение использует:
 
-## Expanding the ESLint configuration
+- **ProtectedRoute** — защита маршрутов для авторизованных пользователей
+- **RoleGuard** — проверка доступа по ролям (Admin, Moderator, User)
+- **Модульную структуру** — компоненты, страницы и вспомогательные модули разделены логически
+- **API-клиент** — централизованный модуль для запросов с автоматической обработкой JWT-токенов
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Конфигурация окружения
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Сервер API по умолчанию проксируется через Vite на `http://localhost:8080`
+- Локальный сервер запускается на `http://localhost:3000`
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Скрипты
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev      # Запуск проекта в режиме разработки
+npm run build    # Сборка в продакшен
+npm run preview  # Просмотр собранной версии
+npm run lint     # Проверка кода ESLint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Пример запуска
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd frontend
+npm install
+npm run dev
 ```
+
+---
+
+**Автор:** Асылбек Усербай
