@@ -255,8 +255,10 @@ export function UserFormModal({
           available_organizations: formData.available_organizations,
         };
 
-        // Добавляем пароль только если он введен
-        if (formData.password) {
+        if (formData.require_password_change && !formData.password) {
+          updatePayload.reset_password = true;
+        } else if (formData.password) {
+          // Добавляем пароль только если он введен
           updatePayload.password = formData.password;
         }
 
@@ -366,19 +368,18 @@ export function UserFormModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
                 Доступные организации
               </label>
-              <Button
+              <button
                 type="button"
-                variant="secondary"
                 onClick={() => setShowOrganizationsModal(true)}
-                className="w-full justify-between cursor-pointer"
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors flex items-center justify-between cursor-pointer"
               >
-                <span>
+                <span className="text-gray-900 dark:text-white">
                   {loadingOrganizations
                     ? "Загрузка..."
                     : getSelectedOrganizationsText()}
                 </span>
                 <svg
-                  className="w-5 h-5"
+                  className="w-5 h-5 text-gray-500 dark:text-zinc-400 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -390,7 +391,7 @@ export function UserFormModal({
                     d="M19 9l-7 7-7-7"
                   />
                 </svg>
-              </Button>
+              </button>
             </div>
 
             {/* Actions */}
@@ -404,7 +405,11 @@ export function UserFormModal({
               >
                 Отмена
               </Button>
-              <Button type="submit" disabled={isLoading} className="cursor-pointer">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="cursor-pointer"
+              >
                 {isLoading ? "Сохранение..." : "Сохранить"}
               </Button>
             </div>
@@ -592,19 +597,18 @@ export function UserFormModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
                 Доступные организации
               </label>
-              <Button
+              <button
                 type="button"
-                variant="secondary"
                 onClick={() => setShowOrganizationsModal(true)}
-                className="w-full justify-between cursor-pointer"
+                className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors flex items-center justify-between cursor-pointer"
               >
-                <span>
+                <span className="text-gray-900 dark:text-white">
                   {loadingOrganizations
                     ? "Загрузка..."
                     : getSelectedOrganizationsText()}
                 </span>
                 <svg
-                  className="w-5 h-5"
+                  className="w-5 h-5 text-gray-500 dark:text-zinc-400 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -616,7 +620,7 @@ export function UserFormModal({
                     d="M19 9l-7 7-7-7"
                   />
                 </svg>
-              </Button>
+              </button>
               <p className="text-sm text-gray-600 dark:text-zinc-400">
                 Выберите организации, к которым пользователь будет иметь доступ
               </p>
@@ -735,7 +739,11 @@ export function UserFormModal({
             >
               Отмена
             </Button>
-            <Button type="submit" disabled={isLoading} className="cursor-pointer">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="cursor-pointer"
+            >
               {isLoading
                 ? "Сохранение..."
                 : isEditing

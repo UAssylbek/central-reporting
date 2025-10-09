@@ -30,11 +30,12 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      const user = await authApi.login(formData);
+      const response = await authApi.login(formData);
 
-      // Проверяем, нужна ли смена пароля
-      if (user.require_password_change) {
+      // ✅ ИСПРАВЛЕНИЕ: Проверяем require_password_change из ответа
+      if (response.require_password_change) {
         setShowPasswordModal(true);
+        // Токен УЖЕ сохранен в authApi.login(), НЕ удаляем его!
       } else {
         navigate("/home");
       }
@@ -63,12 +64,12 @@ export function LoginPage() {
     navigate("/home");
   };
 
+  // ✅ ИСПРАВЛЕНИЕ: Убрали useEffect, который удалял токен!
+  // Токен нужен для смены пароля, поэтому НЕ удаляем его
+
   useEffect(() => {
     if (showPasswordModal) {
-      // Удаляем токен, чтобы при "Назад" нельзя было попасть в систему
-      localStorage.removeItem("token");
-
-      // Блокируем кнопку "Назад"
+      // Блокируем кнопку "Назад" при смене пароля
       const handlePopState = () => {
         window.history.pushState(null, "", window.location.href);
       };
@@ -116,7 +117,6 @@ export function LoginPage() {
                 autoComplete="username"
               />
 
-              {/* ✅ ИСПРАВЛЕНИЕ: Убрали required с пароля */}
               <Input
                 label="Пароль"
                 type="password"

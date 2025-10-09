@@ -1,21 +1,20 @@
-import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { ThemeSwitcher } from "../../shared/components/ThemeSwitcher/ThemeSwitcher";
 import { authApi } from "../../shared/api/auth.api";
 
 /**
  * Главный Layout для авторизованных пользователей
- * С боковым меню (sidebar) вместо выпадающего, с левой и правой частями, стилизованный под infostart.ru
+ * С выпадающим меню под навбаром
  */
 export function MainLayout() {
   const navigate = useNavigate();
-  const location = useLocation();
   const user = authApi.getCurrentUser();
   const isAdmin = user?.role === "admin";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const rightPanelRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleLogout = async () => {
     authApi.logout();
@@ -32,9 +31,7 @@ export function MainLayout() {
   const handleHomeClick = () => {
     setIsMenuOpen(false);
     setHoveredItem(null);
-    if (location.pathname !== "/home") {
-      navigate("/home");
-    }
+    navigate("/home");
   };
 
   // Список ссылок на одном уровне с иконками
@@ -90,11 +87,13 @@ export function MainLayout() {
   // Закрытие меню при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
       if (
         menuRef.current &&
-        !menuRef.current.contains(event.target as Node) &&
-        rightPanelRef.current &&
-        !rightPanelRef.current.contains(event.target as Node)
+        !menuRef.current.contains(target) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(target)
       ) {
         setIsMenuOpen(false);
         setHoveredItem(null);
@@ -103,8 +102,6 @@ export function MainLayout() {
 
     if (isMenuOpen) {
       document.addEventListener("mousedown", handleClickOutside);
-    } else {
-      document.removeEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
@@ -126,17 +123,17 @@ export function MainLayout() {
   }, [isMenuOpen]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50 dark:bg-zinc-900">
       {/* Header (Fixed Navbar) */}
-      <header className="fixed top-0 left-0 w-full bg-white border-b border-gray-200 shadow-sm z-60">
+      <header className="bg-white dark:bg-zinc-800 border-b border-gray-200 dark:border-zinc-700 fixed top-0 left-0 right-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-16">
             {/* Left Section: Menu Button, Search */}
             <div className="flex items-center gap-4">
               {/* Menu Button: Hamburger when closed, Home when open */}
               <button
-                className="p-2 text-gray-600 hover:text-blue-600"
-                onMouseDown={(e) => e.stopPropagation()} // <- добавлено
+                ref={buttonRef}
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 onClick={isMenuOpen ? handleHomeClick : toggleMenu}
                 aria-label={isMenuOpen ? "Go to Home" : "Toggle menu"}
               >
@@ -170,10 +167,10 @@ export function MainLayout() {
                 <input
                   type="text"
                   placeholder="Поиск..."
-                  className="pl-10 pr-4 py-1 w-40 sm:w-48 text-sm bg-gray-100 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                  className="pl-10 pr-4 py-1 w-40 sm:w-48 text-sm bg-gray-100 dark:bg-zinc-700 border border-gray-300 dark:border-zinc-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
                 />
                 <svg
-                  className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                  className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -193,10 +190,10 @@ export function MainLayout() {
               {user && (
                 <Link
                   to="/profile"
-                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
-                  <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 font-semibold">
+                  <div className="w-7 h-7 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 dark:text-blue-300 font-semibold">
                       {user.full_name?.[0] || user.username?.[0] || "U"}
                     </span>
                   </div>
@@ -208,7 +205,7 @@ export function MainLayout() {
               <ThemeSwitcher />
               <button
                 onClick={handleLogout}
-                className="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
+                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 Выход
               </button>
@@ -217,10 +214,10 @@ export function MainLayout() {
         </div>
       </header>
 
-      {/* Backdrop for overlay (semi-transparent) */}
+      {/* Backdrop for overlay */}
       {isMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-40"
+          className="fixed inset-0 bg-black/30 dark:bg-black/50 z-20"
           onClick={() => {
             setIsMenuOpen(false);
             setHoveredItem(null);
@@ -228,84 +225,84 @@ export function MainLayout() {
         ></div>
       )}
 
-      {/* Sidebar Menu (centered, with white background, visible background behind) */}
+      {/* Dropdown Menu - продолжение навбара */}
       {isMenuOpen && (
         <div
-          className="fixed top-14 left-1/2 -translate-x-1/2 w-full max-w-7xl z-50 overflow-y-auto"
           ref={menuRef}
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-7xl w-[calc(100%-2rem)] mx-4"
           onMouseLeave={() => {
             setHoveredItem(null);
           }}
         >
-          <div className="bg-white rounded-b-lg shadow-xl mx-4 sm:mx-6 lg:mx-8 py-8 px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="col-span-1 space-y-0">
-              {links.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className="flex items-center gap-4 p-4 rounded-none hover:bg-gray-100 transition-colors border-b border-gray-200 last:border-b-0"
-                  onMouseEnter={() => setHoveredItem(link.label)}
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setHoveredItem(null);
-                  }}
-                >
-                  <span className="text-3xl">{link.icon}</span>
-                  <span className="text-lg font-medium text-gray-900">
-                    {link.label}
-                  </span>
-                </Link>
-              ))}
-            </div>
+          <div className="bg-white dark:bg-zinc-800 px-4 sm:px-6 lg:px-8 py-8 rounded-b-lg border-gray-200 dark:border-zinc-700">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Left Part: Menu Links */}
+              <div className="col-span-1 space-y-0">
+                {links.map((link) => (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className="flex items-center gap-4 p-4 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-colors border-b border-gray-200 dark:border-zinc-700 last:border-b-0"
+                    onMouseEnter={() => setHoveredItem(link.label)}
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setHoveredItem(null);
+                    }}
+                  >
+                    <span className="text-3xl">{link.icon}</span>
+                    <span className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                      {link.label}
+                    </span>
+                  </Link>
+                ))}
+              </div>
 
-            {/* Right Part: Big icons with descriptions or detailed info on hover, clickable */}
-            <div className="col-span-2" ref={rightPanelRef}>
-              {hoveredItem ? (
-                // Detailed info on hover
-                <div
-                  className="p-6 bg-gray-50 rounded-lg"
-                  onMouseEnter={() => {}}
-                  onMouseLeave={() => setHoveredItem(null)}
-                >
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                    {hoveredItem}
-                  </h2>
-                  <p className="text-gray-600">
-                    {links.find((l) => l.label === hoveredItem)?.description ||
-                      "Описание раздела."}
-                    <br />В этом разделе вы найдете: [детали о функциях...].
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {links.map((link) => (
-                    <Link
-                      key={link.to}
-                      to={link.to}
-                      className="flex flex-col items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        setHoveredItem(null);
-                      }}
-                    >
-                      <span className="text-4xl mb-2">{link.icon}</span>
-                      <p className="text-base font-medium text-gray-900 text-center">
-                        {link.label}
-                      </p>
-                      <p className="text-xs text-gray-600 text-center">
-                        {link.description}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              )}
+              {/* Right Part: Detailed info or icon grid */}
+              <div className="col-span-2">
+                {hoveredItem ? (
+                  // Detailed info on hover
+                  <div className="p-6 bg-gray-50 dark:bg-zinc-700 rounded-lg h-full">
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+                      {hoveredItem}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      {links.find((l) => l.label === hoveredItem)
+                        ?.description || "Описание раздела."}
+                      <br />В этом разделе вы найдете: [детали о функциях...].
+                    </p>
+                  </div>
+                ) : (
+                  // Icon grid when nothing is hovered
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {links.map((link) => (
+                      <Link
+                        key={link.to}
+                        to={link.to}
+                        className="flex flex-col items-center p-4 bg-gray-50 dark:bg-zinc-700 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-600 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          setHoveredItem(null);
+                        }}
+                      >
+                        <span className="text-4xl mb-2">{link.icon}</span>
+                        <p className="text-base font-medium text-gray-900 dark:text-gray-100 text-center">
+                          {link.label}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 text-center mt-1">
+                          {link.description}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <main className="pt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-white">
+      {/* Main Content - добавлен отступ сверху для fixed navbar */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-16">
         <Outlet />
       </main>
     </div>

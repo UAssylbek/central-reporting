@@ -80,7 +80,6 @@ export function ChangePasswordModal({
     setIsLoading(true);
 
     try {
-      // ✅ КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Отправляем old_password только если он заполнен
       const requestData: {
         old_password?: string;
         new_password: string;
@@ -95,6 +94,7 @@ export function ChangePasswordModal({
         requestData.old_password = formData.old_password;
       }
 
+      // ✅ ИСПРАВЛЕНИЕ: changePassword сам обновит данные через me()
       await authApi.changePassword(requestData);
 
       // Сброс формы
@@ -104,6 +104,7 @@ export function ChangePasswordModal({
         confirm_password: "",
       });
 
+      // ✅ Вызываем onSuccess для редиректа
       onSuccess();
     } catch (err: unknown) {
       const errorMessage =
@@ -115,9 +116,9 @@ export function ChangePasswordModal({
         "data" in err.response &&
         err.response.data &&
         typeof err.response.data === "object" &&
-        "detail" in err.response.data &&
-        typeof err.response.data.detail === "string"
-          ? err.response.data.detail
+        "error" in err.response.data &&
+        typeof err.response.data.error === "string"
+          ? err.response.data.error
           : "Ошибка при смене пароля";
       setError(errorMessage);
     } finally {
@@ -187,7 +188,7 @@ export function ChangePasswordModal({
             <button
               type="button"
               onClick={() => togglePasswordVisibility("old")}
-              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
             >
               {showPasswords.old ? (
                 <svg
@@ -243,7 +244,7 @@ export function ChangePasswordModal({
           <button
             type="button"
             onClick={() => togglePasswordVisibility("new")}
-            className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+            className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
           >
             {showPasswords.new ? (
               <svg
@@ -336,7 +337,7 @@ export function ChangePasswordModal({
           <button
             type="button"
             onClick={() => togglePasswordVisibility("confirm")}
-            className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+            className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
           >
             {showPasswords.confirm ? (
               <svg
@@ -384,11 +385,17 @@ export function ChangePasswordModal({
               variant="secondary"
               onClick={handleClose}
               disabled={isLoading}
+              className="cursor-pointer"
             >
               Отмена
             </Button>
           )}
-          <Button type="submit" disabled={isLoading} fullWidth={isFirstLogin}>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            fullWidth={isFirstLogin}
+            className="cursor-pointer"
+          >
             {isLoading
               ? "Сохранение..."
               : isFirstLogin

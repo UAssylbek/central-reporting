@@ -192,7 +192,6 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 	}
 
 	if updates.Password != "" {
-		// Новый пароль установлен
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updates.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
@@ -202,7 +201,9 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		argIndex++
 		shouldInvalidateToken = true
 	} else if updates.ResetPassword {
-		// Пароль сброшен
+		setParts = append(setParts, "password = NULL")
+		shouldInvalidateToken = true
+	} else if updates.RequirePasswordChange != nil && *updates.RequirePasswordChange {
 		setParts = append(setParts, "password = NULL")
 		shouldInvalidateToken = true
 	}
