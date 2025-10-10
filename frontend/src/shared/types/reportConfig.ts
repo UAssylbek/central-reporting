@@ -14,7 +14,27 @@ export type ReportFieldType =
   | "radio"
   | "checkbox"
   | "number"
-  | "textarea";
+  | "textarea"
+  | "search"; // ← ДОБАВЛЕН ТИП SEARCH
+
+/**
+ * Опция для search поля
+ */
+export interface SearchOption {
+  id: string | number;
+  name: string;
+  description?: string;
+}
+
+/**
+ * Конфигурация для search поля
+ */
+export interface SearchConfig {
+  modalTitle: string;
+  searchPlaceholder: string;
+  noResultsText?: string;
+  loadOptions: () => Promise<SearchOption[]> | SearchOption[];
+}
 
 /**
  * Опция для select/radio полей
@@ -40,6 +60,7 @@ export interface ReportFieldConfig {
     formData?: Record<string, unknown>
   ) => boolean | string;
   defaultValue?: unknown;
+  searchConfig?: SearchConfig; // ← ДОБАВЛЕНО ДЛЯ SEARCH ПОЛЕЙ
 }
 
 /**

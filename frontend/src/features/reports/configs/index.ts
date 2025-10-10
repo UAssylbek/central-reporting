@@ -1,10 +1,17 @@
 // frontend/src/features/reports/configs/index.ts
 import type { ReportModalConfig } from "../../../shared/types/reportConfig";
 import type { ReportType } from "../../../shared/types/reports";
+
+// Импорт всех конфигураций отчётов
 import { consolidatedStatementConfig } from "./consolidated-statement.config";
 import { tariffListConfig } from "./tariff-list.config";
 import { osBalanceConfig } from "./os-balance.config";
 import { expenseReportConfig } from "./expense-report.config";
+import { longTermSearchConfig } from "./long-term-search.config";
+import { tmzBalanceConfig } from "./tmz-balance.config";
+import { cashFlowConfig } from "./cash-flow.config";
+import { employeeListConfig } from "./employee-list.config";
+import { debtReportConfig } from "./debt-report.config";
 
 /**
  * Карта всех конфигураций отчётов
@@ -14,20 +21,38 @@ const REPORT_CONFIGS: Record<ReportType, ReportModalConfig> = {
   tariff_list: tariffListConfig,
   os_balance: osBalanceConfig,
   expense_report: expenseReportConfig,
-  
-  // Остальные конфиги будут добавлены позже
-  long_term_search: osBalanceConfig, // Временная заглушка
-  tmz_balance: osBalanceConfig,
-  cash_flow: osBalanceConfig,
-  employee_list: osBalanceConfig,
-  debt_report: osBalanceConfig,
+  long_term_search: longTermSearchConfig,
+  tmz_balance: tmzBalanceConfig,
+  cash_flow: cashFlowConfig,
+  employee_list: employeeListConfig,
+  debt_report: debtReportConfig,
 };
 
 /**
  * Получить конфигурацию отчёта по типу
  */
-export function getReportConfig(reportType: ReportType): ReportModalConfig | undefined {
+export function getReportConfig(
+  reportType: ReportType
+): ReportModalConfig | undefined {
   return REPORT_CONFIGS[reportType];
 }
 
-export { consolidatedStatementConfig, tariffListConfig, osBalanceConfig, expenseReportConfig };
+/**
+ * Получить все конфигурации отчётов
+ */
+export function getAllReportConfigs(): Record<ReportType, ReportModalConfig> {
+  return REPORT_CONFIGS;
+}
+
+// Экспорт отдельных конфигураций
+export {
+  consolidatedStatementConfig,
+  tariffListConfig,
+  osBalanceConfig,
+  expenseReportConfig,
+  longTermSearchConfig,
+  tmzBalanceConfig,
+  cashFlowConfig,
+  employeeListConfig,
+  debtReportConfig,
+};

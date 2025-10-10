@@ -153,7 +153,7 @@ export function HomePage() {
           config={selectedConfig}
           onSubmit={handleReportSubmit}
           startStep={1}
-          allowReportChange={false}
+          allowReportChange={true}
         />
       )}
 

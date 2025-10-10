@@ -3,104 +3,16 @@ import { useEffect, useState } from "react";
 import { Modal } from "../../../shared/ui/Modal/Modal";
 import { Button } from "../../../shared/ui/Button/Button";
 import { StepNavigation } from "../../../shared/ui/StepNavigation/StepNavigation";
+import { ConfirmModal } from "../../../shared/ui/ConfirmModal/ConfirmModal";
 import { useModalSteps } from "../../../shared/hooks/useModalSteps";
 import { useReportForm } from "../../../shared/hooks/useReportForm";
 import { OrganizationStep } from "../steps/OrganizationStep";
 import { ReportParamsStep } from "../steps/ReportParamsStep";
 import { EmailStep } from "../steps/EmailStep";
+import { ConfirmationStep } from "../steps/ConfirmationStep";
+import { ReportSelectionStep } from "../steps/ReportSelectionStep";
 import type { ReportType } from "../../../shared/types/reports";
 import type { ReportModalConfig } from "../../../shared/types/reportConfig";
-import { REPORTS_LIST } from "../../../shared/config/reportsList";
-
-// Временные компоненты для отсутствующих шагов
-function ReportSelectionStep({
-  selectedReport,
-}: {
-  selectedReport: ReportType;
-  onChange: (type: ReportType) => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-        Выбор отчёта
-      </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {REPORTS_LIST.map((report) => (
-          <div
-            key={report.id}
-            className={`p-4 border rounded-lg cursor-pointer ${
-              selectedReport === report.id
-                ? "border-blue-500"
-                : "border-gray-200"
-            }`}
-          >
-            <span className="text-2xl">{report.icon}</span>
-            <h4 className="font-semibold mt-2">{report.title}</h4>
-            <p className="text-sm text-gray-600 mt-1">{report.description}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ConfirmationStep({
-  reportTitle,
-  config,
-  formData,
-  organizationCount,
-}: {
-  reportTitle: string;
-  config: ReportModalConfig;
-  formData: Record<string, unknown>;
-  organizationCount: number;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-          Подтверждение
-        </h3>
-        <p className="text-sm text-blue-800 dark:text-blue-200">
-          Проверьте параметры запроса перед отправкой
-        </p>
-      </div>
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          <span className="font-medium min-w-[180px]">Отчёт:</span>
-          <span>{reportTitle}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="font-medium min-w-[180px]">Организаций:</span>
-          <span>{organizationCount}</span>
-        </div>
-        {config.steps
-          .flatMap((s) => s.fields)
-          .map((field) => {
-            const value = formData[field.name];
-            if (!value) return null;
-
-            return (
-              <div key={field.name} className="flex gap-2">
-                <span className="font-medium min-w-[180px]">
-                  {field.label}:
-                </span>
-                <span>
-                  {typeof value === "boolean"
-                    ? value
-                      ? "Да"
-                      : "Нет"
-                    : typeof value === "string" || typeof value === "number"
-                    ? value
-                    : JSON.stringify(value)}
-                </span>
-              </div>
-            );
-          })}
-      </div>
-    </div>
-  );
-}
 
 export interface UniversalReportModalProps {
   readonly isOpen: boolean;
@@ -122,6 +34,11 @@ export function UniversalReportModal({
   allowReportChange = false,
 }: UniversalReportModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(
+    null
+  );
 
   // Локальное состояние для динамической смены отчёта
   const [currentReportType, setCurrentReportType] = useState(initialReportType);
@@ -167,7 +84,9 @@ export function UniversalReportModal({
       setCurrentConfig(initialConfig);
       resetForm(initialReportType);
       resetSteps();
-      // Устанавливаем стартовый шаг (обычно 1, что означает страницу "Организации")
+      setShowSuccessNotification(false);
+      setSlideDirection(null);
+
       if (startStep > 0 && startStep < totalSteps) {
         goToStep(startStep);
       }
@@ -183,9 +102,21 @@ export function UniversalReportModal({
     totalSteps,
   ]);
 
+  // Блокировка скролла body при открытии модалки
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   // Обработчик смены отчёта на первой странице
   const handleReportChange = (newReportType: ReportType) => {
-    // Импортируем конфиг нового отчёта
     import("../configs").then(({ getReportConfig }) => {
       const newConfig = getReportConfig(newReportType);
       if (newConfig) {
@@ -199,12 +130,10 @@ export function UniversalReportModal({
   const validateCurrentStep = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    // Шаг 0: Выбор отчета
     if (currentStep === STEP_REPORT_SELECTION) {
       return true;
     }
 
-    // Шаг 1: Организации
     if (currentStep === STEP_ORGANIZATIONS) {
       if (formData.organizationIds.length === 0) {
         newErrors.organizations = "Выберите хотя бы одну организацию";
@@ -213,7 +142,6 @@ export function UniversalReportModal({
       }
     }
 
-    // Шаги параметров отчёта
     if (currentStep >= STEP_PARAMS_START && currentStep <= STEP_PARAMS_END) {
       const stepIndex = currentStep - STEP_PARAMS_START;
       const stepConfig = currentConfig.steps[stepIndex];
@@ -221,14 +149,12 @@ export function UniversalReportModal({
       stepConfig.fields.forEach((field) => {
         const value = formData[field.name];
 
-        // Проверка обязательных полей
         if (field.required && !value) {
           newErrors[
             field.name
           ] = `Поле "${field.label}" обязательно для заполнения`;
         }
 
-        // Кастомная валидация
         if (value && field.validation) {
           const validationResult = field.validation(value, formData);
           if (validationResult !== true) {
@@ -241,14 +167,12 @@ export function UniversalReportModal({
       });
     }
 
-    // Шаг Email
     if (currentStep === STEP_EMAIL) {
       if (formData.emailNotification && formData.recipients.length === 0) {
         newErrors.recipients = "Добавьте хотя бы один email адрес";
       }
     }
 
-    // Шаг Подтверждение
     if (currentStep === STEP_CONFIRMATION) {
       return true;
     }
@@ -259,8 +183,20 @@ export function UniversalReportModal({
 
   const handleNext = () => {
     if (validateCurrentStep()) {
-      nextStep();
+      setSlideDirection("left");
+      setTimeout(() => {
+        nextStep();
+        setSlideDirection(null);
+      }, 150);
     }
+  };
+
+  const handlePrev = () => {
+    setSlideDirection("right");
+    setTimeout(() => {
+      prevStep();
+      setSlideDirection(null);
+    }, 150);
   };
 
   const handleSubmit = async () => {
@@ -274,13 +210,11 @@ export function UniversalReportModal({
       if (onSubmit) {
         await onSubmit(formData);
       } else {
-        // TODO: Вызов API для генерации отчёта
         console.log("Submitting report:", formData);
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      // Успешно - закрываем модалку
-      onClose();
+      setShowSuccessNotification(true);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Ошибка при создании запроса";
@@ -290,132 +224,277 @@ export function UniversalReportModal({
     }
   };
 
+  const handleCloseAttempt = () => {
+    if (currentStep > STEP_REPORT_SELECTION) {
+      setShowCloseConfirm(true);
+    } else {
+      onClose();
+    }
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirm(false);
+    onClose();
+  };
+
+  const handleSuccessClose = () => {
+    setShowSuccessNotification(false);
+    onClose();
+  };
+
+  // Клавиатурная навигация
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Если открыто подтверждение закрытия
+      if (showCloseConfirm) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleConfirmClose();
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setShowCloseConfirm(false);
+        }
+        return;
+      }
+
+      // Если показано уведомление об успехе
+      if (showSuccessNotification) {
+        if (e.key === "Enter" || e.key === "Escape") {
+          e.preventDefault();
+          handleSuccessClose();
+        }
+        return;
+      }
+
+      // Основная навигация
+      if (e.key === "Enter" && !isSubmitting) {
+        e.preventDefault();
+
+        if (isLastStep) {
+          handleSubmit();
+        } else if (validateCurrentStep()) {
+          handleNext();
+        }
+      }
+
+      if (e.key === "Escape" && !isSubmitting) {
+        e.preventDefault();
+        handleCloseAttempt();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    isOpen,
+    currentStep,
+    isLastStep,
+    isSubmitting,
+    showCloseConfirm,
+    showSuccessNotification,
+    formData,
+  ]);
+
   const renderCurrentStep = () => {
-    // Шаг 0: Выбор отчета
-    if (currentStep === STEP_REPORT_SELECTION) {
-      return (
-        <ReportSelectionStep
-          selectedReport={currentReportType}
-          onChange={allowReportChange ? handleReportChange : () => {}}
-        />
-      );
-    }
+    const baseClass = "transition-all duration-300";
+    const slideClass =
+      slideDirection === "left"
+        ? "-translate-x-full opacity-0"
+        : slideDirection === "right"
+        ? "translate-x-full opacity-0"
+        : "translate-x-0 opacity-100";
 
-    // Шаг 1: Организации
-    if (currentStep === STEP_ORGANIZATIONS) {
-      return (
-        <OrganizationStep
-          selectedOrganizations={formData.organizationIds}
-          onChange={(orgs) => updateField("organizationIds", orgs)}
-        />
-      );
-    }
+    const content = (() => {
+      if (currentStep === STEP_REPORT_SELECTION) {
+        return (
+          <ReportSelectionStep
+            selectedReport={currentReportType}
+            onChange={allowReportChange ? handleReportChange : () => {}}
+          />
+        );
+      }
 
-    // Шаги параметров отчёта
-    if (currentStep >= STEP_PARAMS_START && currentStep <= STEP_PARAMS_END) {
-      const stepIndex = currentStep - STEP_PARAMS_START;
-      const stepConfig = currentConfig.steps[stepIndex];
-      return (
-        <ReportParamsStep
-          step={stepConfig}
-          formData={formData}
-          onChange={updateField}
-          errors={errors}
-        />
-      );
-    }
+      if (currentStep === STEP_ORGANIZATIONS) {
+        return (
+          <OrganizationStep
+            selectedOrganizations={formData.organizationIds}
+            onChange={(orgs) => updateField("organizationIds", orgs)}
+          />
+        );
+      }
 
-    // Шаг Email
-    if (currentStep === STEP_EMAIL) {
-      return (
-        <EmailStep
-          emailNotification={formData.emailNotification}
-          recipients={formData.recipients}
-          onChange={updateField}
-        />
-      );
-    }
+      if (currentStep >= STEP_PARAMS_START && currentStep <= STEP_PARAMS_END) {
+        const stepIndex = currentStep - STEP_PARAMS_START;
+        const stepConfig = currentConfig.steps[stepIndex];
+        return (
+          <ReportParamsStep
+            step={stepConfig}
+            formData={formData}
+            onChange={updateField}
+            errors={errors}
+          />
+        );
+      }
 
-    // Шаг Подтверждение
-    if (currentStep === STEP_CONFIRMATION) {
-      return (
-        <ConfirmationStep
-          reportTitle={currentConfig.title}
-          config={currentConfig}
-          formData={formData}
-          organizationCount={formData.organizationIds.length}
-        />
-      );
-    }
+      if (currentStep === STEP_EMAIL) {
+        return (
+          <EmailStep
+            emailNotification={formData.emailNotification}
+            recipients={formData.recipients}
+            onChange={updateField}
+          />
+        );
+      }
 
-    return null;
+      if (currentStep === STEP_CONFIRMATION) {
+        return (
+          <ConfirmationStep
+            reportTitle={currentConfig.title}
+            config={currentConfig}
+            formData={formData}
+            organizationCount={formData.organizationIds.length}
+          />
+        );
+      }
+
+      return null;
+    })();
+
+    return <div className={`${baseClass} ${slideClass}`}>{content}</div>;
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={currentConfig.title}
-      size="xl"
-      closeOnOverlayClick={false}
-    >
-      <div className="space-y-6">
-        {/* Step Navigation */}
-        <StepNavigation
-          steps={stepLabels}
-          currentStep={currentStep}
-          allowJump={false}
-        />
+    <>
+      <Modal
+        isOpen={isOpen && !showSuccessNotification}
+        onClose={handleCloseAttempt}
+        title={currentConfig.title}
+        size="xl"
+        closeOnOverlayClick={false}
+      >
+        <div className="space-y-6">
+          <StepNavigation
+            steps={stepLabels}
+            currentStep={currentStep}
+            allowJump={false}
+          />
 
-        {/* Current Step Content */}
-        <div className="min-h-[400px]">{renderCurrentStep()}</div>
-
-        {/* Error message */}
-        {errors.submit && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-800 dark:text-red-200 text-sm">
-              {errors.submit}
-            </p>
-          </div>
-        )}
-
-        {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-zinc-700">
-          <div>
-            {!isFirstStep && (
-              <Button
-                variant="secondary"
-                className="cursor-pointer"
-                onClick={prevStep}
-                disabled={isSubmitting}
-              >
-                ← Назад
-              </Button>
-            )}
+          <div className="min-h-[400px] overflow-hidden">
+            {renderCurrentStep()}
           </div>
 
-          <div className="flex gap-3">
-            <Button variant="ghost" onClick={onClose} disabled={isSubmitting} className="cursor-pointer">
-              Отмена
-            </Button>
+          {errors.submit && (
+            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-800 dark:text-red-200 text-sm">
+                {errors.submit}
+              </p>
+            </div>
+          )}
 
-            {!isLastStep ? (
-              <Button onClick={handleNext} disabled={isSubmitting} className="cursor-pointer">
-                Далее →
-              </Button>
-            ) : (
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-zinc-700">
+            <div>
+              {!isFirstStep && (
+                <Button
+                  variant="secondary"
+                  className="cursor-pointer"
+                  onClick={handlePrev}
+                  disabled={isSubmitting}
+                >
+                  ← Назад
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-3">
               <Button
-                onClick={handleSubmit}
-                className="cursor-pointer"
+                variant="ghost"
+                onClick={handleCloseAttempt}
                 disabled={isSubmitting}
-                loading={isSubmitting}
+                className="cursor-pointer"
               >
-                {isSubmitting ? "Создание..." : "Создать запрос"}
+                Отмена
               </Button>
-            )}
+
+              {!isLastStep ? (
+                <Button
+                  onClick={handleNext}
+                  disabled={isSubmitting}
+                  className="cursor-pointer"
+                >
+                  Далее →
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  className="cursor-pointer"
+                  disabled={isSubmitting}
+                  loading={isSubmitting}
+                >
+                  {isSubmitting ? "Создание..." : "Создать запрос"}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+
+      {/* Подтверждение закрытия */}
+      <ConfirmModal
+        isOpen={showCloseConfirm}
+        onClose={() => setShowCloseConfirm(false)}
+        onConfirm={handleConfirmClose}
+        title="Подтверждение закрытия"
+        message="Вы уверены, что хотите закрыть создание запроса отчета? Все введенные данные будут потеряны."
+        confirmText="Да, закрыть"
+        cancelText="Продолжить редактирование"
+        variant="warning"
+      />
+
+      {/* Уведомление об успехе */}
+      {showSuccessNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-green-600 dark:text-green-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Запрос успешно создан!
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Запрос на формирование отчета "{currentConfig.title}" помещен
+                  в очередь выполнения. Отчет будет отправлен по email при
+                  готовности.
+                </p>
+              </div>
+
+              <Button
+                onClick={handleSuccessClose}
+                className="w-full cursor-pointer"
+              >
+                Понятно
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
