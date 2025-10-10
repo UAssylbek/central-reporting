@@ -1,7 +1,17 @@
+import React from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { ThemeSwitcher } from "../../shared/components/ThemeSwitcher/ThemeSwitcher";
 import { authApi } from "../../shared/api/auth.api";
+import {
+  Banknote,
+  Users,
+  Building,
+  Package,
+  Settings,
+  BarChart3,
+  Shield,
+} from "lucide-react";
 
 /**
  * Главный Layout для авторизованных пользователей
@@ -39,37 +49,37 @@ export function MainLayout() {
     {
       to: "/dashboard",
       label: "Dashboard",
-      icon: "📊",
+      icon: <BarChart3 className="w-6 h-6 text-blue-500" />,
       description: "Панель управления с общими данными",
     },
     {
       to: "/centralization",
       label: "Централизация",
-      icon: "🏛️",
+      icon: <Shield className="w-6 h-6 text-green-500" />,
       description: "Управление централизацией процессов",
     },
     {
       to: "/payroll",
       label: "Зарплата и кадры",
-      icon: "👥",
+      icon: <Users className="w-6 h-6 text-amber-500" />,
       description: "Кадровый учет и расчет зарплаты",
     },
     {
       to: "/long-term-assets",
       label: "Долгосрочные активы",
-      icon: "🏢",
+      icon: <Building className="w-6 h-6 text-indigo-500" />,
       description: "Учет долгосрочных активов",
     },
     {
       to: "/nomenclature",
       label: "Номенклатура и склад",
-      icon: "📦",
+      icon: <Package className="w-6 h-6 text-purple-500" />,
       description: "Управление номенклатурой и складом",
     },
     {
       to: "/bank-cash",
       label: "Банк и касса",
-      icon: "💳",
+      icon: <Banknote className="w-6 h-6 text-emerald-500" />,
       description: "Операции с банком и кассой",
     },
     ...(isAdmin
@@ -77,7 +87,9 @@ export function MainLayout() {
           {
             to: "/administration",
             label: "Администрирование",
-            icon: "⚙️",
+            icon: (
+              <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+            ),
             description: "Административные настройки",
           },
         ]
@@ -249,7 +261,9 @@ export function MainLayout() {
                       setHoveredItem(null);
                     }}
                   >
-                    <span className="text-3xl">{link.icon}</span>
+                    <span className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-zinc-700 rounded-lg">
+                      {link.icon}
+                    </span>
                     <span className="text-lg font-medium text-gray-900 dark:text-gray-100">
                       {link.label}
                     </span>
@@ -284,7 +298,12 @@ export function MainLayout() {
                           setHoveredItem(null);
                         }}
                       >
-                        <span className="text-4xl mb-2">{link.icon}</span>
+                        <span className="mb-2">
+                          {React.cloneElement(link.icon, {
+                            className: "w-18 h-18",
+                          })}
+                        </span>
+
                         <p className="text-base font-medium text-gray-900 dark:text-gray-100 text-center">
                           {link.label}
                         </p>
