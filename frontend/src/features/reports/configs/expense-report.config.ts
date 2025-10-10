@@ -1,6 +1,5 @@
 // frontend/src/features/reports/configs/expense-report.config.ts
-import type { ReportModalConfig } from "../../../shared/types/reportConfig";
-import type { SearchOption } from "../../../shared/types/reportConfig";
+import type { ReportModalConfig, SearchOption } from "../../../shared/types/reportConfig";
 
 // Функция загрузки администраторов (в реальном проекте это будет API запрос)
 const loadBudgetAdmins = async (): Promise<SearchOption[]> => {
