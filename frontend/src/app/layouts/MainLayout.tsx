@@ -673,11 +673,12 @@ export function MainLayout() {
       {/* Backdrop for overlay */}
       {isMenuOpen && (
         <div
-          className="fixed inset-0 bg-black/30 dark:bg-black/50 z-20"
+          className="fixed inset-0 bg-black/30 dark:bg-black/50 z-20 opacity-0 animate-fadeIn"
           onClick={() => {
             setIsMenuOpen(false);
             setHoveredItem(null);
           }}
+          style={{ animation: "fadeIn 0.2s ease-out forwards" }}
         ></div>
       )}
 
@@ -685,7 +686,8 @@ export function MainLayout() {
       {isMenuOpen && (
         <div
           ref={menuRef}
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-7xl w-[calc(100%-2rem)] mx-4"
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-zinc-800 rounded-lg shadow-xl max-w-7xl w-[calc(100%-2rem)] mx-4 opacity-0"
+          style={{ animation: "slideInFromTop 0.3s ease-out forwards" }}
           onMouseLeave={() => {
             setHoveredItem(null);
           }}
@@ -719,7 +721,13 @@ export function MainLayout() {
               <div className="col-span-2">
                 {hoveredItem ? (
                   // Detailed info on hover
-                  <div className="p-6 bg-gray-50 dark:bg-zinc-700 rounded-lg h-[600px] overflow-y-auto">
+                  <div
+                    key={hoveredItem}
+                    className="p-6 bg-gray-50 dark:bg-zinc-700 rounded-lg h-[600px] overflow-y-auto opacity-0"
+                    style={{
+                      animation: "slideInFromRight 0.3s ease-out forwards",
+                    }}
+                  >
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
                       {hoveredItem}
                     </h2>
@@ -772,11 +780,15 @@ export function MainLayout() {
                         const subItems = mainLink.subItems as SubMenuItem[];
                         return (
                           <div className="space-y-3">
-                            {subItems.map((subItem) => (
+                            {subItems.map((subItem, index) => (
                               <Link
                                 key={subItem.to}
                                 to={subItem.to}
-                                className="flex items-start gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors border border-gray-200 dark:border-zinc-600"
+                                className="flex items-start gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-all duration-200 border border-gray-200 dark:border-zinc-600 hover:scale-[1.02] hover:shadow-md opacity-0"
+                                style={{
+                                  animation: "fadeIn 0.3s ease-out forwards",
+                                  animationDelay: `${index * 50}ms`,
+                                }}
                                 onClick={() => {
                                   setIsMenuOpen(false);
                                   setHoveredItem(null);
@@ -803,7 +815,11 @@ export function MainLayout() {
                               </p>
                               <button
                                 onClick={handleReportRequest}
-                                className="w-full flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border border-blue-200 dark:border-blue-800"
+                                className="w-full flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 border border-blue-200 dark:border-blue-800 hover:scale-[1.02] hover:shadow-md opacity-0"
+                                style={{
+                                  animation: "fadeIn 0.3s ease-out forwards",
+                                  animationDelay: "200ms",
+                                }}
                               >
                                 <span className="flex items-center justify-center w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex-shrink-0">
                                   <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -1262,11 +1278,15 @@ export function MainLayout() {
                 ) : (
                   // Icon grid when nothing is hovered
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {links.map((link) => (
+                    {links.map((link, index) => (
                       <Link
                         key={link.to}
                         to={link.to}
-                        className="flex flex-col items-center p-4 bg-gray-50 dark:bg-zinc-700 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-600 transition-colors cursor-pointer"
+                        className="flex flex-col items-center p-4 bg-gray-50 dark:bg-zinc-700 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-600 transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-lg opacity-0"
+                        style={{
+                          animation: `fadeIn 0.3s ease-out forwards`,
+                          animationDelay: `${index * 50}ms`,
+                        }}
                         onClick={() => {
                           setIsMenuOpen(false);
                           setHoveredItem(null);
