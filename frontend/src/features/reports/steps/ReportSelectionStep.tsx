@@ -22,7 +22,7 @@ export function ReportSelectionStep({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {REPORTS_LIST.map((report) => (
           <button
             key={report.id}

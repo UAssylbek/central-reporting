@@ -17,7 +17,7 @@ export function NotFoundPage() {
         </p>
         <Button
           variant="primary"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
           leftIcon={
             <svg
               className="w-5 h-5"

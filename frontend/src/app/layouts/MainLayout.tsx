@@ -506,7 +506,7 @@ export function MainLayout() {
                 description: "Общие параметры и конфигурация системы",
               },
               {
-                to: "/administration/user-permissions",
+                to: "/users",
                 label: "Настройки пользователей и прав",
                 icon: <Users className="w-5 h-5 text-amber-500" />,
                 description: "Управление пользователями и правами доступа",

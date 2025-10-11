@@ -33,7 +33,7 @@ export function ThemeSwitcher() {
   return (
     <button
       onClick={toggleTheme}
-      className="p-2 rounded-lg bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors duration-200"
+      className="p-2 rounded-lg bg-gray-100 dark:bg-zinc-700 text-gray-700 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-600 transition-colors duration-200 cursor-pointer"
       aria-label={
         isDark ? "Переключить на светлую тему" : "Переключить на темную тему"
       }
