@@ -393,12 +393,95 @@ export function MainLayout() {
       label: "Номенклатура и склад",
       icon: <Package className="w-6 h-6 text-purple-500" />,
       description: "Управление номенклатурой и складом",
+      subItems: [
+        {
+          to: "/nomenclature/expense-classification",
+          label: "Классификация расходов",
+          icon: <BarChart3 className="w-5 h-5 text-purple-500" />,
+          description: "Классификация расходов по номенклатуре",
+        },
+        {
+          category: "Отчеты",
+          items: [
+            {
+              to: "/nomenclature/consolidated-balance",
+              label: "Сводная ведомость остатков ТМЗ",
+              icon: <FileText className="w-5 h-5 text-blue-500" />,
+              description:
+                "Сводный отчет по остаткам товарно-материальных запасов",
+            },
+            {
+              to: "/nomenclature/balance-statement",
+              label: "Ведомость остатков ТМЗ",
+              icon: <FileText className="w-5 h-5 text-cyan-500" />,
+              description:
+                "Детальная ведомость остатков товарно-материальных запасов",
+            },
+          ],
+        },
+      ] as MixedSubItems,
     },
     {
       to: "/bank-cash",
       label: "Банк и касса",
       icon: <Banknote className="w-6 h-6 text-emerald-500" />,
       description: "Операции с банком и кассой",
+      subItems: [
+        {
+          to: "/bank-cash/expense-classification",
+          label: "Классификация расходов",
+          icon: <BarChart3 className="w-5 h-5 text-purple-500" />,
+          description: "Классификация расходов банка и кассы",
+        },
+        {
+          to: "/bank-cash/cost-items",
+          label: "Статьи затрат",
+          icon: <FileText className="w-5 h-5 text-orange-500" />,
+          description: "Управление статьями затрат",
+        },
+        {
+          category: "Отчеты",
+          items: [
+            {
+              to: "/bank-cash/cash-execution-report",
+              label: "Отчет об исполнении денежных средств",
+              icon: <Banknote className="w-5 h-5 text-green-600" />,
+              description: "Отчет о движении и исполнении денежных средств",
+            },
+            {
+              to: "/bank-cash/expenses-4-20",
+              label: "Отчет по расходам по форме 4-20",
+              icon: <FileText className="w-5 h-5 text-blue-500" />,
+              description: "Отчет о расходах согласно форме 4-20",
+            },
+            {
+              to: "/bank-cash/paid-obligations-report",
+              label: "Отчет по расшифровкам оплаченных и принятых обязательств",
+              icon: <FileText className="w-5 h-5 text-indigo-500" />,
+              description: "Детализация оплаченных и принятых обязательств",
+            },
+            {
+              to: "/bank-cash/payment-registry",
+              label: "Реестр счетов к оплате",
+              icon: <FileText className="w-5 h-5 text-cyan-500" />,
+              description: "Реестр всех счетов, ожидающих оплаты",
+            },
+            {
+              to: "/bank-cash/consolidated-cash-report",
+              label: "Сводный отчет об исполнении денежных средств",
+              icon: <Banknote className="w-5 h-5 text-emerald-600" />,
+              description: "Сводный отчет по исполнению денежных средств",
+            },
+            {
+              to: "/bank-cash/debt-report",
+              label:
+                "Сводный отчет по дебиторской и кредиторской задолженности",
+              icon: <BarChart3 className="w-5 h-5 text-rose-500" />,
+              description: "Анализ дебиторской и кредиторской задолженности",
+            },
+          ],
+        },
+      ] as MixedSubItems,
     },
     ...(isAdmin
       ? [
@@ -409,6 +492,49 @@ export function MainLayout() {
               <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
             ),
             description: "Административные настройки",
+            subItems: [
+              {
+                to: "/administration/maintenance",
+                label: "Обслуживание",
+                icon: <Settings className="w-5 h-5 text-blue-500" />,
+                description: "Техническое обслуживание системы",
+              },
+              {
+                to: "/administration/general-settings",
+                label: "Общие настройки",
+                icon: <Settings className="w-5 h-5 text-purple-500" />,
+                description: "Общие параметры и конфигурация системы",
+              },
+              {
+                to: "/administration/user-permissions",
+                label: "Настройки пользователей и прав",
+                icon: <Users className="w-5 h-5 text-amber-500" />,
+                description: "Управление пользователями и правами доступа",
+              },
+              {
+                to: "/administration/scheduled-jobs",
+                label: "Регламентные и фоновые задания",
+                icon: <BarChart3 className="w-5 h-5 text-indigo-500" />,
+                description: "Управление автоматическими и фоновыми задачами",
+              },
+              {
+                category: "См. также",
+                items: [
+                  {
+                    to: "/administration/delete-marked",
+                    label: "Удаление помеченных объектов",
+                    icon: <Package className="w-5 h-5 text-red-500" />,
+                    description: "Удаление объектов, помеченных на удаление",
+                  },
+                  {
+                    to: "/administration/find-duplicates",
+                    label: "Поиск и удаление дублей",
+                    icon: <FileText className="w-5 h-5 text-orange-500" />,
+                    description: "Поиск и удаление дублирующихся записей",
+                  },
+                ],
+              },
+            ] as MixedSubItems,
           },
         ]
       : []),
@@ -837,6 +963,237 @@ export function MainLayout() {
                         return (
                           <div className="space-y-6">
                             {payrollLink.subItems.map((item, idx) => {
+                              // Если это категория с группой элементов
+                              if (isCategoryGroup(item)) {
+                                return (
+                                  <div key={idx}>
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                                      {item.category}
+                                    </p>
+                                    <div className="space-y-2">
+                                      {item.items.map((subItem) => (
+                                        <Link
+                                          key={subItem.to}
+                                          to={subItem.to}
+                                          className="flex items-start gap-3 p-3 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors border border-gray-200 dark:border-zinc-600"
+                                          onClick={() => {
+                                            setIsMenuOpen(false);
+                                            setHoveredItem(null);
+                                          }}
+                                        >
+                                          <span className="flex items-center justify-center w-8 h-8 bg-gray-100 dark:bg-zinc-700 rounded-lg flex-shrink-0">
+                                            {subItem.icon}
+                                          </span>
+                                          <div>
+                                            <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-0.5">
+                                              {subItem.label}
+                                            </h4>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                                              {subItem.description}
+                                            </p>
+                                          </div>
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                // Если это простой элемент
+                                return (
+                                  <Link
+                                    key={item.to}
+                                    to={item.to}
+                                    className="flex items-start gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors border border-gray-200 dark:border-zinc-600"
+                                    onClick={() => {
+                                      setIsMenuOpen(false);
+                                      setHoveredItem(null);
+                                    }}
+                                  >
+                                    <span className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-zinc-700 rounded-lg flex-shrink-0">
+                                      {item.icon}
+                                    </span>
+                                    <div>
+                                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                                        {item.label}
+                                      </h3>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {item.description}
+                                      </p>
+                                    </div>
+                                  </Link>
+                                );
+                              }
+                            })}
+                          </div>
+                        );
+                      })()}
+
+                    {/* Показываем подразделы для "Номенклатура и склад" (смешанная структура) */}
+                    {hoveredItem === "Номенклатура и склад" &&
+                      (() => {
+                        const nomenclatureLink = links.find(
+                          (l) => l.label === "Номенклатура и склад"
+                        );
+                        if (!nomenclatureLink?.subItems) {
+                          return null;
+                        }
+                        return (
+                          <div className="space-y-6">
+                            {nomenclatureLink.subItems.map((item, idx) => {
+                              // Если это категория с группой элементов
+                              if (isCategoryGroup(item)) {
+                                return (
+                                  <div key={idx}>
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                                      {item.category}
+                                    </p>
+                                    <div className="space-y-2">
+                                      {item.items.map((subItem) => (
+                                        <Link
+                                          key={subItem.to}
+                                          to={subItem.to}
+                                          className="flex items-start gap-3 p-3 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors border border-gray-200 dark:border-zinc-600"
+                                          onClick={() => {
+                                            setIsMenuOpen(false);
+                                            setHoveredItem(null);
+                                          }}
+                                        >
+                                          <span className="flex items-center justify-center w-8 h-8 bg-gray-100 dark:bg-zinc-700 rounded-lg flex-shrink-0">
+                                            {subItem.icon}
+                                          </span>
+                                          <div>
+                                            <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-0.5">
+                                              {subItem.label}
+                                            </h4>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                                              {subItem.description}
+                                            </p>
+                                          </div>
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                // Если это простой элемент
+                                return (
+                                  <Link
+                                    key={item.to}
+                                    to={item.to}
+                                    className="flex items-start gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors border border-gray-200 dark:border-zinc-600"
+                                    onClick={() => {
+                                      setIsMenuOpen(false);
+                                      setHoveredItem(null);
+                                    }}
+                                  >
+                                    <span className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-zinc-700 rounded-lg flex-shrink-0">
+                                      {item.icon}
+                                    </span>
+                                    <div>
+                                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                                        {item.label}
+                                      </h3>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {item.description}
+                                      </p>
+                                    </div>
+                                  </Link>
+                                );
+                              }
+                            })}
+                          </div>
+                        );
+                      })()}
+
+                    {/* Показываем подразделы для "Банк и касса" (смешанная структура) */}
+                    {hoveredItem === "Банк и касса" &&
+                      (() => {
+                        const bankCashLink = links.find(
+                          (l) => l.label === "Банк и касса"
+                        );
+                        if (!bankCashLink?.subItems) {
+                          return null;
+                        }
+                        return (
+                          <div className="space-y-6">
+                            {bankCashLink.subItems.map((item, idx) => {
+                              // Если это категория с группой элементов
+                              if (isCategoryGroup(item)) {
+                                return (
+                                  <div key={idx}>
+                                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+                                      {item.category}
+                                    </p>
+                                    <div className="space-y-2">
+                                      {item.items.map((subItem) => (
+                                        <Link
+                                          key={subItem.to}
+                                          to={subItem.to}
+                                          className="flex items-start gap-3 p-3 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors border border-gray-200 dark:border-zinc-600"
+                                          onClick={() => {
+                                            setIsMenuOpen(false);
+                                            setHoveredItem(null);
+                                          }}
+                                        >
+                                          <span className="flex items-center justify-center w-8 h-8 bg-gray-100 dark:bg-zinc-700 rounded-lg flex-shrink-0">
+                                            {subItem.icon}
+                                          </span>
+                                          <div>
+                                            <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-0.5">
+                                              {subItem.label}
+                                            </h4>
+                                            <p className="text-xs text-gray-600 dark:text-gray-400">
+                                              {subItem.description}
+                                            </p>
+                                          </div>
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              } else {
+                                // Если это простой элемент
+                                return (
+                                  <Link
+                                    key={item.to}
+                                    to={item.to}
+                                    className="flex items-start gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg hover:bg-gray-50 dark:hover:bg-zinc-600 transition-colors border border-gray-200 dark:border-zinc-600"
+                                    onClick={() => {
+                                      setIsMenuOpen(false);
+                                      setHoveredItem(null);
+                                    }}
+                                  >
+                                    <span className="flex items-center justify-center w-10 h-10 bg-gray-100 dark:bg-zinc-700 rounded-lg flex-shrink-0">
+                                      {item.icon}
+                                    </span>
+                                    <div>
+                                      <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                                        {item.label}
+                                      </h3>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                                        {item.description}
+                                      </p>
+                                    </div>
+                                  </Link>
+                                );
+                              }
+                            })}
+                          </div>
+                        );
+                      })()}
+
+                    {/* Показываем подразделы для "Администрирование" (смешанная структура) */}
+                    {hoveredItem === "Администрирование" &&
+                      (() => {
+                        const adminLink = links.find(
+                          (l) => l.label === "Администрирование"
+                        );
+                        if (!adminLink?.subItems) {
+                          return null;
+                        }
+                        return (
+                          <div className="space-y-6">
+                            {adminLink.subItems.map((item, idx) => {
                               // Если это категория с группой элементов
                               if (isCategoryGroup(item)) {
                                 return (
