@@ -27,8 +27,12 @@ export interface User {
   last_seen?: string;
   available_organizations?: number[];
   accessible_users?: number[];
+  created_at?: string;
+  updated_at?: string;
+  token_version?: number;
+  comment?: string;
+  additional_email?: string;
 }
-
 export interface ChangePasswordRequest {
   old_password?: string;
   new_password: string;

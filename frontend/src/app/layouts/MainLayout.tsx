@@ -589,7 +589,7 @@ export function MainLayout() {
               {/* Menu Button: Hamburger when closed, Home when open */}
               <button
                 ref={buttonRef}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
                 onClick={isMenuOpen ? handleHomeClick : toggleMenu}
                 aria-label={isMenuOpen ? "Go to Home" : "Toggle menu"}
               >
@@ -661,7 +661,7 @@ export function MainLayout() {
               <ThemeSwitcher />
               <button
                 onClick={handleLogout}
-                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
               >
                 Выход
               </button>
@@ -815,7 +815,7 @@ export function MainLayout() {
                               </p>
                               <button
                                 onClick={handleReportRequest}
-                                className="w-full flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 border border-blue-200 dark:border-blue-800 hover:scale-[1.02] hover:shadow-md opacity-0"
+                                className="w-full flex items-start gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-all duration-200 border border-blue-200 dark:border-blue-800 hover:scale-[1.02] hover:shadow-md opacity-0 cursor-pointer"
                                 style={{
                                   animation: "fadeIn 0.3s ease-out forwards",
                                   animationDelay: "200ms",
