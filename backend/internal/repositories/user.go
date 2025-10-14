@@ -492,18 +492,37 @@ func (r *UserRepository) MarkOfflineInactiveUsers(inactiveMinutes int) error {
 	return err
 }
 
+func (r *UserRepository) getByIDWithPassword(id int) (*models.User, error) {
+	var user models.User
+	// ВКЛЮЧАЕМ password для проверки
+	query := `SELECT id, full_name, username, password, avatar_url, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, accessible_users, emails, phones, 
+	          position, department, birth_date, address, city, country, postal_code, social_links, 
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by, 
+	          updated_by, created_at, updated_at, token_version 
+	          FROM users WHERE id = $1`
+
+	err := r.db.Get(&user, query, id)
+	return &user, err
+}
+
 // CheckPassword проверяет пароль пользователя
 func (r *UserRepository) CheckPassword(userID int, password string) (bool, error) {
 	log.Printf("🟡 CheckPassword called for userID=%d, password length=%d", userID, len(password))
-	user, err := r.GetByID(userID)
+
+	// ✅ ИСПРАВЛЕНИЕ: используем getByIDWithPassword вместо GetByID
+	user, err := r.getByIDWithPassword(userID)
 	if err != nil {
-		log.Printf("❌ GetByID error: %v", err)
+		log.Printf("❌ getByIDWithPassword error: %v", err)
 		return false, err
 	}
+
 	log.Printf("HEEELLOOO 1111")
 
 	if !user.Password.Valid || user.Password.String == "" {
 		// Пользователь без пароля
+		log.Printf("User has no password, allowing empty password login")
 		return password == "", nil
 	}
 
@@ -512,8 +531,8 @@ func (r *UserRepository) CheckPassword(userID int, password string) (bool, error
 	// Убираем возможные кавычки или пробелы вокруг хэша
 	hash := strings.Trim(user.Password.String, "\" ")
 
-	log.Printf("DB hash raw: %q", user.Password.String)
-	log.Printf("Password to check: %q", password)
+	log.Printf("DB hash length: %d", len(hash))
+	log.Printf("Password to check length: %d", len(password))
 
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
@@ -521,6 +540,7 @@ func (r *UserRepository) CheckPassword(userID int, password string) (bool, error
 		return false, nil
 	}
 
+	log.Printf("✅ Password match successful!")
 	return true, nil
 }
 

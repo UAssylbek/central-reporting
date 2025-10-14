@@ -1,4 +1,5 @@
 import type { User, UserRole, SocialLinks } from "./auth.api";
+import type { Organization } from "./organizations.api";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
 
@@ -62,8 +63,14 @@ export interface UpdateUserRequest {
 }
 
 export const usersApi = {
-  async getAll(): Promise<User[]> {
+  // ✅ ИСПРАВЛЕНИЕ: добавляем метод getUsers
+  async getUsers(): Promise<User[]> {
     const response = await fetch(`${API_URL}/users`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
       credentials: "include",
     });
 
@@ -71,13 +78,22 @@ export const usersApi = {
       throw new Error("Failed to fetch users");
     }
 
-    // Backend возвращает { users: User[] }
     const data = await response.json();
     return data.users || [];
   },
 
+  // Оставляем getAll для обратной совместимости
+  async getAll(): Promise<User[]> {
+    return this.getUsers();
+  },
+
   async getById(id: number): Promise<User> {
     const response = await fetch(`${API_URL}/users/${id}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
       credentials: "include",
     });
 
@@ -85,9 +101,27 @@ export const usersApi = {
       throw new Error("Failed to fetch user");
     }
 
-    // Backend возвращает { user: User }
     const data = await response.json();
     return data.user;
+  },
+
+  // Добавляем метод для получения организаций (если его нет)
+  async getOrganizations(): Promise<Organization[]> {
+    const response = await fetch(`${API_URL}/users/organizations`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch organizations");
+    }
+
+    const data = await response.json();
+    return data.organizations || [];
   },
 
   async create(userData: CreateUserRequest): Promise<{ user: User }> {
