@@ -293,7 +293,24 @@ export function UserFormModal({
     if (!user) return;
     try {
       await usersApi.deleteAvatar(user.id);
+
+      // ВАЖНО: Обновляем formData с пустой строкой вместо null
       setFormData({ ...formData, avatar_url: "" });
+
+      // ДОБАВЛЕНО: Получаем обновленные данные пользователя из API
+      // чтобы убедиться что изменения применены
+      const updatedUser = await usersApi.getById(user.id);
+
+      // Обновляем локальные данные
+      if (updatedUser) {
+        setFormData((prevData) => ({
+          ...prevData,
+          avatar_url: updatedUser.avatar_url || "",
+        }));
+      }
+
+      // Опционально: Показать уведомление об успехе
+      console.log("Avatar removed successfully");
     } catch (error) {
       console.error("Failed to delete avatar:", error);
       throw error;

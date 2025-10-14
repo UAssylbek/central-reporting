@@ -71,7 +71,7 @@ export function AvatarUpload({
     setUploading(true);
     try {
       await onRemove();
-      setPreview(null);
+      setPreview(null); // Очищаем preview после удаления
     } catch (error) {
       console.error("Failed to remove avatar:", error);
       alert("Не удалось удалить аватар");
@@ -80,7 +80,10 @@ export function AvatarUpload({
     }
   };
 
-  const avatarSrc = preview || getAvatarUrl(currentAvatar);
+  // ИСПРАВЛЕНИЕ: Правильная проверка наличия аватарки
+  // Используем preview если есть, иначе пытаемся получить URL из currentAvatar
+  const avatarUrl =
+    preview || (currentAvatar ? getAvatarUrl(currentAvatar) : null);
 
   return (
     <div className="space-y-4">
@@ -91,13 +94,14 @@ export function AvatarUpload({
       <div className="flex items-center gap-4">
         {/* Avatar Display */}
         <div className="relative">
-          {avatarSrc ? (
+          {avatarUrl ? (
             <img
-              src={avatarSrc}
+              src={avatarUrl}
               alt={fullName}
               className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-zinc-700 shadow-lg"
             />
           ) : (
+            // Показываем инициалы когда нет аватарки
             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl border-4 border-white dark:border-zinc-700 shadow-lg">
               {getInitials()}
             </div>
@@ -140,10 +144,11 @@ export function AvatarUpload({
                 d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
               />
             </svg>
-            {avatarSrc ? "Изменить фото" : "Загрузить фото"}
+            {avatarUrl ? "Изменить фото" : "Загрузить фото"}
           </button>
 
-          {avatarSrc && onRemove && (
+          {/* Показываем кнопку удаления только если есть аватарка (не preview!) */}
+          {currentAvatar && onRemove && (
             <button
               type="button"
               onClick={handleRemove}

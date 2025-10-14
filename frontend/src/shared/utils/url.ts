@@ -8,9 +8,10 @@ export function getApiBaseUrl(): string {
     return import.meta.env.VITE_API_URL.replace("/api", "");
   }
 
-  // Для локальной разработки
+  // Для локальной разработки используем текущий origin (localhost:3000)
+  // Vite proxy перенаправит запросы на backend:8080
   if (window.location.hostname === "localhost") {
-    return "http://localhost:8080";
+    return window.location.origin; // http://localhost:3000
   }
 
   // Для продакшена - используем текущий origin
@@ -29,6 +30,8 @@ export function getAvatarUrl(avatarPath?: string | null): string | undefined {
   }
 
   // Преобразуем относительный путь в полный URL
+  // Для локальной разработки это будет http://localhost:3000/uploads/...
+  // Vite proxy перенаправит на http://localhost:8080/uploads/...
   const baseUrl = getApiBaseUrl();
   return `${baseUrl}${avatarPath}`;
 }

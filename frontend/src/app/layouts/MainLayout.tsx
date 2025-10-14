@@ -19,6 +19,7 @@ import {
 import { UniversalReportModal } from "../../features/reports/UniversalReportModal/UniversalReportModal";
 import { getReportConfig } from "../../features/reports/configs";
 import type { ReportType } from "../../shared/types/reports";
+import { getAvatarUrl } from "../../shared/utils/url";
 
 // Типы для структуры меню
 interface SubMenuItem {
@@ -648,11 +649,34 @@ export function MainLayout() {
                   to="/profile"
                   className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
-                  <div className="w-7 h-7 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                    <span className="text-blue-600 dark:text-blue-300 font-semibold">
-                      {user.full_name?.[0] || user.username?.[0] || "U"}
-                    </span>
-                  </div>
+                  {/* ИСПРАВЛЕНИЕ: Добавлена проверка и отображение аватарки */}
+                  {user.avatar_url ? (
+                    <img
+                      src={getAvatarUrl(user.avatar_url)}
+                      alt={user.full_name || user.username}
+                      className="w-7 h-7 rounded-full object-cover border-2 border-blue-200 dark:border-blue-700"
+                      onError={(e) => {
+                        // Если изображение не загрузилось, показываем инициалы
+                        e.currentTarget.style.display = "none";
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement("div");
+                          fallback.className =
+                            "w-7 h-7 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center";
+                          fallback.innerHTML = `<span class="text-blue-600 dark:text-blue-300 font-semibold text-xs">${
+                            user.full_name?.[0] || user.username?.[0] || "U"
+                          }</span>`;
+                          parent.insertBefore(fallback, e.currentTarget);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-7 h-7 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 dark:text-blue-300 font-semibold text-xs">
+                        {user.full_name?.[0] || user.username?.[0] || "U"}
+                      </span>
+                    </div>
+                  )}
                   <span className="hidden sm:block font-medium">
                     {user.full_name || user.username}
                   </span>
