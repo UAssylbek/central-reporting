@@ -430,3 +430,88 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"new_password" binding:"required,min=6"`
 	ConfirmPassword string `json:"confirm_password" binding:"required"`
 }
+
+func (ns NullString) MarshalJSON() ([]byte, error) {
+	if !ns.Valid || ns.String == "" {
+		return []byte("null"), nil
+	}
+	return json.Marshal(ns.String)
+}
+
+func (ns *NullString) UnmarshalJSON(data []byte) error {
+	// Если null или пустая строка
+	if string(data) == "null" || string(data) == `""` {
+		ns.String = ""
+		ns.Valid = false
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	ns.String = s
+	ns.Valid = s != ""
+	return nil
+}
+
+// ===== JSON Marshaling для NullTime =====
+
+func (nt NullTime) MarshalJSON() ([]byte, error) {
+	if !nt.Valid {
+		return []byte("null"), nil
+	}
+	// Форматируем в ISO date format (YYYY-MM-DD)
+	return json.Marshal(nt.Time.Format("2006-01-02"))
+}
+
+func (nt *NullTime) UnmarshalJSON(data []byte) error {
+	// Если null
+	if string(data) == "null" || string(data) == `""` {
+		nt.Time = time.Time{}
+		nt.Valid = false
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	// Парсим дату в формате YYYY-MM-DD
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return err
+	}
+
+	nt.Time = t
+	nt.Valid = true
+	return nil
+}
+
+// ===== JSON Marshaling для NullInt =====
+
+func (ni NullInt) MarshalJSON() ([]byte, error) {
+	if !ni.Valid {
+		return []byte("null"), nil
+	}
+	return json.Marshal(ni.Int)
+}
+
+func (ni *NullInt) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		ni.Int = 0
+		ni.Valid = false
+		return nil
+	}
+
+	var i int
+	if err := json.Unmarshal(data, &i); err != nil {
+		return err
+	}
+
+	ni.Int = i
+	ni.Valid = true
+	return nil
+}

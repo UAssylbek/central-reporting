@@ -25,6 +25,7 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 // GetAll возвращает список пользователей
 func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
+	// ВАЖНО: не включаем password в SELECT для списка пользователей
 	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, accessible_users, emails, phones, 
 	          position, department, birth_date, address, city, country, postal_code, social_links, 
@@ -52,6 +53,7 @@ func (r *UserRepository) GetAccessibleUsers(moderatorID int) ([]models.User, err
 	}
 
 	var users []models.User
+	// ВАЖНО: не включаем password в SELECT для списка
 	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, accessible_users, emails, phones, 
 	          position, department, birth_date, address, city, country, postal_code, social_links, 
@@ -64,10 +66,11 @@ func (r *UserRepository) GetAccessibleUsers(moderatorID int) ([]models.User, err
 	return users, err
 }
 
-// GetByID возвращает пользователя по ID
+// GetByID возвращает пользователя по ID (БЕЗ пароля для безопасности)
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	var user models.User
-	query := `SELECT id, full_name, username, password, avatar_url, require_password_change, disable_password_change, 
+	// Не включаем password, т.к. это публичный метод
+	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, accessible_users, emails, phones, 
 	          position, department, birth_date, address, city, country, postal_code, social_links, 
 	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
@@ -79,9 +82,10 @@ func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	return &user, err
 }
 
-// GetByUsername возвращает пользователя по имени пользователя
+// GetByUsername возвращает пользователя по имени (С паролем для аутентификации)
 func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
+	// ВКЛЮЧАЕМ password, т.к. используется для аутентификации
 	query := `SELECT id, full_name, username, password, avatar_url, require_password_change, disable_password_change, 
 	          show_in_selection, available_organizations, accessible_users, emails, phones, 
 	          position, department, birth_date, address, city, country, postal_code, social_links, 
@@ -93,9 +97,9 @@ func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	err := r.db.Get(&user, query, username)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil // пользователь не найден
+			return nil, nil
 		}
-		return nil, err // другая ошибка
+		return nil, err
 	}
 	return &user, nil
 }

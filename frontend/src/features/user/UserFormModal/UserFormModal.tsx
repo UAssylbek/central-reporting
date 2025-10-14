@@ -301,26 +301,31 @@ export function UserFormModal({
     setLoading(true);
 
     try {
+      // Фильтруем пустые email и телефоны
       const filteredEmails = formData.emails.filter((e) => e.trim() !== "");
       const filteredPhones = formData.phones.filter((p) => p.trim() !== "");
+
+      // ВАЖНО: Если массивы пустые, отправляем пустой массив, а не массив с пустой строкой
+      const cleanEmails = filteredEmails.length > 0 ? filteredEmails : [];
+      const cleanPhones = filteredPhones.length > 0 ? filteredPhones : [];
 
       if (isEditing && user) {
         const updateData: UpdateUserRequest = {
           full_name: formData.full_name,
           username: formData.username,
-          emails: filteredEmails,
-          phones: filteredPhones,
-          position: formData.position,
-          department: formData.department,
-          birth_date: formData.birth_date,
-          address: formData.address,
-          city: formData.city,
-          country: formData.country,
-          postal_code: formData.postal_code,
+          emails: cleanEmails,
+          phones: cleanPhones,
+          position: formData.position || undefined,
+          department: formData.department || undefined,
+          birth_date: formData.birth_date || undefined,
+          address: formData.address || undefined,
+          city: formData.city || undefined,
+          country: formData.country || undefined,
+          postal_code: formData.postal_code || undefined,
           social_links: formData.social_links,
-          timezone: formData.timezone,
-          work_hours: formData.work_hours,
-          comment: formData.comment,
+          timezone: formData.timezone || undefined,
+          work_hours: formData.work_hours || undefined,
+          comment: formData.comment || undefined,
           custom_fields: formData.custom_fields,
           tags: formData.tags,
           require_password_change: formData.require_password_change,
@@ -341,19 +346,19 @@ export function UserFormModal({
           full_name: formData.full_name,
           username: formData.username,
           password: formData.password,
-          emails: filteredEmails,
-          phones: filteredPhones,
-          position: formData.position,
-          department: formData.department,
-          birth_date: formData.birth_date,
-          address: formData.address,
-          city: formData.city,
-          country: formData.country,
-          postal_code: formData.postal_code,
+          emails: cleanEmails,
+          phones: cleanPhones,
+          position: formData.position || undefined,
+          department: formData.department || undefined,
+          birth_date: formData.birth_date || undefined,
+          address: formData.address || undefined,
+          city: formData.city || undefined,
+          country: formData.country || undefined,
+          postal_code: formData.postal_code || undefined,
           social_links: formData.social_links,
-          timezone: formData.timezone,
-          work_hours: formData.work_hours,
-          comment: formData.comment,
+          timezone: formData.timezone || undefined,
+          work_hours: formData.work_hours || undefined,
+          comment: formData.comment || undefined,
           custom_fields: formData.custom_fields,
           tags: formData.tags,
           require_password_change: formData.require_password_change,

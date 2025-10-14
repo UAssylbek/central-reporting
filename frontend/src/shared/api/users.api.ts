@@ -71,7 +71,9 @@ export const usersApi = {
       throw new Error("Failed to fetch users");
     }
 
-    return response.json();
+    // Backend возвращает { users: User[] }
+    const data = await response.json();
+    return data.users || [];
   },
 
   async getById(id: number): Promise<User> {
@@ -83,7 +85,9 @@ export const usersApi = {
       throw new Error("Failed to fetch user");
     }
 
-    return response.json();
+    // Backend возвращает { user: User }
+    const data = await response.json();
+    return data.user;
   },
 
   async create(userData: CreateUserRequest): Promise<{ user: User }> {
