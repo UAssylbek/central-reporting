@@ -13,6 +13,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	errInvalidUserID      = "Неверный ID пользователя"
+	errNoAccess           = "Нет доступа к этому пользователю"
+	errUserAlreadyExists  = "Пользователь с логином '%s' уже существует"
+	errFailedToGetUsers   = "Не удалось получить список пользователей"
+	errFailedToCreateUser = "Не удалось создать пользователя"
+	errFailedToUpdateUser = "Не удалось обновить пользователя"
+	errFailedToDeleteUser = "Не удалось удалить пользователя"
+	errUserNotFound       = "Пользователь не найден"
+	errCannotDeleteSelf   = "Вы не можете удалить самого себя"
+)
+
 func (h *UserHandler) GetUserByID(c *gin.Context) {
 	h.GetUser(c)
 }
@@ -109,7 +121,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	existingUser, _ := h.userRepo.GetByUsername(req.Username)
 	if existingUser != nil {
 		c.JSON(http.StatusConflict, gin.H{
-			"error": fmt.Sprintf("Пользователь с логином '%s' уже существует", req.Username),
+			"error": fmt.Sprintf(errUserAlreadyExists, req.Username),
 		})
 		return
 	}
@@ -205,7 +217,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный ID пользователя"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errInvalidUserID})
 		return
 	}
 
@@ -223,20 +235,21 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	if role == models.RoleModerator {
 		canAccess, err := h.userRepo.CanModeratorAccessUser(currentUserID, id)
 		if err != nil || !canAccess {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
+			c.JSON(http.StatusForbidden, gin.H{"error": errNoAccess})
 			return
 		}
 
+		// 🔧 ИСПРАВЛЕНИЕ: Правильное сравнение типов
 		// Модератор не может изменять роль на admin
-		if req.Role == models.RoleAdmin {
+		if req.Role != "" && models.UserRole(req.Role) == models.RoleAdmin {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Модератор не может назначать роль администратора"})
 			return
 		}
 	}
 
-	// Обычный пользователь может редактировать только себя и только определённые поля
+	// Обычный пользователь может редактировать только себя
 	if role == models.RoleUser && currentUserID != id {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
+		c.JSON(http.StatusForbidden, gin.H{"error": errNoAccess})
 		return
 	}
 
@@ -251,7 +264,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		existingUser, _ := h.userRepo.GetByUsername(req.Username)
 		if existingUser != nil && existingUser.ID != id {
 			c.JSON(http.StatusConflict, gin.H{
-				"error": fmt.Sprintf("Пользователь с логином '%s' уже существует", req.Username),
+				"error": fmt.Sprintf(errUserAlreadyExists, req.Username),
 			})
 			return
 		}
@@ -261,7 +274,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	if err := h.userRepo.Update(id, req, currentUserID); err != nil {
 		log.Printf("Failed to update user %d: %v", id, err)
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Не удалось обновить пользователя",
+			"error": errFailedToUpdateUser,
 		})
 		return
 	}

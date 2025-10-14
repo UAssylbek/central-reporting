@@ -1,3 +1,4 @@
+// frontend/src/shared/ui/AvatarUpload/AvatarUpload.tsx
 import { useRef, useState } from "react";
 import { getAvatarUrl } from "../../utils/url";
 
@@ -20,6 +21,7 @@ export function AvatarUpload({
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Функция для получения инициалов
   const getInitials = () => {
     return fullName
       .split(" ")
@@ -33,26 +35,22 @@ export function AvatarUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Проверка типа файла
     if (!file.type.startsWith("image/")) {
       alert("Пожалуйста, выберите изображение");
       return;
     }
 
-    // Проверка размера (макс 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert("Размер файла не должен превышать 5MB");
       return;
     }
 
-    // Создаем превью
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
 
-    // Загружаем файл
     setUploading(true);
     try {
       await onUpload(file);
@@ -71,7 +69,7 @@ export function AvatarUpload({
     setUploading(true);
     try {
       await onRemove();
-      setPreview(null); // Очищаем preview после удаления
+      setPreview(null);
     } catch (error) {
       console.error("Failed to remove avatar:", error);
       alert("Не удалось удалить аватар");
@@ -80,33 +78,62 @@ export function AvatarUpload({
     }
   };
 
-  // ИСПРАВЛЕНИЕ: Правильная проверка наличия аватарки
-  // Используем preview если есть, иначе пытаемся получить URL из currentAvatar
+  // Определяем URL аватарки
   const avatarUrl =
     preview || (currentAvatar ? getAvatarUrl(currentAvatar) : null);
 
+  // Рендерим аватарку с 3 вариантами
+  const renderAvatar = () => {
+    if (avatarUrl) {
+      // Вариант 1: Есть аватарка - показываем её
+      return (
+        <img
+          src={avatarUrl}
+          alt={fullName}
+          className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-zinc-700 shadow-lg"
+        />
+      );
+    } else if (fullName && fullName !== "User") {
+      // Вариант 2: Нет аватарки, но есть имя - показываем инициалы
+      return (
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl border-4 border-white dark:border-zinc-700 shadow-lg">
+          {getInitials()}
+        </div>
+      );
+    } else {
+      // Вариант 3: Ничего нет - показываем дефолтную иконку (SVG вместо lucide-react)
+      return (
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-zinc-700 dark:to-zinc-800 flex items-center justify-center border-4 border-white dark:border-zinc-700 shadow-lg">
+          <svg
+            className="w-12 h-12 text-gray-500 dark:text-zinc-400"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+            />
+          </svg>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+      <div className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
         Фото профиля
-      </label>
+      </div>
 
       <div className="flex items-center gap-4">
         {/* Avatar Display */}
         <div className="relative">
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={fullName}
-              className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-zinc-700 shadow-lg"
-            />
-          ) : (
-            // Показываем инициалы когда нет аватарки
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl border-4 border-white dark:border-zinc-700 shadow-lg">
-              {getInitials()}
-            </div>
-          )}
+          {renderAvatar()}
 
+          {/* Индикатор загрузки */}
           {uploading && (
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
               <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -125,6 +152,7 @@ export function AvatarUpload({
             disabled={disabled || uploading}
           />
 
+          {/* Кнопка загрузки/изменения */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -147,7 +175,7 @@ export function AvatarUpload({
             {avatarUrl ? "Изменить фото" : "Загрузить фото"}
           </button>
 
-          {/* Показываем кнопку удаления только если есть аватарка (не preview!) */}
+          {/* Кнопка удаления - показываем только если есть РЕАЛЬНАЯ аватарка */}
           {currentAvatar && onRemove && (
             <button
               type="button"

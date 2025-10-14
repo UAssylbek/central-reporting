@@ -387,7 +387,7 @@ type UpdateUserRequest struct {
 	FullName               string          `json:"full_name,omitempty"`
 	Username               string          `json:"username,omitempty"`
 	Password               string          `json:"password,omitempty"`
-	AvatarURL              string          `json:"avatar_url,omitempty"`
+	AvatarURL              *string         `json:"avatar_url,omitempty"`
 	ResetPassword          bool            `json:"reset_password,omitempty"`
 	RequirePasswordChange  *bool           `json:"require_password_change,omitempty"`
 	DisablePasswordChange  *bool           `json:"disable_password_change,omitempty"`

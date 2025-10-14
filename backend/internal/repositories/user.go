@@ -223,7 +223,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 	}
 
 	// Аватарка
-	if updates.AvatarURL != "" {
+	if updates.AvatarURL != nil {
 		setParts = append(setParts, fmt.Sprintf("avatar_url = $%d", argIndex))
 		args = append(args, updates.AvatarURL)
 		argIndex++

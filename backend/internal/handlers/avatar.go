@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -105,10 +106,10 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	// Обновляем URL в базе данных
+	// 🔧 ИСПРАВЛЕНИЕ: Создаем указатель на строку правильно
 	avatarURL := fmt.Sprintf("/uploads/avatars/%s", filename)
 	updateReq := models.UpdateUserRequest{
-		AvatarURL: avatarURL,
+		AvatarURL: &avatarURL, // ✅ Указатель на переменную
 	}
 
 	if err := h.userRepo.Update(userID, updateReq, currentUserID.(int)); err != nil {
@@ -153,12 +154,17 @@ func (h *AvatarHandler) DeleteAvatar(c *gin.Context) {
 	// Удаляем файл если он есть
 	if user.AvatarURL.Valid && user.AvatarURL.String != "" {
 		oldPath := strings.TrimPrefix(user.AvatarURL.String, "/uploads/avatars/")
-		os.Remove(filepath.Join(AvatarDir, oldPath))
+		filePath := filepath.Join(AvatarDir, oldPath)
+		if err := os.Remove(filePath); err != nil {
+			log.Printf("Warning: failed to remove avatar file %s: %v", filePath, err)
+			// Продолжаем даже если файл не удалился
+		}
 	}
 
-	// Обновляем базу данных
+	// 🔧 КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: передаем указатель на пустую строку
+	emptyString := ""
 	updateReq := models.UpdateUserRequest{
-		AvatarURL: "",
+		AvatarURL: &emptyString, // Теперь это указатель!
 	}
 
 	if err := h.userRepo.Update(userID, updateReq, currentUserID.(int)); err != nil {

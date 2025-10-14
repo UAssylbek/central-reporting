@@ -41,7 +41,7 @@ export interface UpdateUserRequest {
   full_name?: string;
   username?: string;
   password?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
   reset_password?: boolean;
   require_password_change?: boolean;
   disable_password_change?: boolean;
@@ -69,15 +69,14 @@ export interface UpdateUserRequest {
 }
 
 export const usersApi = {
-
-   async deleteUser(id: number): Promise<void> {
+  async deleteUser(id: number): Promise<void> {
     await apiClient.delete<void>(`/users/${id}`);
   },
 
   async delete(id: number): Promise<void> {
     await apiClient.delete<void>(`/users/${id}`);
   },
-  
+
   async getUsers(): Promise<User[]> {
     const response = await apiClient.get<{ users: User[] }>("/users");
     return response.users || [];
@@ -114,14 +113,17 @@ export const usersApi = {
     await apiClient.delete<void>(`/users/${userId}/avatar`);
   },
 
-  async uploadAvatar(userId: number, file: File): Promise<{ avatar_url: string }> {
+  async uploadAvatar(
+    userId: number,
+    file: File
+  ): Promise<{ avatar_url: string }> {
     const formData = new FormData();
     formData.append("avatar", file);
 
     const token = localStorage.getItem("token");
-    const baseUrl = window.location.origin.includes('localhost') 
-      ? 'http://localhost:8080/api'
-      : '/api';
+    const baseUrl = window.location.origin.includes("localhost")
+      ? "http://localhost:8080/api"
+      : "/api";
 
     const response = await fetch(`${baseUrl}/users/${userId}/avatar`, {
       method: "POST",
@@ -139,11 +141,10 @@ export const usersApi = {
     return response.json();
   },
 
-    async getOrganizations(): Promise<Organization[]> {
+  async getOrganizations(): Promise<Organization[]> {
     const response = await apiClient.get<{ organizations: Organization[] }>(
       "/users/organizations"
     );
     return response.organizations || [];
   },
-
 };
