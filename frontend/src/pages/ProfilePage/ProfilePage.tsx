@@ -6,6 +6,7 @@ import { Button } from "../../shared/ui/Button/Button";
 import { Badge } from "../../shared/ui/Badge/Badge";
 import { Toast } from "../../shared/ui/Toast/Toast";
 import { ChangePasswordModal } from "../../features/auth/components/ChangePasswordModal";
+import { UserFormModal } from "../../features/user/UserFormModal/UserFormModal";
 import { useToast } from "../../shared/hooks/useToast";
 
 export const ProfilePage: React.FC = () => {
@@ -13,6 +14,7 @@ export const ProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(!user);
   const [error, setError] = useState<string | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"info" | "security" | "activity">(
     "info"
   );
@@ -32,6 +34,13 @@ export const ProfilePage: React.FC = () => {
   const handlePasswordChangeSuccess = () => {
     setIsPasswordModalOpen(false);
     success("Пароль успешно изменён");
+  };
+
+  const handleProfileUpdateSuccess = () => {
+    setIsEditModalOpen(false);
+    success("Профиль успешно обновлён");
+    // Обновляем данные пользователя
+    authApi.me().then(setUser);
   };
 
   if (loading) {
@@ -107,9 +116,17 @@ export const ProfilePage: React.FC = () => {
         <div className="flex flex-col md:flex-row gap-6">
           {/* Аватар */}
           <div className="flex-shrink-0">
-            <div className="w-24 h-24 rounded-xl bg-blue-500 dark:bg-blue-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-              {getInitials(user.full_name || user.username)}
-            </div>
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.full_name}
+                className="w-24 h-24 rounded-xl object-cover shadow-lg"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                {getInitials(user.full_name || user.username)}
+              </div>
+            )}
             {user.is_online && (
               <div className="flex items-center gap-2 mt-2 text-sm text-green-600 dark:text-green-400">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -127,33 +144,58 @@ export const ProfilePage: React.FC = () => {
               <p className="text-gray-500 dark:text-gray-400 text-sm">
                 @{user.username}
               </p>
+              {user.position && (
+                <p className="text-gray-600 dark:text-gray-300 text-sm mt-1">
+                  {user.position}
+                  {user.department && ` • ${user.department}`}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Badge variant={getRoleBadge(user.role)}>
                 {getRoleLabel(user.role)}
               </Badge>
+              {user.tags?.map((tag, idx) => (
+                <Badge key={idx} variant="info">
+                  {tag}
+                </Badge>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              {user.email && (
+              {user.emails && user.emails.length > 0 && (
                 <div>
                   <span className="text-gray-500 dark:text-gray-400">
                     Email:
                   </span>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {user.email}
-                  </p>
+                  <div className="space-y-1">
+                    {user.emails.map((email, idx) => (
+                      <p
+                        key={idx}
+                        className="font-medium text-gray-900 dark:text-white"
+                      >
+                        {email}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
-              {user.phone && (
+              {user.phones && user.phones.length > 0 && (
                 <div>
                   <span className="text-gray-500 dark:text-gray-400">
                     Телефон:
                   </span>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {user.phone}
-                  </p>
+                  <div className="space-y-1">
+                    {user.phones.map((phone, idx) => (
+                      <p
+                        key={idx}
+                        className="font-medium text-gray-900 dark:text-white"
+                      >
+                        {phone}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -161,6 +203,13 @@ export const ProfilePage: React.FC = () => {
 
           {/* Действия */}
           <div className="flex md:flex-col gap-2">
+            <Button
+              onClick={() => setIsEditModalOpen(true)}
+              variant="primary"
+              className="cursor-pointer"
+            >
+              Редактировать профиль
+            </Button>
             <Button
               onClick={() => setIsPasswordModalOpen(true)}
               variant="secondary"
@@ -185,7 +234,7 @@ export const ProfilePage: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
                   activeTab === tab.id
                     ? "border-blue-500 text-blue-600 dark:text-blue-400"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
@@ -200,64 +249,202 @@ export const ProfilePage: React.FC = () => {
         {/* Tab Content */}
         <div className="p-6">
           {activeTab === "info" && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">
-                    Полное имя
-                  </span>
-                  <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
-                    {user.full_name || "—"}
-                  </p>
-                </div>
+            <div className="space-y-6">
+              {/* Основная информация */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                  Основная информация
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">
+                      Полное имя
+                    </span>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                      {user.full_name || "—"}
+                    </p>
+                  </div>
 
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">
-                    Логин
-                  </span>
-                  <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
-                    {user.username}
-                  </p>
-                </div>
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">
+                      Логин
+                    </span>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                      {user.username}
+                    </p>
+                  </div>
 
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">
-                    Email
-                  </span>
-                  <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
-                    {user.email || "—"}
-                  </p>
-                </div>
+                  {user.position && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">
+                        Должность
+                      </span>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                        {user.position}
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">
-                    Телефон
-                  </span>
-                  <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
-                    {user.phone || "—"}
-                  </p>
-                </div>
+                  {user.department && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">
+                        Отдел
+                      </span>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                        {user.department}
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">
-                    Роль
-                  </span>
-                  <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
-                    {getRoleLabel(user.role)}
-                  </p>
-                </div>
+                  {user.birth_date && (
+                    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <span className="text-gray-500 dark:text-gray-400 text-sm">
+                        Дата рождения
+                      </span>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                        {new Date(user.birth_date).toLocaleDateString("ru-RU")}
+                      </p>
+                    </div>
+                  )}
 
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <span className="text-gray-500 dark:text-gray-400 text-sm">
-                    Последняя активность
-                  </span>
-                  <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
-                    {user.last_seen
-                      ? new Date(user.last_seen).toLocaleString("ru-RU")
-                      : "Нет данных"}
-                  </p>
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">
+                      Роль
+                    </span>
+                    <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                      {getRoleLabel(user.role)}
+                    </p>
+                  </div>
                 </div>
               </div>
+
+              {/* Адрес */}
+              {(user.address || user.city || user.country) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Адрес
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {user.address && (
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg md:col-span-2">
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          Адрес
+                        </span>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                          {user.address}
+                        </p>
+                      </div>
+                    )}
+                    {user.city && (
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          Город
+                        </span>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                          {user.city}
+                        </p>
+                      </div>
+                    )}
+                    {user.country && (
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          Страна
+                        </span>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                          {user.country}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Рабочие настройки */}
+              {(user.timezone || user.work_hours) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Рабочие настройки
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {user.timezone && (
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          Часовой пояс
+                        </span>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                          {user.timezone}
+                        </p>
+                      </div>
+                    )}
+                    {user.work_hours && (
+                      <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">
+                          Рабочие часы
+                        </span>
+                        <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                          {user.work_hours}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Социальные сети */}
+              {user.social_links &&
+                Object.keys(user.social_links).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                      Социальные сети
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {user.social_links.telegram && (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                          <span className="text-gray-500 dark:text-gray-400 text-sm">
+                            Telegram
+                          </span>
+                          <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                            {user.social_links.telegram}
+                          </p>
+                        </div>
+                      )}
+                      {user.social_links.whatsapp && (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                          <span className="text-gray-500 dark:text-gray-400 text-sm">
+                            WhatsApp
+                          </span>
+                          <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                            {user.social_links.whatsapp}
+                          </p>
+                        </div>
+                      )}
+                      {user.social_links.linkedin && (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                          <span className="text-gray-500 dark:text-gray-400 text-sm">
+                            LinkedIn
+                          </span>
+                          <p className="text-lg font-medium text-gray-900 dark:text-white mt-1">
+                            {user.social_links.linkedin}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              {/* Комментарий */}
+              {user.comment && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                    Комментарий
+                  </h3>
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <p className="text-gray-900 dark:text-white whitespace-pre-wrap">
+                      {user.comment}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -331,6 +518,14 @@ export const ProfilePage: React.FC = () => {
         onClose={() => setIsPasswordModalOpen(false)}
         onSuccess={handlePasswordChangeSuccess}
         isFirstLogin={false}
+      />
+
+      {/* Модальное окно редактирования профиля */}
+      <UserFormModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={handleProfileUpdateSuccess}
+        user={user}
       />
     </div>
   );

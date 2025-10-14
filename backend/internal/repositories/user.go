@@ -1,9 +1,12 @@
 package repositories
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/jmoiron/sqlx"
@@ -19,15 +22,17 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-// GetAll возвращает список пользователей с учётом прав доступа
+// GetAll возвращает список пользователей
 func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
-	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at, token_version 
+	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, accessible_users, emails, phones, 
+	          position, department, birth_date, address, city, country, postal_code, social_links, 
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by, 
+	          updated_by, created_at, updated_at, token_version 
 	          FROM users ORDER BY created_at DESC`
 
-	log.Printf("Executing query: %s", query)
 	err := r.db.Select(&users, query)
 	if err != nil {
 		log.Printf("Database error in GetAll: %v", err)
@@ -37,78 +42,65 @@ func (r *UserRepository) GetAll() ([]models.User, error) {
 
 // GetAccessibleUsers возвращает список пользователей, доступных для модератора
 func (r *UserRepository) GetAccessibleUsers(moderatorID int) ([]models.User, error) {
-	// Сначала получаем самого модератора
 	moderator, err := r.GetByID(moderatorID)
 	if err != nil {
-		log.Printf("Error getting moderator %d: %v", moderatorID, err)
 		return nil, err
 	}
 
-	log.Printf("Moderator %d has accessible_users: %v", moderatorID, moderator.AccessibleUsers)
-
-	// Если нет доступных пользователей, возвращаем пустой список
 	if len(moderator.AccessibleUsers) == 0 {
-		log.Printf("Moderator %d has no accessible users", moderatorID)
 		return []models.User{}, nil
 	}
 
-	// Преобразуем []int в interface{} слайс для PostgreSQL
-	ids := make([]interface{}, len(moderator.AccessibleUsers))
-	for i, id := range moderator.AccessibleUsers {
-		ids[i] = id
-	}
-
-	// Формируем список ID для SQL запроса
 	var users []models.User
-	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-	          comment, role, is_first_login, is_online, last_seen, created_at, updated_at, token_version 
+	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, accessible_users, emails, phones, 
+	          position, department, birth_date, address, city, country, postal_code, social_links, 
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by, 
+	          updated_by, created_at, updated_at, token_version 
 	          FROM users WHERE id = ANY($1::int[]) ORDER BY created_at DESC`
 
-	// Используем pq.Array для правильной передачи массива
 	err = r.db.Select(&users, query, pq.Array(moderator.AccessibleUsers))
-	if err != nil {
-		log.Printf("Database error in GetAccessibleUsers: %v", err)
-		return nil, err
-	}
-
-	log.Printf("Found %d accessible users for moderator %d", len(users), moderatorID)
-	return users, nil
+	return users, err
 }
 
+// GetByID возвращает пользователя по ID
 func (r *UserRepository) GetByID(id int) (*models.User, error) {
 	var user models.User
-	query := `SELECT id, full_name, username, require_password_change, disable_password_change, 
-          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-          comment, role, is_first_login, is_online, last_seen, created_at, updated_at, token_version 
-          FROM users WHERE id = $1`
+	query := `SELECT id, full_name, username, password, avatar_url, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, accessible_users, emails, phones, 
+	          position, department, birth_date, address, city, country, postal_code, social_links, 
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by, 
+	          updated_by, created_at, updated_at, token_version 
+	          FROM users WHERE id = $1`
+
 	err := r.db.Get(&user, query, id)
-	if err != nil {
-		return nil, err
-	}
-	return &user, nil
+	return &user, err
 }
 
+// GetByUsername возвращает пользователя по имени пользователя
 func (r *UserRepository) GetByUsername(username string) (*models.User, error) {
 	var user models.User
-	query := `SELECT id, full_name, username, password, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-	          comment, role, is_first_login, created_at, updated_at, token_version 
+	query := `SELECT id, full_name, username, password, avatar_url, require_password_change, disable_password_change, 
+	          show_in_selection, available_organizations, accessible_users, emails, phones, 
+	          position, department, birth_date, address, city, country, postal_code, social_links, 
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by, 
+	          updated_by, created_at, updated_at, token_version 
 	          FROM users WHERE LOWER(username) = LOWER($1)`
-
-	log.Printf("Looking for user with username: %s", username)
 
 	err := r.db.Get(&user, query, username)
 	if err != nil {
-		log.Printf("User not found or error: %v", err)
-		return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil // пользователь не найден
+		}
+		return nil, err // другая ошибка
 	}
-
-	hasPassword := user.Password.Valid && user.Password.String != ""
-	log.Printf("User found: ID=%d, Username=%s, HasPassword=%v", user.ID, user.Username, hasPassword)
 	return &user, nil
 }
 
+// Create создает нового пользователя
 func (r *UserRepository) Create(user *models.User) error {
 	var hashedPassword *string
 
@@ -120,48 +112,59 @@ func (r *UserRepository) Create(user *models.User) error {
 		}
 		hashStr := string(hash)
 		hashedPassword = &hashStr
-		log.Printf("Password hashed for user: %s", user.Username)
-	} else {
-		log.Printf("No password provided for user: %s", user.Username)
-	}
-
-	// Подготавливаем nullable поля
-	var email, phone, additionalEmail, comment interface{}
-
-	if user.Email.Valid && user.Email.String != "" {
-		email = user.Email.String
-	}
-	if user.Phone.Valid && user.Phone.String != "" {
-		phone = user.Phone.String
-	}
-	if user.AdditionalEmail.Valid && user.AdditionalEmail.String != "" {
-		additionalEmail = user.AdditionalEmail.String
-	}
-	if user.Comment.Valid && user.Comment.String != "" {
-		comment = user.Comment.String
 	}
 
 	// Устанавливаем is_first_login если требуется смена пароля
 	if user.RequirePasswordChange {
 		user.IsFirstLogin = true
-		log.Printf("Setting IsFirstLogin=true for user: %s (RequirePasswordChange=true)", user.Username)
 	}
 
-	log.Printf("Creating user: %s, IsFirstLogin: %v, RequirePasswordChange: %v",
-		user.Username, user.IsFirstLogin, user.RequirePasswordChange)
+	// Парсим дату рождения если она задана
+	var birthDate interface{}
+	if user.BirthDate.Valid {
+		birthDate = user.BirthDate.Time
+	}
 
 	query := `
-        INSERT INTO users (full_name, username, password, require_password_change, disable_password_change, 
-                          show_in_selection, available_organizations, accessible_users, email, phone, additional_email, 
-                          comment, role, is_first_login) 
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) 
+        INSERT INTO users (
+            full_name, username, password, avatar_url, require_password_change, disable_password_change, 
+            show_in_selection, available_organizations, accessible_users, emails, phones, 
+            position, department, birth_date, address, city, country, postal_code, social_links, 
+            timezone, work_hours, comment, custom_fields, tags, is_active, role, is_first_login, created_by
+        ) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28) 
         RETURNING id, created_at, updated_at`
 
 	err := r.db.QueryRow(query,
-		user.FullName, user.Username, hashedPassword, user.RequirePasswordChange, user.DisablePasswordChange,
-		user.ShowInSelection, user.AvailableOrganizations, user.AccessibleUsers, email, phone, additionalEmail,
-		comment, user.Role, user.IsFirstLogin).
-		Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
+		user.FullName,
+		user.Username,
+		hashedPassword,
+		nullStringToInterface(user.AvatarURL),
+		user.RequirePasswordChange,
+		user.DisablePasswordChange,
+		user.ShowInSelection,
+		user.AvailableOrganizations,
+		user.AccessibleUsers,
+		user.Emails,
+		user.Phones,
+		nullStringToInterface(user.Position),
+		nullStringToInterface(user.Department),
+		birthDate,
+		nullStringToInterface(user.Address),
+		nullStringToInterface(user.City),
+		nullStringToInterface(user.Country),
+		nullStringToInterface(user.PostalCode),
+		user.SocialLinks,
+		nullStringToInterface(user.Timezone),
+		nullStringToInterface(user.WorkHours),
+		nullStringToInterface(user.Comment),
+		user.CustomFields,
+		user.Tags,
+		user.IsActive,
+		user.Role,
+		user.IsFirstLogin,
+		nullIntToInterface(user.CreatedBy),
+	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
 	if err != nil {
 		log.Printf("Failed to create user: %v", err)
@@ -172,13 +175,37 @@ func (r *UserRepository) Create(user *models.User) error {
 	return nil
 }
 
-func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error {
+// Helper functions для конвертации nullable типов
+func nullStringToInterface(ns models.NullString) interface{} {
+	if ns.Valid && ns.String != "" {
+		return ns.String
+	}
+	return nil
+}
+
+func nullIntToInterface(ni models.NullInt) interface{} {
+	if ni.Valid {
+		return ni.Int
+	}
+	return nil
+}
+
+func nullTimeToInterface(nt models.NullTime) interface{} {
+	if nt.Valid {
+		return nt.Time
+	}
+	return nil
+}
+
+// Update обновляет данные пользователя
+func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, updatedByUserID int) error {
 	setParts := []string{}
 	args := []interface{}{}
 	argIndex := 1
 
 	shouldInvalidateToken := false
 
+	// Основная информация
 	if updates.FullName != "" {
 		setParts = append(setParts, fmt.Sprintf("full_name = $%d", argIndex))
 		args = append(args, updates.FullName)
@@ -191,6 +218,14 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		argIndex++
 	}
 
+	// Аватарка
+	if updates.AvatarURL != "" {
+		setParts = append(setParts, fmt.Sprintf("avatar_url = $%d", argIndex))
+		args = append(args, updates.AvatarURL)
+		argIndex++
+	}
+
+	// Пароль
 	if updates.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updates.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -203,11 +238,9 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 	} else if updates.ResetPassword {
 		setParts = append(setParts, "password = NULL")
 		shouldInvalidateToken = true
-	} else if updates.RequirePasswordChange != nil && *updates.RequirePasswordChange {
-		setParts = append(setParts, "password = NULL")
-		shouldInvalidateToken = true
 	}
 
+	// Настройки доступа
 	if updates.RequirePasswordChange != nil {
 		setParts = append(setParts, fmt.Sprintf("require_password_change = $%d", argIndex))
 		args = append(args, *updates.RequirePasswordChange)
@@ -217,7 +250,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 			setParts = append(setParts, fmt.Sprintf("is_first_login = $%d", argIndex))
 			args = append(args, true)
 			argIndex++
-			shouldInvalidateToken = true // Требуется смена пароля
+			shouldInvalidateToken = true
 		}
 	}
 
@@ -233,155 +266,286 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest) error 
 		argIndex++
 	}
 
-	if updates.AvailableOrganizations != nil {
+	if len(updates.AvailableOrganizations) > 0 {
 		setParts = append(setParts, fmt.Sprintf("available_organizations = $%d", argIndex))
 		args = append(args, updates.AvailableOrganizations)
 		argIndex++
 	}
 
-	if updates.AccessibleUsers != nil {
+	if len(updates.AccessibleUsers) > 0 {
 		setParts = append(setParts, fmt.Sprintf("accessible_users = $%d", argIndex))
 		args = append(args, updates.AccessibleUsers)
 		argIndex++
 	}
 
-	if updates.Email != "" {
-		setParts = append(setParts, fmt.Sprintf("email = $%d", argIndex))
-		args = append(args, updates.Email)
+	// Контактная информация
+	if len(updates.Emails) > 0 {
+		setParts = append(setParts, fmt.Sprintf("emails = $%d", argIndex))
+		args = append(args, models.Emails(updates.Emails))
 		argIndex++
 	}
 
-	if updates.Phone != "" {
-		setParts = append(setParts, fmt.Sprintf("phone = $%d", argIndex))
-		args = append(args, updates.Phone)
+	if len(updates.Phones) > 0 {
+		setParts = append(setParts, fmt.Sprintf("phones = $%d", argIndex))
+		args = append(args, models.Phones(updates.Phones))
 		argIndex++
 	}
 
-	if updates.AdditionalEmail != "" {
-		setParts = append(setParts, fmt.Sprintf("additional_email = $%d", argIndex))
-		args = append(args, updates.AdditionalEmail)
+	// Личная информация
+	if updates.Position != "" {
+		setParts = append(setParts, fmt.Sprintf("position = $%d", argIndex))
+		args = append(args, updates.Position)
 		argIndex++
 	}
 
+	if updates.Department != "" {
+		setParts = append(setParts, fmt.Sprintf("department = $%d", argIndex))
+		args = append(args, updates.Department)
+		argIndex++
+	}
+
+	if updates.BirthDate != "" {
+		birthDate, err := time.Parse("2006-01-02", updates.BirthDate)
+		if err == nil {
+			setParts = append(setParts, fmt.Sprintf("birth_date = $%d", argIndex))
+			args = append(args, birthDate)
+			argIndex++
+		}
+	}
+
+	// Адрес
+	if updates.Address != "" {
+		setParts = append(setParts, fmt.Sprintf("address = $%d", argIndex))
+		args = append(args, updates.Address)
+		argIndex++
+	}
+
+	if updates.City != "" {
+		setParts = append(setParts, fmt.Sprintf("city = $%d", argIndex))
+		args = append(args, updates.City)
+		argIndex++
+	}
+
+	if updates.Country != "" {
+		setParts = append(setParts, fmt.Sprintf("country = $%d", argIndex))
+		args = append(args, updates.Country)
+		argIndex++
+	}
+
+	if updates.PostalCode != "" {
+		setParts = append(setParts, fmt.Sprintf("postal_code = $%d", argIndex))
+		args = append(args, updates.PostalCode)
+		argIndex++
+	}
+
+	// Социальные сети
+	if len(updates.SocialLinks.Telegram) > 0 || len(updates.SocialLinks.WhatsApp) > 0 ||
+		len(updates.SocialLinks.LinkedIn) > 0 || len(updates.SocialLinks.Facebook) > 0 ||
+		len(updates.SocialLinks.Instagram) > 0 || len(updates.SocialLinks.Twitter) > 0 {
+		setParts = append(setParts, fmt.Sprintf("social_links = $%d", argIndex))
+		args = append(args, updates.SocialLinks)
+		argIndex++
+	}
+
+	// Рабочие настройки
+	if updates.Timezone != "" {
+		setParts = append(setParts, fmt.Sprintf("timezone = $%d", argIndex))
+		args = append(args, updates.Timezone)
+		argIndex++
+	}
+
+	if updates.WorkHours != "" {
+		setParts = append(setParts, fmt.Sprintf("work_hours = $%d", argIndex))
+		args = append(args, updates.WorkHours)
+		argIndex++
+	}
+
+	// Дополнительные поля
 	if updates.Comment != "" {
 		setParts = append(setParts, fmt.Sprintf("comment = $%d", argIndex))
 		args = append(args, updates.Comment)
 		argIndex++
 	}
 
-	// РОЛЬ - КРИТИЧНО ДЛЯ БЕЗОПАСНОСТИ
+	if len(updates.CustomFields) > 0 {
+		setParts = append(setParts, fmt.Sprintf("custom_fields = $%d", argIndex))
+		args = append(args, updates.CustomFields)
+		argIndex++
+	}
+
+	if len(updates.Tags) > 0 {
+		setParts = append(setParts, fmt.Sprintf("tags = $%d", argIndex))
+		args = append(args, models.Tags(updates.Tags))
+		argIndex++
+	}
+
+	// Статус
+	if updates.IsActive != nil {
+		setParts = append(setParts, fmt.Sprintf("is_active = $%d", argIndex))
+		args = append(args, *updates.IsActive)
+		argIndex++
+
+		if !*updates.IsActive {
+			// Если блокируем пользователя
+			setParts = append(setParts, fmt.Sprintf("blocked_at = $%d", argIndex))
+			args = append(args, time.Now())
+			argIndex++
+
+			setParts = append(setParts, fmt.Sprintf("blocked_by = $%d", argIndex))
+			args = append(args, updatedByUserID)
+			argIndex++
+
+			if updates.BlockedReason != "" {
+				setParts = append(setParts, fmt.Sprintf("blocked_reason = $%d", argIndex))
+				args = append(args, updates.BlockedReason)
+				argIndex++
+			}
+
+			shouldInvalidateToken = true
+		} else {
+			// Если разблокируем
+			setParts = append(setParts, "blocked_at = NULL, blocked_by = NULL, blocked_reason = NULL")
+		}
+	}
+
+	// Роль
 	if updates.Role != "" {
 		setParts = append(setParts, fmt.Sprintf("role = $%d", argIndex))
 		args = append(args, updates.Role)
 		argIndex++
 		shouldInvalidateToken = true
-		log.Printf("Role changed for user %d, invalidating token", id)
 	}
 
-	// Если нужно инвалидировать токен - увеличиваем версию
+	// Инвалидация токена если нужно
 	if shouldInvalidateToken {
 		setParts = append(setParts, "token_version = token_version + 1")
-		log.Printf("Invalidating token for user %d due to security changes", id)
 	}
+
+	// Отслеживание кто обновил
+	setParts = append(setParts, fmt.Sprintf("updated_by = $%d", argIndex))
+	args = append(args, updatedByUserID)
+	argIndex++
 
 	if len(setParts) == 0 {
-		return nil
+		return fmt.Errorf("nothing to update")
 	}
 
-	setParts = append(setParts, "updated_at = NOW()")
+	// Добавляем ID пользователя в конец
 	args = append(args, id)
 
-	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d", strings.Join(setParts, ", "), argIndex)
+	query := fmt.Sprintf("UPDATE users SET %s WHERE id = $%d",
+		strings.Join(setParts, ", "), argIndex)
+
+	log.Printf("Update query: %s", query)
+	log.Printf("Update args: %v", args)
+
 	_, err := r.db.Exec(query, args...)
 	return err
 }
 
+// Delete удаляет пользователя
 func (r *UserRepository) Delete(id int) error {
 	query := "DELETE FROM users WHERE id = $1"
 	_, err := r.db.Exec(query, id)
 	return err
 }
 
-func (r *UserRepository) CheckPassword(user *models.User, password string) bool {
-	// Если пароль в БД пустой/NULL, то любой пароль (включая пустой) проходит
-	if !user.Password.Valid || user.Password.String == "" {
-		log.Printf("Password is NULL or empty in DB - allowing login")
-		return true
-	}
-
-	log.Printf("Checking password hash")
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password.String), []byte(password))
-	return err == nil
+// SetOnlineStatus устанавливает онлайн статус
+func (r *UserRepository) SetOnlineStatus(userID int, isOnline bool) error {
+	query := "UPDATE users SET is_online = $1, last_seen = $2 WHERE id = $3"
+	_, err := r.db.Exec(query, isOnline, time.Now(), userID)
+	return err
 }
 
-// Новый метод для смены пароля при первом входе
+// IncrementTokenVersion увеличивает версию токена
+func (r *UserRepository) IncrementTokenVersion(userID int) error {
+	query := "UPDATE users SET token_version = token_version + 1 WHERE id = $1"
+	_, err := r.db.Exec(query, userID)
+	return err
+}
+
+// CanModeratorAccessUser проверяет доступ модератора к пользователю
+func (r *UserRepository) CanModeratorAccessUser(moderatorID, targetUserID int) (bool, error) {
+	moderator, err := r.GetByID(moderatorID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, id := range moderator.AccessibleUsers {
+		if id == targetUserID {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// MarkOfflineInactiveUsers помечает неактивных пользователей как оффлайн
+func (r *UserRepository) MarkOfflineInactiveUsers(inactiveMinutes int) error {
+	threshold := time.Now().Add(-time.Duration(inactiveMinutes) * time.Minute)
+	query := "UPDATE users SET is_online = false WHERE is_online = true AND last_seen < $1"
+	_, err := r.db.Exec(query, threshold)
+	return err
+}
+
+// CheckPassword проверяет пароль пользователя
+func (r *UserRepository) CheckPassword(userID int, password string) (bool, error) {
+	log.Printf("🟡 CheckPassword called for userID=%d, password length=%d", userID, len(password))
+	user, err := r.GetByID(userID)
+	if err != nil {
+		log.Printf("❌ GetByID error: %v", err)
+		return false, err
+	}
+	log.Printf("HEEELLOOO 1111")
+
+	if !user.Password.Valid || user.Password.String == "" {
+		// Пользователь без пароля
+		return password == "", nil
+	}
+
+	log.Printf("HEEELLOOO 22222")
+
+	// Убираем возможные кавычки или пробелы вокруг хэша
+	hash := strings.Trim(user.Password.String, "\" ")
+
+	log.Printf("DB hash raw: %q", user.Password.String)
+	log.Printf("Password to check: %q", password)
+
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil {
+		log.Printf("❌ Password mismatch: %v", err)
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// ChangePassword изменяет пароль пользователя
 func (r *UserRepository) ChangePassword(userID int, newPassword string) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	query := `UPDATE users SET password = $1, is_first_login = FALSE, 
-	          require_password_change = FALSE, updated_at = NOW() WHERE id = $2`
+	query := `UPDATE users SET password = $1, require_password_change = false, 
+	          is_first_login = false, token_version = token_version + 1 WHERE id = $2`
 	_, err = r.db.Exec(query, string(hashedPassword), userID)
 	return err
 }
 
-// UpdateUserActivity обновляет время последней активности и статус онлайн
+// UpdateUserActivity обновляет активность пользователя
 func (r *UserRepository) UpdateUserActivity(userID int) error {
-	query := `UPDATE users SET is_online = TRUE, last_seen = NOW(), updated_at = NOW() WHERE id = $1`
-	result, err := r.db.Exec(query, userID)
-	if err != nil {
-		log.Printf("UpdateUserActivity ERROR for user %d: %v", userID, err)
-		return err
-	}
-
-	rowsAffected, _ := result.RowsAffected()
-	log.Printf("UpdateUserActivity: user %d, rows affected: %d", userID, rowsAffected)
-	return nil
-}
-
-// SetUserOffline устанавливает пользователя в офлайн
-func (r *UserRepository) SetUserOffline(userID int) error {
-	query := `UPDATE users SET is_online = FALSE, updated_at = NOW() WHERE id = $1`
-	_, err := r.db.Exec(query, userID)
+	query := "UPDATE users SET is_online = true, last_seen = $1 WHERE id = $2"
+	_, err := r.db.Exec(query, time.Now(), userID)
 	return err
 }
 
-// UpdateOfflineUsers помечает пользователей как офлайн если они неактивны более N минут
-func (r *UserRepository) UpdateOfflineUsers(inactiveMinutes int) error {
-	query := `UPDATE users 
-	          SET is_online = FALSE 
-	          WHERE is_online = TRUE 
-	          AND last_seen < NOW() - INTERVAL '1 minute' * $1`
-	result, err := r.db.Exec(query, inactiveMinutes)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, _ := result.RowsAffected()
-	log.Printf("UpdateOfflineUsers: Set %d users as offline (inactive > %d mins)", rowsAffected, inactiveMinutes)
-	return nil
+// SetUserOffline помечает пользователя как оффлайн
+func (r *UserRepository) SetUserOffline(userID int) error {
+	return r.SetOnlineStatus(userID, false)
 }
 
-// CanModeratorAccessUser проверяет, может ли модератор управлять пользователем
-func (r *UserRepository) CanModeratorAccessUser(moderatorID int, targetUserID int) (bool, error) {
-	moderator, err := r.GetByID(moderatorID)
-	if err != nil {
-		return false, err
-	}
-
-	// Проверяем, что это действительно модератор
-	if moderator.Role != models.RoleModerator {
-		return false, nil
-	}
-
-	// Проверяем, есть ли targetUserID в списке доступных пользователей
-	for _, userID := range moderator.AccessibleUsers {
-		if userID == targetUserID {
-			return true, nil
-		}
-	}
-
-	return false, nil
+// UpdateOfflineUsers помечает неактивных пользователей как оффлайн
+func (r *UserRepository) UpdateOfflineUsers(inactiveMinutes int) error {
+	return r.MarkOfflineInactiveUsers(inactiveMinutes)
 }

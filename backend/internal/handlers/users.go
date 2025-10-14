@@ -6,11 +6,16 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/UAssylbek/central-reporting/internal/repositories"
 	"github.com/gin-gonic/gin"
 )
+
+func (h *UserHandler) GetUserByID(c *gin.Context) {
+	h.GetUser(c)
+}
 
 type UserHandler struct {
 	userRepo *repositories.UserRepository
@@ -81,6 +86,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
+// CreateUser создаёт нового пользователя
 func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req models.CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -89,19 +95,17 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	}
 
 	role, _ := c.Get("role")
+	currentUserID, _ := c.Get("user_id")
 
-	// Модераторы не могут создавать пользователей
-	if role == models.RoleModerator {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Модераторы не могут создавать пользователей"})
+	// Модератор не может создавать администраторов
+	if role == models.RoleModerator && req.Role == models.RoleAdmin {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Модератор не может создавать администраторов",
+		})
 		return
 	}
 
-	// Если роль не указана, ставим "user" по умолчанию
-	if req.Role == "" {
-		req.Role = models.RoleUser
-	}
-
-	// Проверяем существует ли пользователь с таким username
+	// Проверка на существующего пользователя
 	existingUser, _ := h.userRepo.GetByUsername(req.Username)
 	if existingUser != nil {
 		c.JSON(http.StatusConflict, gin.H{
@@ -110,7 +114,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	// Функция для создания NullString из строки
+	// Функция для создания NullString
 	createNullString := func(s string) models.NullString {
 		return models.NullString{
 			String: s,
@@ -118,24 +122,61 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		}
 	}
 
+	// Парсим дату рождения
+	var birthDate models.NullTime
+	if req.BirthDate != "" {
+		parsedDate, err := time.Parse("2006-01-02", req.BirthDate)
+		if err == nil {
+			birthDate = models.NullTime{Time: parsedDate, Valid: true}
+		}
+	}
+
+	// Инициализируем массивы если они nil
+	if req.Emails == nil {
+		req.Emails = []string{}
+	}
+	if req.Phones == nil {
+		req.Phones = []string{}
+	}
+	if req.Tags == nil {
+		req.Tags = []string{}
+	}
+	if req.CustomFields == nil {
+		req.CustomFields = models.CustomFields{}
+	}
+
 	user := models.User{
 		FullName:               req.FullName,
 		Username:               req.Username,
 		Password:               createNullString(req.Password),
+		AvatarURL:              createNullString(req.AvatarURL),
 		RequirePasswordChange:  req.RequirePasswordChange,
 		DisablePasswordChange:  req.DisablePasswordChange,
 		ShowInSelection:        req.ShowInSelection,
 		AvailableOrganizations: req.AvailableOrganizations,
 		AccessibleUsers:        req.AccessibleUsers,
-		Email:                  createNullString(req.Email),
-		Phone:                  createNullString(req.Phone),
-		AdditionalEmail:        createNullString(req.AdditionalEmail),
+		Emails:                 models.Emails(req.Emails),
+		Phones:                 models.Phones(req.Phones),
+		Position:               createNullString(req.Position),
+		Department:             createNullString(req.Department),
+		BirthDate:              birthDate,
+		Address:                createNullString(req.Address),
+		City:                   createNullString(req.City),
+		Country:                createNullString(req.Country),
+		PostalCode:             createNullString(req.PostalCode),
+		SocialLinks:            req.SocialLinks,
+		Timezone:               createNullString(req.Timezone),
+		WorkHours:              createNullString(req.WorkHours),
 		Comment:                createNullString(req.Comment),
+		CustomFields:           req.CustomFields,
+		Tags:                   models.Tags(req.Tags),
+		IsActive:               true,
 		Role:                   req.Role,
 		IsFirstLogin:           true,
+		CreatedBy:              models.NullInt{Int: currentUserID.(int), Valid: true},
 	}
 
-	// Если пароль не задан, но требуется его смена при первом входе, устанавливаем флаг
+	// Если пароль не задан, но требуется его смена при первом входе
 	if !user.Password.Valid && user.RequirePasswordChange {
 		user.IsFirstLogin = true
 	}
@@ -159,6 +200,7 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"user": user})
 }
 
+// UpdateUser обновляет данные пользователя
 func (h *UserHandler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -175,27 +217,36 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 
 	role, _ := c.Get("role")
 	userID, _ := c.Get("user_id")
+	currentUserID := userID.(int)
 
-	// Если модератор - проверяем доступ и ограничиваем возможности
+	// Если модератор - проверяем доступ
 	if role == models.RoleModerator {
-		canAccess, err := h.userRepo.CanModeratorAccessUser(userID.(int), id)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки доступа"})
-			return
-		}
-		if !canAccess {
+		canAccess, err := h.userRepo.CanModeratorAccessUser(currentUserID, id)
+		if err != nil || !canAccess {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
 			return
 		}
 
-		// Модератор может изменять ТОЛЬКО доступные организации
-		// Очищаем все остальные поля
-		req = models.UpdateUserRequest{
-			AvailableOrganizations: req.AvailableOrganizations,
+		// Модератор не может изменять роль на admin
+		if req.Role == models.RoleAdmin {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Модератор не может назначать роль администратора"})
+			return
 		}
 	}
 
-	// Если меняется username, проверяем что он не занят
+	// Обычный пользователь может редактировать только себя и только определённые поля
+	if role == models.RoleUser && currentUserID != id {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
+		return
+	}
+
+	// Обычный пользователь не может менять свою роль
+	if role == models.RoleUser && req.Role != "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Вы не можете изменять свою роль"})
+		return
+	}
+
+	// Проверка на существование пользователя с таким username
 	if req.Username != "" {
 		existingUser, _ := h.userRepo.GetByUsername(req.Username)
 		if existingUser != nil && existingUser.ID != id {
@@ -206,31 +257,27 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		}
 	}
 
-	if err := h.userRepo.Update(id, req); err != nil {
-		log.Printf("Failed to update user: %v", err)
-		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") {
-			c.JSON(http.StatusConflict, gin.H{
-				"error": "Пользователь с таким логином уже существует",
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Не удалось обновить пользователя",
-			})
-		}
+	// Выполняем обновление
+	if err := h.userRepo.Update(id, req, currentUserID); err != nil {
+		log.Printf("Failed to update user %d: %v", id, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Не удалось обновить пользователя",
+		})
 		return
 	}
 
-	// Получаем обновленного пользователя
-	user, err := h.userRepo.GetByID(id)
+	// Получаем обновлённого пользователя
+	updatedUser, err := h.userRepo.GetByID(id)
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"message": "Пользователь обновлен успешно"})
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Не удалось получить обновлённого пользователя",
+		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Пользователь обновлен успешно",
-		"user":    user,
-	})
+	// Очищаем пароль перед отправкой
+	updatedUser.Password = models.NullString{}
+	c.JSON(http.StatusOK, gin.H{"user": updatedUser})
 }
 
 func (h *UserHandler) DeleteUser(c *gin.Context) {

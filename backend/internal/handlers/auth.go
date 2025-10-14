@@ -50,7 +50,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		if hasPassword {
 			log.Printf("Checking password (password exists in DB)")
 			// Если пароль задан - проверяем его
-			if !h.userRepo.CheckPassword(user, req.Password) {
+			isValid, err := h.userRepo.CheckPassword(user.ID, req.Password)
+			if err != nil {
+				log.Printf("Error checking password: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки пароля"})
+				return
+			}
+			if !isValid {
 				log.Printf("Password check failed")
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные учетные данные"})
 				return
@@ -62,7 +68,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	} else {
 		log.Printf("Regular login - checking password")
 		// Обычная проверка пароля для всех остальных случаев
-		if !h.userRepo.CheckPassword(user, req.Password) {
+		isValid, err := h.userRepo.CheckPassword(user.ID, req.Password)
+		if err != nil {
+			log.Printf("Error checking password: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки пароля"})
+			return
+		}
+		if !isValid {
 			log.Printf("Password check failed")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные учетные данные"})
 			return
@@ -70,32 +82,23 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		log.Printf("Password check passed")
 	}
 
+	log.Printf("Updating user activity for user %d", user.ID)
+	if err := h.userRepo.UpdateUserActivity(user.ID); err != nil {
+		log.Printf("Failed to update activity: %v", err)
+	}
+
 	token, err := auth.GenerateToken(*user, h.jwtSecret)
 	if err != nil {
-		log.Printf("Token generation failed: %v", err)
+		log.Printf("Failed to generate JWT: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось создать токен"})
 		return
 	}
 
-	// Устанавливаем пользователя как онлайн при успешном логине
-	log.Printf("Login: Setting user %d as online", user.ID)
-	err = h.userRepo.UpdateUserActivity(user.ID)
-	if err != nil {
-		log.Printf("Login: Failed to set user %d as online: %v", user.ID, err)
-	}
-
-	// Очищаем пароль перед отправкой
-	user.Password = models.NullString{}
-
-	// Определяем нужно ли менять пароль
-	requirePasswordChange := user.IsFirstLogin && user.RequirePasswordChange
-
-	log.Printf("Login successful - RequirePasswordChange: %v", requirePasswordChange)
-
+	log.Printf("Login successful for user: %s (ID: %d)", user.Username, user.ID)
 	c.JSON(http.StatusOK, models.LoginResponse{
 		User:                  *user,
 		Token:                 token,
-		RequirePasswordChange: requirePasswordChange,
+		RequirePasswordChange: user.RequirePasswordChange,
 	})
 }
 
@@ -141,7 +144,7 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	}
 
 	userID, _ := c.Get("user_id")
-	user, err := h.userRepo.GetByUsername(c.GetString("username"))
+	user, err := h.userRepo.GetByID(userID.(int))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Пользователь не найден"})
 		return
@@ -153,10 +156,15 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	// ИСПРАВЛЕНИЕ: Для первого входа разрешаем пустой старый пароль
+	// Для первого входа разрешаем пустой старый пароль
 	if !user.IsFirstLogin {
 		// Обычная проверка старого пароля
-		if !h.userRepo.CheckPassword(user, req.OldPassword) {
+		isValid, err := h.userRepo.CheckPassword(user.ID, req.OldPassword)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки пароля"})
+			return
+		}
+		if !isValid {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный текущий пароль"})
 			return
 		}
@@ -164,7 +172,12 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		// Для первого входа проверяем старый пароль только если он был задан
 		hasPassword := user.Password.Valid && user.Password.String != ""
 		if hasPassword {
-			if !h.userRepo.CheckPassword(user, req.OldPassword) {
+			isValid, err := h.userRepo.CheckPassword(user.ID, req.OldPassword)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка проверки пароля"})
+				return
+			}
+			if !isValid {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "Неверный текущий пароль"})
 				return
 			}

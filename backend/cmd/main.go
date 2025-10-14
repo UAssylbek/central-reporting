@@ -8,6 +8,7 @@ import (
 	"github.com/UAssylbek/central-reporting/internal/config"
 	"github.com/UAssylbek/central-reporting/internal/database"
 	"github.com/UAssylbek/central-reporting/internal/handlers"
+	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/UAssylbek/central-reporting/internal/repositories"
 	"github.com/gin-gonic/gin"
 )
@@ -29,6 +30,7 @@ func main() {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userRepo, cfg.JWTSecret)
 	userHandler := handlers.NewUserHandler(userRepo)
+	avatarHandler := handlers.NewAvatarHandler(userRepo)
 
 	// Setup router
 	r := gin.Default()
@@ -40,7 +42,7 @@ func main() {
 		// Список разрешённых доменов
 		allowedOrigins := map[string]bool{
 			"http://localhost:3000":       true, // Локальная разработка
-			"http://192.168.110.36:3000": true, // Ваш IP в сети
+			"http://192.168.110.36:3000":  true, // Ваш IP в сети
 			"https://your-production.com": true, // Продакшен домен
 			// Добавьте другие нужные домены
 		}
@@ -73,18 +75,25 @@ func main() {
 		protected.POST("/auth/logout", authHandler.Logout)
 		protected.POST("/auth/change-password", authHandler.ChangePassword)
 
-		// User routes (доступны всем авторизованным пользователям)
-		protected.GET("/users/organizations", userHandler.GetOrganizations) // Список организаций
+		// User routes
+		protected.GET("/users/organizations", userHandler.GetOrganizations)
+
+		// Avatar routes (доступны всем авторизованным пользователям)
+		protected.POST("/users/:id/avatar", avatarHandler.UploadAvatar)
+		protected.DELETE("/users/:id/avatar", avatarHandler.DeleteAvatar)
 	}
 
-	// Routes for Admin and Moderator
-	adminOrModerator := protected.Group("/")
-	adminOrModerator.Use(auth.AdminOrModeratorMiddleware())
+	// Admin & Moderator routes
+	adminModeratorRoutes := r.Group("/api")
+	adminModeratorRoutes.Use(auth.JWTMiddleware(cfg.JWTSecret, userRepo))
+	adminModeratorRoutes.Use(auth.ActivityMiddleware(userRepo))
+	adminModeratorRoutes.Use(auth.RoleMiddleware([]models.UserRole{models.RoleAdmin, models.RoleModerator}))
 	{
-		// Модераторы могут просматривать своих пользователей и обновлять только организации
-		adminOrModerator.GET("/users", userHandler.GetUsers)
-		adminOrModerator.GET("/users/:id", userHandler.GetUser)
-		adminOrModerator.PUT("/users/:id", userHandler.UpdateUser) // Модератор может изменять только организации
+		adminModeratorRoutes.GET("/users", userHandler.GetUsers)
+		adminModeratorRoutes.GET("/users/:id", userHandler.GetUserByID)
+		// adminModeratorRoutes.POST("/users", userHandler.CreateUser)
+		adminModeratorRoutes.PUT("/users/:id", userHandler.UpdateUser)
+		// adminModeratorRoutes.DELETE("/users/:id", userHandler.DeleteUser)
 	}
 
 	// Admin only routes
@@ -94,6 +103,9 @@ func main() {
 		adminOnly.POST("/users", userHandler.CreateUser)
 		adminOnly.DELETE("/users/:id", userHandler.DeleteUser)
 	}
+
+	// Serving uploaded files (avatars)
+	r.Static("/uploads", "./uploads")
 
 	// Background task для обновления статусов офлайн
 	go func() {
@@ -111,5 +123,7 @@ func main() {
 	}()
 
 	log.Printf("Server starting on port %s", cfg.Port)
-	r.Run(":" + cfg.Port)
+	if err := r.Run(":" + cfg.Port); err != nil {
+		log.Fatal("Failed to start server:", err)
+	}
 }

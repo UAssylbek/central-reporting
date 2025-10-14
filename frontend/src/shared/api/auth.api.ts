@@ -1,6 +1,99 @@
 // frontend/src/shared/api/auth.api.ts
 import { apiClient } from "./client";
 
+// Обновите только типы User в файле auth.api.ts
+
+export type UserRole = "admin" | "moderator" | "user";
+
+export interface SocialLinks {
+  telegram?: string;
+  whatsapp?: string;
+  linkedin?: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+}
+
+export interface User {
+  id: number;
+  full_name: string;
+  username: string;
+
+  // Аватарка
+  avatar_url?: string;
+
+  // Настройки доступа
+  require_password_change: boolean;
+  disable_password_change: boolean;
+  show_in_selection: boolean;
+  available_organizations: number[];
+  accessible_users: number[];
+
+  // Контактная информация (массивы)
+  emails: string[];
+  phones: string[];
+
+  // Личная информация
+  position?: string;
+  department?: string;
+  birth_date?: string;
+
+  // Адрес
+  address?: string;
+  city?: string;
+  country?: string;
+  postal_code?: string;
+
+  // Социальные сети
+  social_links: SocialLinks;
+
+  // Рабочие настройки
+  timezone?: string;
+  work_hours?: string;
+
+  // Дополнительные поля
+  comment?: string;
+  custom_fields: Record<string, unknown>;
+  tags: string[];
+
+  // Статус
+  is_active: boolean;
+  blocked_reason?: string;
+  blocked_at?: string;
+  blocked_by?: number;
+
+  // Системные поля
+  role: UserRole;
+  is_first_login: boolean;
+  is_online: boolean;
+  last_seen?: string;
+
+  // История изменений
+  created_by?: number;
+  updated_by?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface LoginResponse {
+  user: User;
+  token: string;
+  require_password_change: boolean;
+}
+
+export interface ChangePasswordRequest {
+  old_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+// Остальной код authApi остается без изменений...
+
 export interface LoginRequest {
   username: string;
   password: string;
@@ -12,32 +105,6 @@ export interface LoginResponse {
   require_password_change: boolean;
 }
 
-export interface User {
-  id: number;
-  username: string;
-  full_name: string;
-  role: "admin" | "moderator" | "user";
-  email?: string;
-  phone?: string;
-  is_first_login: boolean;
-  require_password_change: boolean;
-  disable_password_change: boolean;
-  show_in_selection: boolean;
-  is_online: boolean;
-  last_seen?: string;
-  available_organizations?: number[];
-  accessible_users?: number[];
-  created_at?: string;
-  updated_at?: string;
-  token_version?: number;
-  comment?: string;
-  additional_email?: string;
-}
-export interface ChangePasswordRequest {
-  old_password?: string;
-  new_password: string;
-  confirm_password: string;
-}
 
 export const authApi = {
   /**

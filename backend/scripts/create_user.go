@@ -61,20 +61,36 @@ func main() {
 		}
 	}
 
+	// Создаём массивы для новых полей
+	emails := models.Emails{}
+	if *email != "" {
+		emails = models.Emails{*email}
+	}
+
+	phones := models.Phones{}
+	if *phone != "" {
+		phones = models.Phones{*phone}
+	}
+
 	// Create user
 	user := models.User{
 		FullName:               *fullName,
 		Username:               *username,
-		Password:               createNullString(*password), // ИЗМЕНЕНО: используем NullString
+		Password:               createNullString(*password),
 		Role:                   models.UserRole(*role),
 		RequirePasswordChange:  false,
 		DisablePasswordChange:  false,
 		ShowInSelection:        true,
 		IsFirstLogin:           false,
 		IsOnline:               false,
-		Email:                  createNullString(*email),
-		Phone:                  createNullString(*phone),
+		IsActive:               true,
+		Emails:                 emails,
+		Phones:                 phones,
+		SocialLinks:            models.SocialLinks{},
+		CustomFields:           models.CustomFields{},
+		Tags:                   models.Tags{},
 		AvailableOrganizations: models.Organizations{},
+		AccessibleUsers:        models.AccessibleUsers{},
 	}
 
 	if err := userRepo.Create(&user); err != nil {
