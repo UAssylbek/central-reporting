@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { getAvatarUrl } from "../../utils/url";
 
 interface AvatarUploadProps {
   currentAvatar?: string;
@@ -79,7 +80,7 @@ export function AvatarUpload({
     }
   };
 
-  const avatarSrc = preview || currentAvatar;
+  const avatarSrc = preview || getAvatarUrl(currentAvatar);
 
   return (
     <div className="space-y-4">

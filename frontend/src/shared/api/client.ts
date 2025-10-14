@@ -27,6 +27,10 @@ class ApiClient {
     console.log("🔍 ApiClient initialized with baseUrl:", this.baseUrl); // ← И эту
   }
 
+  public getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   /**
    * Получить токен из localStorage
    */

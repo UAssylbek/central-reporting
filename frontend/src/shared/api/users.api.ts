@@ -1,7 +1,13 @@
+// frontend/src/shared/api/users.api.ts
 import type { User, UserRole, SocialLinks } from "./auth.api";
-import type { Organization } from "./organizations.api";
+import { apiClient } from "./client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+export interface Organization {
+  id: number;
+  name: string;
+  code?: string;
+  description?: string;
+}
 
 export interface CreateUserRequest {
   full_name: string;
@@ -63,127 +69,65 @@ export interface UpdateUserRequest {
 }
 
 export const usersApi = {
-  // ✅ ИСПРАВЛЕНИЕ: добавляем метод getUsers
-  async getUsers(): Promise<User[]> {
-    const response = await fetch(`${API_URL}/users`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      credentials: "include",
-    });
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch users");
-    }
-
-    const data = await response.json();
-    return data.users || [];
+   async deleteUser(id: number): Promise<void> {
+    await apiClient.delete<void>(`/users/${id}`);
   },
 
-  // Оставляем getAll для обратной совместимости
+  async delete(id: number): Promise<void> {
+    await apiClient.delete<void>(`/users/${id}`);
+  },
+  
+  async getUsers(): Promise<User[]> {
+    const response = await apiClient.get<{ users: User[] }>("/users");
+    return response.users || [];
+  },
+
+  // Алиас для обратной совместимости
   async getAll(): Promise<User[]> {
     return this.getUsers();
   },
 
   async getById(id: number): Promise<User> {
-    const response = await fetch(`${API_URL}/users/${id}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch user");
-    }
-
-    const data = await response.json();
-    return data.user;
-  },
-
-  // Добавляем метод для получения организаций (если его нет)
-  async getOrganizations(): Promise<Organization[]> {
-    const response = await fetch(`${API_URL}/users/organizations`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch organizations");
-    }
-
-    const data = await response.json();
-    return data.organizations || [];
+    const response = await apiClient.get<{ user: User }>(`/users/${id}`);
+    return response.user;
   },
 
   async create(userData: CreateUserRequest): Promise<{ user: User }> {
-    const response = await fetch(`${API_URL}/users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(userData),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to create user");
-    }
-
-    return response.json();
+    return await apiClient.post<{ user: User }, CreateUserRequest>(
+      "/users",
+      userData
+    );
   },
 
   async update(
     id: number,
     userData: UpdateUserRequest
   ): Promise<{ user: User }> {
-    const response = await fetch(`${API_URL}/users/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(userData),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to update user");
-    }
-
-    return response.json();
+    return await apiClient.put<{ user: User }, UpdateUserRequest>(
+      `/users/${id}`,
+      userData
+    );
   },
 
-  async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/users/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to delete user");
-    }
+  async deleteAvatar(userId: number): Promise<void> {
+    await apiClient.delete<void>(`/users/${userId}/avatar`);
   },
 
-  async uploadAvatar(
-    userId: number,
-    file: File
-  ): Promise<{ avatar_url: string }> {
+  async uploadAvatar(userId: number, file: File): Promise<{ avatar_url: string }> {
     const formData = new FormData();
     formData.append("avatar", file);
 
-    const response = await fetch(`${API_URL}/users/${userId}/avatar`, {
+    const token = localStorage.getItem("token");
+    const baseUrl = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8080/api'
+      : '/api';
+
+    const response = await fetch(`${baseUrl}/users/${userId}/avatar`, {
       method: "POST",
-      credentials: "include",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
       body: formData,
     });
 
@@ -195,14 +139,11 @@ export const usersApi = {
     return response.json();
   },
 
-  async deleteAvatar(userId: number): Promise<void> {
-    const response = await fetch(`${API_URL}/users/${userId}/avatar`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to delete avatar");
-    }
+    async getOrganizations(): Promise<Organization[]> {
+    const response = await apiClient.get<{ organizations: Organization[] }>(
+      "/users/organizations"
+    );
+    return response.organizations || [];
   },
+
 };

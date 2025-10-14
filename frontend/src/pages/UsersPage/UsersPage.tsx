@@ -11,6 +11,7 @@ import { useToast } from "../../shared/hooks/useToast";
 import { usersApi } from "../../shared/api/users.api";
 import { authApi } from "../../shared/api/auth.api";
 import type { User } from "../../shared/api/auth.api";
+import { getAvatarUrl } from "../../shared/utils/url";
 
 type SortField =
   | "full_name"
@@ -102,8 +103,8 @@ export function UsersPage() {
         (user) =>
           user.full_name.toLowerCase().includes(query) ||
           user.username.toLowerCase().includes(query) ||
-          user.email?.toLowerCase().includes(query) ||
-          user.phone?.toLowerCase().includes(query)
+          user.emails?.[0]?.toLowerCase().includes(query) ||
+          user.phones?.[0]?.toLowerCase().includes(query)
       );
     }
 
@@ -121,10 +122,26 @@ export function UsersPage() {
 
     // Сортировка
     result.sort((a, b) => {
-      let aValue: string | number | boolean | number[] | undefined =
-        a[sortField as keyof User];
-      let bValue: string | number | boolean | number[] | undefined =
-        b[sortField as keyof User];
+      // ✅ ИСПРАВЛЕНИЕ: Правильные типы для значений
+      let aValue: string | number | boolean | undefined;
+      let bValue: string | number | boolean | undefined;
+
+      // Специальная обработка для массивов (emails, phones)
+      if (sortField === "email") {
+        aValue = a.emails?.[0] || "";
+        bValue = b.emails?.[0] || "";
+      } else {
+        aValue = a[sortField as keyof User] as
+          | string
+          | number
+          | boolean
+          | undefined;
+        bValue = b[sortField as keyof User] as
+          | string
+          | number
+          | boolean
+          | undefined;
+      }
 
       // Обработка null/undefined значений
       aValue = aValue ?? "";
@@ -721,14 +738,25 @@ export function UsersPage() {
                       )}
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                            {user.full_name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2)}
-                          </div>
+                          {user.avatar_url ? (
+                            <img
+                              src={getAvatarUrl(user.avatar_url)}
+                              alt={user.full_name}
+                              className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-zinc-700"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+                              {user.full_name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()
+                                .slice(0, 2)}
+                            </div>
+                          )}
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white">
                               {user.full_name}
@@ -748,12 +776,13 @@ export function UsersPage() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="text-sm">
+                          {/* ✅ ИСПРАВЛЕНО: Используем emails[0] и phones[0] */}
                           <div className="text-gray-900 dark:text-white">
-                            {user.email || "—"}
+                            {user.emails?.[0] || "—"}
                           </div>
-                          {user.phone && (
+                          {user.phones?.[0] && (
                             <div className="text-gray-500 dark:text-zinc-400">
-                              {user.phone}
+                              {user.phones[0]}
                             </div>
                           )}
                         </div>

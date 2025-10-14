@@ -9,6 +9,7 @@ import { AvatarUpload } from "../../../shared/ui/AvatarUpload/AvatarUpload";
 import { SocialLinksInput } from "../../../shared/ui/SocialLinksInput/SocialLinksInput";
 import { TagsInput } from "../../../shared/ui/TagsInput/TagsInput";
 import { CustomFields } from "../../../shared/ui/CustomFields/CustomFields";
+import { getAvatarUrl } from "../../../shared/utils/url";
 import {
   authApi,
   type User,
@@ -255,19 +256,23 @@ export function UserFormModal({
   };
 
   const loadAccessibleUsers = async () => {
-    setLoadingUsers(true);
     try {
-      const users = await usersApi.getAll();
-      setAccessibleUsers(
-        users.map((u) => ({
+      setLoadingUsers(true);
+      const allUsers = await usersApi.getUsers();
+
+      const regularUsers = allUsers
+        .filter((u) => u.role === "user")
+        .map((u) => ({
           id: u.id,
-          full_name: u.full_name,
           username: u.username,
+          full_name: u.full_name,
+          email: u.emails?.[0],
           role: u.role,
-        }))
-      );
-    } catch (error) {
-      console.error("Failed to load users:", error);
+        }));
+
+      setAccessibleUsers(regularUsers);
+    } catch (err: unknown) {
+      console.error("Failed to load users:", err);
     } finally {
       setLoadingUsers(false);
     }
@@ -548,7 +553,7 @@ export function UserFormModal({
             <div className="space-y-6">
               {isEditing && user && (
                 <AvatarUpload
-                  currentAvatar={formData.avatar_url}
+                  currentAvatar={getAvatarUrl(formData.avatar_url)}
                   fullName={formData.full_name}
                   onUpload={handleAvatarUpload}
                   onRemove={handleAvatarRemove}
@@ -589,9 +594,15 @@ export function UserFormModal({
                     setFormData({ ...formData, password: e.target.value })
                   }
                   placeholder={
-                    isEditing ? "Оставьте пустым, чтобы не менять" : "******"
+                    isEditing
+                      ? "Оставьте пустым, чтобы не менять"
+                      : "Оставьте пустым для входа без пароля"
                   }
-                  required={!isEditing}
+                  helperText={
+                    isEditing
+                      ? "Оставьте поле пустым, если не хотите менять пароль"
+                      : "Если пароль не указан, пользователь сможет войти без пароля"
+                  }
                 />
 
                 <div className="space-y-2">
@@ -635,13 +646,6 @@ export function UserFormModal({
                   placeholder="+7 (777) 123-45-67"
                   type="tel"
                   helperText="Формат будет применен автоматически"
-                />
-
-                <SocialLinksInput
-                  value={formData.social_links}
-                  onChange={(social_links) =>
-                    setFormData({ ...formData, social_links })
-                  }
                 />
               </div>
 
@@ -755,6 +759,13 @@ export function UserFormModal({
                   value={formData.custom_fields}
                   onChange={(custom_fields) =>
                     setFormData({ ...formData, custom_fields })
+                  }
+                />
+
+                <SocialLinksInput
+                  value={formData.social_links}
+                  onChange={(social_links) =>
+                    setFormData({ ...formData, social_links })
                   }
                 />
 
