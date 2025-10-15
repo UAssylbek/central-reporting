@@ -65,7 +65,6 @@ interface UserFormData {
   accessible_users: number[];
 }
 
-// Компонент для отображения поля в режиме просмотра
 interface ViewModeFieldProps {
   readonly label: string;
   readonly value: string | number | boolean | string[] | undefined | null;
@@ -88,30 +87,27 @@ function ViewModeField({
 
     if (type === "boolean") {
       return value ? (
-        <Badge variant="success">✓ Да</Badge>
+        <Badge variant="success">Да</Badge>
       ) : (
-        <Badge variant="gray">✗ Нет</Badge>
+        <Badge variant="gray">Нет</Badge>
       );
     }
 
-    if (type === "badge" && typeof value === "string") {
-      return <Badge variant={badgeVariant || "info"}>{value}</Badge>;
+    if (type === "badge" && badgeVariant) {
+      return <Badge variant={badgeVariant}>{String(value)}</Badge>;
     }
 
     if (type === "list" && Array.isArray(value)) {
-      if (value.length === 0) {
-        return (
-          <span className="text-gray-400 dark:text-zinc-500">Не указано</span>
-        );
-      }
-      return (
+      return value.length > 0 ? (
         <div className="flex flex-wrap gap-2">
           {value.map((item, idx) => (
-            <Badge key={`${item}-${idx}`} variant="info">
+            <Badge key={idx} variant="info">
               {item}
             </Badge>
           ))}
         </div>
+      ) : (
+        <span className="text-gray-400 dark:text-zinc-500">Не указано</span>
       );
     }
 
@@ -122,12 +118,10 @@ function ViewModeField({
 
   return (
     <div className="space-y-1">
-      <label className="block text-sm font-medium text-gray-600 dark:text-zinc-400">
+      <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
         {label}
-      </label>
-      <div className="px-4 py-2.5 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg">
-        {renderValue()}
-      </div>
+      </span>
+      {renderValue()}
     </div>
   );
 }
@@ -140,8 +134,20 @@ export function UserFormModal({
 }: UserFormModalProps) {
   const currentUser = authApi.getCurrentUser();
   const isEditing = !!user;
-  const isViewMode =
+
+  // 🔧 ИСПРАВЛЕНИЕ 1: Определяем режим просмотра/редактирования в зависимости от роли
+  // User может редактировать только себя и ограниченно
+  // Moderator может редактировать только available_organizations у своих пользователей
+  const isSelfEditing = isEditing && currentUser?.id === user?.id;
+  const isModeratorEditingOthers =
+    isEditing &&
+    currentUser?.role === "moderator" &&
+    currentUser.id !== user?.id;
+  const isUserEditingOthers =
     isEditing && currentUser?.role === "user" && currentUser.id !== user?.id;
+
+  // Пользователь не может редактировать других
+  const isViewOnlyMode = isUserEditingOthers;
 
   const [formData, setFormData] = useState<UserFormData>({
     full_name: "",
@@ -181,7 +187,6 @@ export function UserFormModal({
   const [loadingOrganizations, setLoadingOrganizations] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Загрузка данных пользователя при редактировании
   useEffect(() => {
     if (user && isOpen) {
       setFormData({
@@ -205,13 +210,14 @@ export function UserFormModal({
         comment: user.comment || "",
         custom_fields: user.custom_fields || {},
         tags: user.tags || [],
-        require_password_change: user.require_password_change,
-        disable_password_change: user.disable_password_change,
-        show_in_selection: user.show_in_selection,
+        require_password_change: user.require_password_change || false,
+        disable_password_change: user.disable_password_change || false,
+        show_in_selection: user.show_in_selection ?? true,
         available_organizations: user.available_organizations || [],
         accessible_users: user.accessible_users || [],
       });
-    } else if (!isOpen) {
+    } else if (!isEditing && isOpen) {
+      // Сброс для создания нового
       setFormData({
         full_name: "",
         username: "",
@@ -239,17 +245,17 @@ export function UserFormModal({
         available_organizations: [],
         accessible_users: [],
       });
-      setError(null);
     }
-  }, [user, isOpen]);
+    setError(null);
+  }, [user, isOpen, isEditing]);
 
   const loadOrganizations = async () => {
-    setLoadingOrganizations(true);
     try {
+      setLoadingOrganizations(true);
       const orgs = await organizationsApi.getAll();
       setOrganizations(orgs);
-    } catch (error) {
-      console.error("Failed to load organizations:", error);
+    } catch (err) {
+      console.error("Failed to load organizations:", err);
     } finally {
       setLoadingOrganizations(false);
     }
@@ -258,63 +264,37 @@ export function UserFormModal({
   const loadAccessibleUsers = async () => {
     try {
       setLoadingUsers(true);
-      const allUsers = await usersApi.getUsers();
-
-      const regularUsers = allUsers
-        .filter((u) => u.role === "user")
+      const users = await usersApi.getUsers();
+      const selectableUsers: SelectableUser[] = users
+        .filter((u) => u.id !== user?.id && u.role !== "admin")
         .map((u) => ({
           id: u.id,
-          username: u.username,
           full_name: u.full_name,
-          email: u.emails?.[0],
+          username: u.username,
           role: u.role,
+          emails: u.emails || [],
         }));
-
-      setAccessibleUsers(regularUsers);
-    } catch (err: unknown) {
+      setAccessibleUsers(selectableUsers);
+    } catch (err) {
       console.error("Failed to load users:", err);
     } finally {
       setLoadingUsers(false);
     }
   };
 
-  const handleAvatarUpload = async (file: File) => {
-    if (!user) return;
+  const handleAvatarUpload = async (file: File): Promise<void> => {
+    if (!user) return; // ничего не делаем, если user нет
+
     try {
-      const result = await usersApi.uploadAvatar(user.id, file);
-      setFormData({ ...formData, avatar_url: result.avatar_url });
-    } catch (error) {
-      console.error("Failed to upload avatar:", error);
-      throw error;
+      const { avatar_url } = await usersApi.uploadAvatar(user.id, file);
+      setFormData({ ...formData, avatar_url });
+    } catch (err: unknown) {
+      console.error("Ошибка при загрузке аватара:", err);
     }
   };
 
-  const handleAvatarRemove = async () => {
-    if (!user) return;
-    try {
-      await usersApi.deleteAvatar(user.id);
-
-      // ВАЖНО: Обновляем formData с пустой строкой вместо null
-      setFormData({ ...formData, avatar_url: "" });
-
-      // ДОБАВЛЕНО: Получаем обновленные данные пользователя из API
-      // чтобы убедиться что изменения применены
-      const updatedUser = await usersApi.getById(user.id);
-
-      // Обновляем локальные данные
-      if (updatedUser) {
-        setFormData((prevData) => ({
-          ...prevData,
-          avatar_url: updatedUser.avatar_url || "",
-        }));
-      }
-
-      // Опционально: Показать уведомление об успехе
-      console.log("Avatar removed successfully");
-    } catch (error) {
-      console.error("Failed to delete avatar:", error);
-      throw error;
-    }
+  const handleAvatarRemove = async (): Promise<void> => {
+    setFormData({ ...formData, avatar_url: "" });
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -323,64 +303,63 @@ export function UserFormModal({
     setLoading(true);
 
     try {
-      // Фильтруем пустые email и телефоны
-      const filteredEmails = formData.emails.filter((e) => e.trim() !== "");
-      const filteredPhones = formData.phones.filter((p) => p.trim() !== "");
-
-      // ВАЖНО: Если массивы пустые, отправляем пустой массив, а не массив с пустой строкой
-      const cleanEmails = filteredEmails.length > 0 ? filteredEmails : [];
-      const cleanPhones = filteredPhones.length > 0 ? filteredPhones : [];
-
-      if (isEditing && user) {
+      // 🔧 ИСПРАВЛЕНИЕ 2: Модератор может менять только available_organizations
+      if (isModeratorEditingOthers && user) {
+        const updateData: UpdateUserRequest = {
+          available_organizations: formData.available_organizations,
+        };
+        await usersApi.update(user.id, updateData);
+      }
+      // User редактирует себя - ограниченные поля
+      else if (isSelfEditing && user) {
         const updateData: UpdateUserRequest = {
           full_name: formData.full_name,
-          username: formData.username,
-          emails: cleanEmails,
-          phones: cleanPhones,
-          position: formData.position || undefined,
-          department: formData.department || undefined,
-          birth_date: formData.birth_date || undefined,
-          address: formData.address || undefined,
-          city: formData.city || undefined,
-          country: formData.country || undefined,
-          postal_code: formData.postal_code || undefined,
+          emails: formData.emails.filter((e) => e.trim()),
+          phones: formData.phones.filter((p) => p.trim()),
+          position: formData.position,
+          department: formData.department,
+          birth_date: formData.birth_date,
+          address: formData.address,
+          city: formData.city,
+          country: formData.country,
+          postal_code: formData.postal_code,
           social_links: formData.social_links,
-          timezone: formData.timezone || undefined,
-          work_hours: formData.work_hours || undefined,
-          comment: formData.comment || undefined,
+          timezone: formData.timezone,
+          work_hours: formData.work_hours,
+          comment: formData.comment,
           custom_fields: formData.custom_fields,
           tags: formData.tags,
-          require_password_change: formData.require_password_change,
-          disable_password_change: formData.disable_password_change,
-          show_in_selection: formData.show_in_selection,
-          available_organizations: formData.available_organizations,
-          accessible_users: formData.accessible_users,
-          role: formData.role,
+          avatar_url: formData.avatar_url || undefined,
         };
 
-        if (formData.password) {
-          updateData.password = formData.password;
+        // Аватарку обрабатываем отдельно если была изменена
+        if (formData.avatar_url !== user.avatar_url) {
+          updateData.avatar_url = formData.avatar_url || undefined;
         }
 
         await usersApi.update(user.id, updateData);
-      } else {
-        const createData: CreateUserRequest = {
+      }
+      // Admin создает или редактирует - полный доступ
+      else {
+        const userData: CreateUserRequest | UpdateUserRequest = {
           full_name: formData.full_name,
           username: formData.username,
-          password: formData.password,
-          emails: cleanEmails,
-          phones: cleanPhones,
-          position: formData.position || undefined,
-          department: formData.department || undefined,
-          birth_date: formData.birth_date || undefined,
-          address: formData.address || undefined,
-          city: formData.city || undefined,
-          country: formData.country || undefined,
-          postal_code: formData.postal_code || undefined,
+          password: formData.password || undefined,
+          avatar_url: formData.avatar_url || undefined,
+          role: formData.role,
+          emails: formData.emails.filter((e) => e.trim()),
+          phones: formData.phones.filter((p) => p.trim()),
+          position: formData.position,
+          department: formData.department,
+          birth_date: formData.birth_date,
+          address: formData.address,
+          city: formData.city,
+          country: formData.country,
+          postal_code: formData.postal_code,
           social_links: formData.social_links,
-          timezone: formData.timezone || undefined,
-          work_hours: formData.work_hours || undefined,
-          comment: formData.comment || undefined,
+          timezone: formData.timezone,
+          work_hours: formData.work_hours,
+          comment: formData.comment,
           custom_fields: formData.custom_fields,
           tags: formData.tags,
           require_password_change: formData.require_password_change,
@@ -388,10 +367,13 @@ export function UserFormModal({
           show_in_selection: formData.show_in_selection,
           available_organizations: formData.available_organizations,
           accessible_users: formData.accessible_users,
-          role: formData.role,
         };
 
-        await usersApi.create(createData);
+        if (isEditing && user) {
+          await usersApi.update(user.id, userData as UpdateUserRequest);
+        } else {
+          await usersApi.create(userData as CreateUserRequest);
+        }
       }
 
       onSuccess();
@@ -402,17 +384,6 @@ export function UserFormModal({
       setError(errorMessage);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "danger";
-      case "moderator":
-        return "warning";
-      default:
-        return "info";
     }
   };
 
@@ -427,11 +398,30 @@ export function UserFormModal({
     }
   };
 
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "danger" as const;
+      case "moderator":
+        return "warning" as const;
+      default:
+        return "info" as const;
+    }
+  };
+
   const getModalTitle = () => {
-    if (isViewMode) return "Просмотр пользователя";
+    if (isViewOnlyMode) return "Просмотр пользователя";
     if (isEditing) return "Редактирование пользователя";
     return "Создание пользователя";
   };
+
+  // 🔧 ИСПРАВЛЕНИЕ 3: Определяем какие поля показывать
+  const canEditRole = currentUser?.role === "admin" && !isSelfEditing;
+  const canEditSettings = currentUser?.role === "admin";
+  const canEditOrganizations =
+    currentUser?.role === "admin" || isModeratorEditingOthers;
+  const canEditAccessibleUsers = currentUser?.role === "admin";
+  const canEditBasicInfo = !isViewOnlyMode && !isModeratorEditingOthers;
 
   return (
     <>
@@ -448,127 +438,114 @@ export function UserFormModal({
             </div>
           )}
 
-          {isViewMode ? (
+          {/* Режим просмотра или режим модератора */}
+          {(isViewOnlyMode || isModeratorEditingOthers) && user ? (
             <div className="space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-                {user?.avatar_url ? (
-                  <img
-                    src={user.avatar_url}
-                    alt={user.full_name}
-                    className="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-zinc-700 shadow-lg"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl flex-shrink-0 border-4 border-white dark:border-zinc-700 shadow-lg">
-                    {user?.full_name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2)}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white truncate">
-                    {user?.full_name}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-zinc-400">
-                    @{user?.username}
-                  </p>
-                </div>
-                <Badge variant={getRoleBadgeVariant(user?.role || "user")}>
-                  {getRoleLabel(user?.role || "user")}
-                </Badge>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  📋 Основная информация
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ViewModeField label="Полное имя" value={user?.full_name} />
-                  <ViewModeField label="Логин" value={user?.username} />
-                  <ViewModeField label="Должность" value={user?.position} />
-                  <ViewModeField label="Отдел" value={user?.department} />
-                  <ViewModeField
-                    label="Дата рождения"
-                    value={user?.birth_date}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  📞 Контактная информация
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <ViewModeField
-                    label="Email адреса"
-                    value={user?.emails}
-                    type="list"
-                  />
-                  <ViewModeField
-                    label="Телефоны"
-                    value={user?.phones}
-                    type="list"
-                  />
-                </div>
-              </div>
-
-              {(user?.address || user?.city || user?.country) && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                    🏠 Адрес
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <ViewModeField label="Адрес" value={user?.address} />
+              {/* Базовая информация - только просмотр */}
+              <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                <div className="flex items-center gap-4">
+                  {user.avatar_url ? (
+                    <img
+                      src={getAvatarUrl(user.avatar_url)}
+                      alt={user.full_name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                      {user.full_name?.charAt(0) || user.username.charAt(0)}
                     </div>
-                    <ViewModeField label="Город" value={user?.city} />
-                    <ViewModeField label="Страна" value={user?.country} />
-                    <ViewModeField label="Индекс" value={user?.postal_code} />
+                  )}
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {user.full_name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      @{user.username}
+                    </p>
+                    <div className="mt-2">
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Для модератора показываем только организации */}
+              {isModeratorEditingOthers && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                    Доступ к организациям
+                  </h3>
+                  <div className="space-y-2">
+                    <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                      Доступные организации
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        loadOrganizations();
+                        setShowOrganizationsModal(true);
+                      }}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="text-gray-900 dark:text-white">
+                        {loadingOrganizations
+                          ? "Загрузка..."
+                          : `Выбрано организаций: ${formData.available_organizations.length}`}
+                      </span>
+                      <svg
+                        className="w-5 h-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               )}
 
-              {(user?.timezone || user?.work_hours) && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                    ⏰ Рабочие настройки
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Для просмотра показываем всю информацию */}
+              {isViewOnlyMode && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
                     <ViewModeField
-                      label="Часовой пояс"
-                      value={user?.timezone}
+                      label="Email"
+                      value={user.emails?.join(", ")}
                     />
                     <ViewModeField
-                      label="Рабочие часы"
-                      value={user?.work_hours}
+                      label="Телефон"
+                      value={user.phones?.join(", ")}
+                    />
+                    <ViewModeField label="Должность" value={user.position} />
+                    <ViewModeField label="Отдел" value={user.department} />
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                      🏢 Доступные организации
+                    </h4>
+                    <ViewModeField
+                      label=""
+                      value={`Организаций: ${
+                        user.available_organizations?.length || 0
+                      }`}
                     />
                   </div>
-                </div>
-              )}
-
-              {user?.tags && user.tags.length > 0 && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                    🏷️ Теги
-                  </h4>
-                  <ViewModeField label="" value={user.tags} type="list" />
-                </div>
-              )}
-
-              {user?.comment && (
-                <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                    💬 Комментарий
-                  </h4>
-                  <ViewModeField label="" value={user.comment} />
-                </div>
+                </>
               )}
             </div>
           ) : (
+            /* Режим полного редактирования */
             <div className="space-y-6">
-              {isEditing && user && (
+              {isEditing && user && canEditBasicInfo && (
                 <AvatarUpload
                   currentAvatar={getAvatarUrl(formData.avatar_url)}
                   fullName={formData.full_name}
@@ -583,272 +560,366 @@ export function UserFormModal({
                   Основная информация
                 </h3>
 
-                <Input
-                  label="Полное имя"
-                  value={formData.full_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, full_name: e.target.value })
-                  }
-                  placeholder="Иванов Иван Иванович"
-                  required
-                />
+                {canEditBasicInfo && (
+                  <>
+                    <Input
+                      label="Полное имя"
+                      value={formData.full_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, full_name: e.target.value })
+                      }
+                      placeholder="Иванов Иван Иванович"
+                      required
+                    />
 
-                <Input
-                  label="Логин"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  placeholder="ivanov"
-                  required
-                />
+                    <Input
+                      label="Логин"
+                      value={formData.username}
+                      onChange={(e) =>
+                        setFormData({ ...formData, username: e.target.value })
+                      }
+                      placeholder="ivanov"
+                      required
+                      disabled={isSelfEditing} // User не может менять свой логин
+                    />
 
-                <Input
-                  label={isEditing ? "Новый пароль" : "Пароль"}
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password: e.target.value })
-                  }
-                  placeholder={
-                    isEditing
-                      ? "Оставьте пустым, чтобы не менять"
-                      : "Оставьте пустым для входа без пароля"
-                  }
-                  helperText={
-                    isEditing
-                      ? "Оставьте поле пустым, если не хотите менять пароль"
-                      : "Если пароль не указан, пользователь сможет войти без пароля"
-                  }
-                />
+                    <Input
+                      label={isEditing ? "Новый пароль" : "Пароль"}
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      placeholder={
+                        isEditing
+                          ? "Оставьте пустым, чтобы не менять"
+                          : "Оставьте пустым для входа без пароля"
+                      }
+                      helperText={
+                        isEditing
+                          ? "Оставьте поле пустым, если не хотите менять пароль"
+                          : "Если пароль не указан, пользователь сможет войти без пароля"
+                      }
+                      disabled={isSelfEditing} // User меняет пароль через отдельную форму
+                    />
+                  </>
+                )}
 
-                <div className="space-y-2">
-                  <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    Роль
-                  </span>
-                  <select
-                    value={formData.role}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        role: e.target.value as "admin" | "moderator" | "user",
-                      })
-                    }
-                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                  >
-                    <option value="user">Пользователь</option>
-                    <option value="moderator">Модератор</option>
-                    <option value="admin">Администратор</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  Контактная информация
-                </h3>
-
-                <MultiInput
-                  label="Email адреса"
-                  values={formData.emails}
-                  onChange={(emails) => setFormData({ ...formData, emails })}
-                  placeholder="user@example.com"
-                  type="email"
-                />
-
-                <MultiInput
-                  label="Телефоны"
-                  values={formData.phones}
-                  onChange={(phones) => setFormData({ ...formData, phones })}
-                  placeholder="+7 (777) 123-45-67"
-                  type="tel"
-                  helperText="Формат будет применен автоматически"
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  Личная информация
-                </h3>
-
-                <Input
-                  label="Должность"
-                  value={formData.position}
-                  onChange={(e) =>
-                    setFormData({ ...formData, position: e.target.value })
-                  }
-                  placeholder="Менеджер"
-                />
-
-                <Input
-                  label="Отдел"
-                  value={formData.department}
-                  onChange={(e) =>
-                    setFormData({ ...formData, department: e.target.value })
-                  }
-                  placeholder="Отдел продаж"
-                />
-
-                <Input
-                  label="Дата рождения"
-                  type="date"
-                  value={formData.birth_date}
-                  onChange={(e) =>
-                    setFormData({ ...formData, birth_date: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  Адрес
-                </h3>
-
-                <Input
-                  label="Адрес"
-                  value={formData.address}
-                  onChange={(e) =>
-                    setFormData({ ...formData, address: e.target.value })
-                  }
-                  placeholder="ул. Примерная, д. 1"
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Input
-                    label="Город"
-                    value={formData.city}
-                    onChange={(e) =>
-                      setFormData({ ...formData, city: e.target.value })
-                    }
-                    placeholder="Алматы"
-                  />
-
-                  <Input
-                    label="Страна"
-                    value={formData.country}
-                    onChange={(e) =>
-                      setFormData({ ...formData, country: e.target.value })
-                    }
-                    placeholder="Казахстан"
-                  />
-
-                  <Input
-                    label="Индекс"
-                    value={formData.postal_code}
-                    onChange={(e) =>
-                      setFormData({ ...formData, postal_code: e.target.value })
-                    }
-                    placeholder="050000"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  Рабочие настройки
-                </h3>
-
-                <Input
-                  label="Часовой пояс"
-                  value={formData.timezone}
-                  onChange={(e) =>
-                    setFormData({ ...formData, timezone: e.target.value })
-                  }
-                  placeholder="Asia/Almaty"
-                />
-
-                <Input
-                  label="Рабочие часы"
-                  value={formData.work_hours}
-                  onChange={(e) =>
-                    setFormData({ ...formData, work_hours: e.target.value })
-                  }
-                  placeholder="9:00-18:00"
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  Дополнительные поля
-                </h3>
-
-                <CustomFields
-                  value={formData.custom_fields}
-                  onChange={(custom_fields) =>
-                    setFormData({ ...formData, custom_fields })
-                  }
-                />
-
-                <SocialLinksInput
-                  value={formData.social_links}
-                  onChange={(social_links) =>
-                    setFormData({ ...formData, social_links })
-                  }
-                />
-
-                <TagsInput
-                  label="Теги"
-                  value={formData.tags}
-                  onChange={(tags) => setFormData({ ...formData, tags })}
-                  suggestions={["VIP", "Партнер", "Поставщик", "Клиент"]}
-                />
-
-                <div className="space-y-2">
-                  <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    Комментарий
-                  </span>
-                  <textarea
-                    value={formData.comment}
-                    onChange={(e) =>
-                      setFormData({ ...formData, comment: e.target.value })
-                    }
-                    placeholder="Дополнительная информация о пользователе"
-                    rows={4}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  Доступ к организациям
-                </h3>
-
-                <div className="space-y-2">
-                  <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                    Доступные организации
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      loadOrganizations();
-                      setShowOrganizationsModal(true);
-                    }}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="text-gray-900 dark:text-white">
-                      {loadingOrganizations
-                        ? "Загрузка..."
-                        : `Выбрано организаций: ${formData.available_organizations.length}`}
+                {canEditRole && (
+                  <div className="space-y-2">
+                    <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                      Роль
                     </span>
-                    <svg
-                      className="w-5 h-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                    <select
+                      value={formData.role}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          role: e.target.value as
+                            | "admin"
+                            | "moderator"
+                            | "user",
+                        })
+                      }
+                      className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                </div>
+                      <option value="user">Пользователь</option>
+                      <option value="moderator">Модератор</option>
+                      <option value="admin">Администратор</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
-              {formData.role === "moderator" && (
+              {canEditBasicInfo && (
+                <>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                      Контактная информация
+                    </h3>
+
+                    <MultiInput
+                      label="Email адреса"
+                      values={formData.emails}
+                      onChange={(values) =>
+                        setFormData({ ...formData, emails: values })
+                      }
+                      placeholder="example@email.com"
+                      type="email"
+                    />
+
+                    <MultiInput
+                      label="Телефоны"
+                      values={formData.phones}
+                      onChange={(values) =>
+                        setFormData({ ...formData, phones: values })
+                      }
+                      placeholder="+7 (___) ___-__-__"
+                      type="tel"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                      Рабочая информация
+                    </h3>
+
+                    <Input
+                      label="Должность"
+                      value={formData.position}
+                      onChange={(e) =>
+                        setFormData({ ...formData, position: e.target.value })
+                      }
+                      placeholder="Менеджер"
+                    />
+
+                    <Input
+                      label="Отдел"
+                      value={formData.department}
+                      onChange={(e) =>
+                        setFormData({ ...formData, department: e.target.value })
+                      }
+                      placeholder="Отдел продаж"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                      Личная информация
+                    </h3>
+
+                    <Input
+                      label="Дата рождения"
+                      type="date"
+                      value={formData.birth_date}
+                      onChange={(e) =>
+                        setFormData({ ...formData, birth_date: e.target.value })
+                      }
+                    />
+
+                    <Input
+                      label="Адрес"
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                      placeholder="Улица, дом, квартира"
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input
+                        label="Город"
+                        value={formData.city}
+                        onChange={(e) =>
+                          setFormData({ ...formData, city: e.target.value })
+                        }
+                        placeholder="Москва"
+                      />
+
+                      <Input
+                        label="Страна"
+                        value={formData.country}
+                        onChange={(e) =>
+                          setFormData({ ...formData, country: e.target.value })
+                        }
+                        placeholder="Россия"
+                      />
+                    </div>
+
+                    <Input
+                      label="Почтовый индекс"
+                      value={formData.postal_code}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          postal_code: e.target.value,
+                        })
+                      }
+                      placeholder="123456"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                      Социальные сети
+                    </h3>
+
+                    <SocialLinksInput
+                      value={formData.social_links}
+                      onChange={(links) =>
+                        setFormData({ ...formData, social_links: links })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                      Дополнительно
+                    </h3>
+
+                    <Input
+                      label="Часовой пояс"
+                      value={formData.timezone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, timezone: e.target.value })
+                      }
+                      placeholder="UTC+3"
+                    />
+
+                    <Input
+                      label="Рабочие часы"
+                      value={formData.work_hours}
+                      onChange={(e) =>
+                        setFormData({ ...formData, work_hours: e.target.value })
+                      }
+                      placeholder="9:00 - 18:00"
+                    />
+
+                    <div className="space-y-2">
+                      <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Комментарий
+                      </span>
+                      <textarea
+                        value={formData.comment}
+                        onChange={(e) =>
+                          setFormData({ ...formData, comment: e.target.value })
+                        }
+                        placeholder="Дополнительная информация о пользователе"
+                        rows={4}
+                        className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <TagsInput
+                      label="Теги"
+                      value={formData.tags}
+                      onChange={(tags) => setFormData({ ...formData, tags })}
+                    />
+
+                    <CustomFields
+                      value={formData.custom_fields}
+                      onChange={(fields) =>
+                        setFormData({ ...formData, custom_fields: fields })
+                      }
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* 🔧 ИСПРАВЛЕНИЕ 4: Настройки показываем только админу */}
+              {canEditSettings && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                    Настройки
+                  </h3>
+
+                  <div className="space-y-3">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.require_password_change}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            require_password_change: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-zinc-300">
+                        Требовать смену пароля при входе
+                      </span>
+                    </label>
+
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.disable_password_change}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            disable_password_change: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-zinc-300">
+                        Запретить смену пароля
+                      </span>
+                    </label>
+
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.show_in_selection}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            show_in_selection: e.target.checked,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-zinc-300">
+                        Показывать в выборе
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Организации - админ может всегда редактировать, модератор только для своих пользователей, user только просмотр */}
+              {(canEditOrganizations || isSelfEditing) && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                    Доступ к организациям
+                  </h3>
+
+                  <div className="space-y-2">
+                    <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                      Доступные организации{" "}
+                      {isSelfEditing && "(только просмотр)"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (canEditOrganizations) {
+                          loadOrganizations();
+                          setShowOrganizationsModal(true);
+                        }
+                      }}
+                      disabled={isSelfEditing}
+                      className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left transition-colors flex items-center justify-between ${
+                        isSelfEditing
+                          ? "cursor-not-allowed opacity-60"
+                          : "hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer"
+                      }`}
+                    >
+                      <span className="text-gray-900 dark:text-white">
+                        {loadingOrganizations
+                          ? "Загрузка..."
+                          : `Выбрано организаций: ${formData.available_organizations.length}`}
+                      </span>
+                      <svg
+                        className="w-5 h-5 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Доступные пользователи - только для админа при редактировании модератора */}
+              {canEditAccessibleUsers && formData.role === "moderator" && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
                     Доступные пользователи
@@ -888,63 +959,6 @@ export function UserFormModal({
                   </div>
                 </div>
               )}
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                  Настройки
-                </h3>
-
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.require_password_change}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        require_password_change: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-zinc-300">
-                    Требовать смену пароля при первом входе
-                  </span>
-                </label>
-
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.disable_password_change}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        disable_password_change: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-zinc-300">
-                    Запретить смену пароля
-                  </span>
-                </label>
-
-                <label className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.show_in_selection}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        show_in_selection: e.target.checked,
-                      })
-                    }
-                    className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-zinc-300">
-                    Показывать в выборе
-                  </span>
-                </label>
-              </div>
             </div>
           )}
 
@@ -955,10 +969,10 @@ export function UserFormModal({
               onClick={onClose}
               disabled={loading}
             >
-              {isViewMode ? "Закрыть" : "Отмена"}
+              {isViewOnlyMode ? "Закрыть" : "Отмена"}
             </Button>
 
-            {!isViewMode && (
+            {!isViewOnlyMode && (
               <Button type="submit" disabled={loading}>
                 {loading
                   ? "Сохранение..."

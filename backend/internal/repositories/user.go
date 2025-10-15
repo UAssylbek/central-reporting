@@ -207,6 +207,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 	args := []interface{}{}
 	argIndex := 1
 
+	// 🔧 ИСПРАВЛЕНИЕ: Инвалидация токена только при критичных изменениях
 	shouldInvalidateToken := false
 
 	// Основная информация
@@ -222,14 +223,14 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
-	// Аватарка
+	// Аватарка - НЕ требует инвалидации токена
 	if updates.AvatarURL != nil {
 		setParts = append(setParts, fmt.Sprintf("avatar_url = $%d", argIndex))
 		args = append(args, updates.AvatarURL)
 		argIndex++
 	}
 
-	// Пароль
+	// 🔧 КРИТИЧНО: Пароль - требует инвалидации токена
 	if updates.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updates.Password), bcrypt.DefaultCost)
 		if err != nil {
@@ -270,6 +271,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
+	// Организации и пользователи - НЕ требуют инвалидации токена
 	if len(updates.AvailableOrganizations) > 0 {
 		setParts = append(setParts, fmt.Sprintf("available_organizations = $%d", argIndex))
 		args = append(args, updates.AvailableOrganizations)
@@ -282,7 +284,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
-	// Контактная информация
+	// Контактная информация - НЕ требует инвалидации токена
 	if len(updates.Emails) > 0 {
 		setParts = append(setParts, fmt.Sprintf("emails = $%d", argIndex))
 		args = append(args, models.Emails(updates.Emails))
@@ -295,7 +297,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
-	// Личная информация
+	// Личная информация - НЕ требует инвалидации токена
 	if updates.Position != "" {
 		setParts = append(setParts, fmt.Sprintf("position = $%d", argIndex))
 		args = append(args, updates.Position)
@@ -317,7 +319,6 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		}
 	}
 
-	// Адрес
 	if updates.Address != "" {
 		setParts = append(setParts, fmt.Sprintf("address = $%d", argIndex))
 		args = append(args, updates.Address)
@@ -342,7 +343,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
-	// Социальные сети
+	// Социальные сети - НЕ требуют инвалидации токена
 	if len(updates.SocialLinks.Telegram) > 0 || len(updates.SocialLinks.WhatsApp) > 0 ||
 		len(updates.SocialLinks.LinkedIn) > 0 || len(updates.SocialLinks.Facebook) > 0 ||
 		len(updates.SocialLinks.Instagram) > 0 || len(updates.SocialLinks.Twitter) > 0 {
@@ -351,7 +352,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
-	// Рабочие настройки
+	// Рабочие настройки - НЕ требуют инвалидации токена
 	if updates.Timezone != "" {
 		setParts = append(setParts, fmt.Sprintf("timezone = $%d", argIndex))
 		args = append(args, updates.Timezone)
@@ -364,7 +365,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
-	// Дополнительные поля
+	// Дополнительные поля - НЕ требуют инвалидации токена
 	if updates.Comment != "" {
 		setParts = append(setParts, fmt.Sprintf("comment = $%d", argIndex))
 		args = append(args, updates.Comment)
@@ -383,7 +384,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		argIndex++
 	}
 
-	// Статус
+	// 🔧 КРИТИЧНО: Блокировка/активность - требует инвалидации токена
 	if updates.IsActive != nil {
 		setParts = append(setParts, fmt.Sprintf("is_active = $%d", argIndex))
 		args = append(args, *updates.IsActive)
@@ -412,7 +413,7 @@ func (r *UserRepository) Update(id int, updates models.UpdateUserRequest, update
 		}
 	}
 
-	// Роль
+	// 🔧 КРИТИЧНО: Роль - требует инвалидации токена
 	if updates.Role != "" {
 		setParts = append(setParts, fmt.Sprintf("role = $%d", argIndex))
 		args = append(args, updates.Role)

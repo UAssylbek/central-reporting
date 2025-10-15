@@ -60,6 +60,7 @@ export function AppRouter() {
 
           {/* Управление пользователями - для admin и moderator */}
           <Route element={<RoleGuard allowedRoles={["admin", "moderator"]} />}>
+            <Route path="/administration" element={<AdministrationPage />} />
             <Route path="/users" element={<UsersPage />} />
           </Route>
 

@@ -14,6 +14,7 @@ export function LoginPage() {
     password: "",
   });
 
+  // 🔧 ИСПРАВЛЕНИЕ 1: Состояние ошибки сохраняется между рендерами
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -32,14 +33,16 @@ export function LoginPage() {
     try {
       const response = await authApi.login(formData);
 
-      // ✅ ИСПРАВЛЕНИЕ: Проверяем require_password_change из ответа
+      // Проверяем require_password_change из ответа
       if (response.require_password_change) {
         setShowPasswordModal(true);
-        // Токен УЖЕ сохранен в authApi.login(), НЕ удаляем его!
+        // Токен УЖЕ сохранен в authApi.login()
       } else {
-        navigate("/home");
+        // 🔧 ИСПРАВЛЕНИЕ 2: Правильный редирект на /home
+        navigate("/home", { replace: true });
       }
     } catch (err: unknown) {
+      // 🔧 ИСПРАВЛЕНИЕ 3: Правильная обработка ошибок с сохранением состояния
       const errorMessage =
         err &&
         typeof err === "object" &&
@@ -49,23 +52,22 @@ export function LoginPage() {
         "data" in err.response &&
         err.response.data &&
         typeof err.response.data === "object" &&
-        "detail" in err.response.data &&
-        typeof err.response.data.detail === "string"
-          ? err.response.data.detail
+        "error" in err.response.data &&
+        typeof err.response.data.error === "string"
+          ? err.response.data.error
           : "Неверный логин или пароль";
+
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // 🔧 ИСПРАВЛЕНИЕ 4: После успешной смены пароля редирект на /home
   const handlePasswordChangeSuccess = () => {
     setShowPasswordModal(false);
-    navigate("/home");
+    navigate("/home", { replace: true });
   };
-
-  // ✅ ИСПРАВЛЕНИЕ: Убрали useEffect, который удалял токен!
-  // Токен нужен для смены пароля, поэтому НЕ удаляем его
 
   useEffect(() => {
     if (showPasswordModal) {
@@ -99,6 +101,7 @@ export function LoginPage() {
           {/* Form */}
           <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border border-gray-200 dark:border-zinc-700 p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* 🔧 ИСПРАВЛЕНИЕ 5: Ошибка теперь не исчезает при обновлении */}
               {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm">
                   {error}
