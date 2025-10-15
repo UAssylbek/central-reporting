@@ -8,6 +8,7 @@ import { Toast } from "../../shared/ui/Toast/Toast";
 import { ChangePasswordModal } from "../../features/auth/components/ChangePasswordModal";
 import { UserFormModal } from "../../features/user/UserFormModal/UserFormModal";
 import { useToast } from "../../shared/hooks/useToast";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const ProfilePage: React.FC = () => {
   const [user, setUser] = useState<User | null>(authApi.getCurrentUser());
@@ -15,6 +16,7 @@ export const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"info" | "security" | "activity">(
     "info"
   );
@@ -114,16 +116,20 @@ export const ProfilePage: React.FC = () => {
       {/* Профиль карточка */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
         <div className="flex flex-col md:flex-row gap-6">
-          {/* Аватар */}
-          <div className="flex-shrink-0">
+          {/* Аватар с увеличением */}
+          <div className="flex-shrink-0 relative">
             {user.avatar_url ? (
               <img
                 src={user.avatar_url}
                 alt={user.full_name}
-                className="w-24 h-24 rounded-xl object-cover shadow-lg"
+                className="w-24 h-24 rounded-xl object-cover shadow-lg cursor-pointer hover:opacity-90 transition"
+                onClick={() => setIsAvatarModalOpen(true)}
               />
             ) : (
-              <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+              <div
+                className="w-24 h-24 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg cursor-pointer"
+                onClick={() => setIsAvatarModalOpen(true)}
+              >
                 {getInitials(user.full_name || user.username)}
               </div>
             )}
@@ -134,6 +140,63 @@ export const ProfilePage: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Модалка увеличенного аватара */}
+          <AnimatePresence>
+            {isAvatarModalOpen && (
+              <motion.div
+                key="backdrop"
+                className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsAvatarModalOpen(false)}
+              >
+                <motion.div
+                  key="modal"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                  className="relative bg-white dark:bg-zinc-900 rounded-2xl p-2 shadow-2xl max-w-lg w-full"
+                  onClick={(e: React.MouseEvent<HTMLDivElement>) =>
+                    e.stopPropagation()
+                  }
+                >
+                  <button
+                    onClick={() => setIsAvatarModalOpen(false)}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer"
+                  >
+                    ✕
+                  </button>
+
+                  {user.avatar_url ? (
+                    <motion.img
+                      key="avatar-img"
+                      src={user.avatar_url}
+                      alt={user.full_name}
+                      className="rounded-xl w-full object-contain max-h-[80vh]"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  ) : (
+                    <motion.div
+                      key="avatar-fallback"
+                      className="w-full aspect-square bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-6xl font-bold rounded-xl"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {getInitials(user.full_name || user.username)}
+                    </motion.div>
+                  )}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Основная информация */}
           <div className="flex-1 space-y-4">

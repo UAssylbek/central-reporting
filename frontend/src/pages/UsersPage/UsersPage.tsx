@@ -390,6 +390,7 @@ export function UsersPage() {
         <div className="flex items-center gap-3">
           <Button
             variant="secondary"
+            className="cursor-pointer"
             onClick={() => loadUsers(false)}
             disabled={refreshing}
             leftIcon={

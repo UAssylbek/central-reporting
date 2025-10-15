@@ -966,6 +966,7 @@ export function UserFormModal({
             <Button
               type="button"
               variant="secondary"
+              className="cursor-pointer"
               onClick={onClose}
               disabled={loading}
             >
@@ -973,7 +974,11 @@ export function UserFormModal({
             </Button>
 
             {!isViewOnlyMode && (
-              <Button type="submit" disabled={loading}>
+              <Button
+                type="submit"
+                className="cursor-pointer"
+                disabled={loading}
+              >
                 {loading
                   ? "Сохранение..."
                   : isEditing

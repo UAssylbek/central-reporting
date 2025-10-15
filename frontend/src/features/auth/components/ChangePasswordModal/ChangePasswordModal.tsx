@@ -35,21 +35,8 @@ export function ChangePasswordModal({
     confirm_password: "",
   });
 
-  const [showPasswords, setShowPasswords] = useState({
-    old: false,
-    new: false,
-    confirm: false,
-  });
-
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  const togglePasswordVisibility = (field: "old" | "new" | "confirm") => {
-    setShowPasswords((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
-  };
 
   const validateForm = (): string | null => {
     // Для первого входа старый пароль не нужен
@@ -142,50 +129,6 @@ export function ChangePasswordModal({
     }
   };
 
-  const EyeIcon = ({ show }: { show: boolean }) => {
-    if (show) {
-      return (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          {/* открытый глаз */}
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-          />
-        </svg>
-      );
-    } else {
-      return (
-        <svg
-          className="w-5 h-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          {/* закрытый глаз — просто линия или перекрестие */}
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 3L21 21"
-          />
-        </svg>
-      );
-    }
-  };
-
   return (
     <Modal
       isOpen={isOpen}
@@ -225,7 +168,7 @@ export function ChangePasswordModal({
           <div className="relative">
             <Input
               label="Текущий пароль"
-              type={showPasswords.old ? "text" : "password"}
+              type="password"
               required
               value={formData.old_password}
               onChange={(e) =>
@@ -233,13 +176,6 @@ export function ChangePasswordModal({
               }
               placeholder="Введите текущий пароль"
             />
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility("old")}
-              className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-            >
-              <EyeIcon show={showPasswords.old} />
-            </button>
           </div>
         )}
 
@@ -247,7 +183,7 @@ export function ChangePasswordModal({
         <div className="relative">
           <Input
             label="Новый пароль"
-            type={showPasswords.new ? "text" : "password"}
+            type="password"
             required
             value={formData.new_password}
             onChange={(e) =>
@@ -255,20 +191,13 @@ export function ChangePasswordModal({
             }
             placeholder="Минимум 6 символов"
           />
-          <button
-            type="button"
-            onClick={() => togglePasswordVisibility("new")}
-            className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-          >
-            <EyeIcon show={showPasswords.new} />
-          </button>
         </div>
 
         {/* Confirm password */}
         <div className="relative">
           <Input
             label="Подтверждение пароля"
-            type={showPasswords.confirm ? "text" : "password"}
+            type="password"
             required
             value={formData.confirm_password}
             onChange={(e) =>
@@ -276,13 +205,6 @@ export function ChangePasswordModal({
             }
             placeholder="Повторите новый пароль"
           />
-          <button
-            type="button"
-            onClick={() => togglePasswordVisibility("confirm")}
-            className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-          >
-            <EyeIcon show={showPasswords.confirm} />
-          </button>
         </div>
 
         {/* Actions */}
