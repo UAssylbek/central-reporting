@@ -14,18 +14,18 @@ export function LoginPage() {
     password: "",
   });
 
-  // 🔧 ИСПРАВЛЕНИЕ 1: Состояние ошибки сохраняется между рендерами
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError("");
+    e.preventDefault(); // ✅ Предотвращаем перезагрузку страницы
+    setError(""); // Очищаем предыдущие ошибки
 
+    // Валидация перед отправкой
     if (!formData.username.trim()) {
       setError("Введите логин");
-      return;
+      return; // ✅ Останавливаем выполнение БЕЗ перезагрузки
     }
 
     setIsLoading(true);
@@ -38,12 +38,15 @@ export function LoginPage() {
         setShowPasswordModal(true);
         // Токен УЖЕ сохранен в authApi.login()
       } else {
-        // 🔧 ИСПРАВЛЕНИЕ 2: Правильный редирект на /home
+        // Успешный вход - редирект на главную
         navigate("/home", { replace: true });
       }
     } catch (err: unknown) {
-      // 🔧 ИСПРАВЛЕНИЕ 3: Правильная обработка ошибок с сохранением состояния
-      const errorMessage =
+      // ✅ ИСПРАВЛЕНИЕ: Правильная обработка ошибок БЕЗ перезагрузки страницы
+      let errorMessage = "Неверный логин или пароль";
+
+      // Безопасное извлечение сообщения об ошибке
+      if (
         err &&
         typeof err === "object" &&
         "response" in err &&
@@ -54,24 +57,25 @@ export function LoginPage() {
         typeof err.response.data === "object" &&
         "error" in err.response.data &&
         typeof err.response.data.error === "string"
-          ? err.response.data.error
-          : "Неверный логин или пароль";
+      ) {
+        errorMessage = err.response.data.error;
+      }
 
-      setError(errorMessage);
+      setError(errorMessage); // ✅ Устанавливаем ошибку БЕЗ reload
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // ✅ Всегда снимаем loading состояние
     }
   };
 
-  // 🔧 ИСПРАВЛЕНИЕ 4: После успешной смены пароля редирект на /home
+  // Обработчик успешной смены пароля
   const handlePasswordChangeSuccess = () => {
     setShowPasswordModal(false);
     navigate("/home", { replace: true });
   };
 
+  // Блокировка кнопки "Назад" при смене пароля
   useEffect(() => {
     if (showPasswordModal) {
-      // Блокируем кнопку "Назад" при смене пароля
       const handlePopState = () => {
         window.history.pushState(null, "", window.location.href);
       };
@@ -101,7 +105,7 @@ export function LoginPage() {
           {/* Form */}
           <div className="bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border border-gray-200 dark:border-zinc-700 p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* 🔧 ИСПРАВЛЕНИЕ 5: Ошибка теперь не исчезает при обновлении */}
+              {/* Error message - теперь НЕ исчезает при ре-рендере */}
               {error && (
                 <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm">
                   {error}

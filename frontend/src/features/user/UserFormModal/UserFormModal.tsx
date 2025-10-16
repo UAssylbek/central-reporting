@@ -29,6 +29,7 @@ import {
   UserSelectModal,
   type SelectableUser,
 } from "../components/UserSelectModal";
+import { TIMEZONES, generateHoursList } from "../../../shared/utils/validation";
 
 export interface UserFormModalProps {
   readonly isOpen: boolean;
@@ -71,6 +72,11 @@ interface ViewModeFieldProps {
   readonly type?: "text" | "boolean" | "badge" | "list";
   readonly badgeVariant?: "success" | "danger" | "warning" | "info" | "gray";
 }
+
+const selectStyles = {
+  maxHeight: "300px", // Примерно 10 элементов
+  overflowY: "auto" as const,
+};
 
 function ViewModeField({
   label,
@@ -387,9 +393,12 @@ export function UserFormModal({
         }
       }
 
+      // ✅ ИСПРАВЛЕНИЕ: Закрываем модалку ТОЛЬКО после успешного обновления
+      setError(null);
       onSuccess();
       onClose();
     } catch (err: unknown) {
+      // ✅ ИСПРАВЛЕНИЕ: При ошибке НЕ закрываем модалку
       const errorMessage =
         err instanceof Error ? err.message : "Произошла ошибка";
       setError(errorMessage);
@@ -818,23 +827,93 @@ export function UserFormModal({
                       Дополнительно
                     </h3>
 
-                    <Input
-                      label="Часовой пояс"
-                      value={formData.timezone}
-                      onChange={(e) =>
-                        setFormData({ ...formData, timezone: e.target.value })
-                      }
-                      placeholder="UTC+3"
-                    />
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Часовой пояс
+                      </label>
+                      <select
+                        value={formData.timezone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, timezone: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                        style={{
+                          ...selectStyles,
+                          appearance: "auto",
+                          WebkitAppearance: "menulist",
+                          MozAppearance: "menulist",
+                        }}
+                      >
+                        {TIMEZONES.map((tz) => (
+                          <option key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                    <Input
-                      label="Рабочие часы"
-                      value={formData.work_hours}
-                      onChange={(e) =>
-                        setFormData({ ...formData, work_hours: e.target.value })
-                      }
-                      placeholder="9:00 - 18:00"
-                    />
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                        Рабочие часы
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <select
+                          value={
+                            formData.work_hours?.split(" - ")[0] || "09:00"
+                          }
+                          onChange={(e) => {
+                            const end =
+                              formData.work_hours?.split(" - ")[1] || "18:00";
+                            setFormData({
+                              ...formData,
+                              work_hours: `${e.target.value} - ${end}`,
+                            });
+                          }}
+                          className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          style={{
+                            ...selectStyles,
+                            appearance: "auto",
+                            WebkitAppearance: "menulist",
+                            MozAppearance: "menulist",
+                          }}
+                        >
+                          {generateHoursList().map((hour) => (
+                            <option key={`start-${hour}`} value={hour}>
+                              {hour}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={
+                            formData.work_hours?.split(" - ")[1] || "18:00"
+                          }
+                          onChange={(e) => {
+                            const start =
+                              formData.work_hours?.split(" - ")[0] || "09:00";
+                            setFormData({
+                              ...formData,
+                              work_hours: `${start} - ${e.target.value}`,
+                            });
+                          }}
+                          className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                          style={{
+                            ...selectStyles,
+                            appearance: "auto",
+                            WebkitAppearance: "menulist",
+                            MozAppearance: "menulist",
+                          }}
+                        >
+                          {generateHoursList().map((hour) => (
+                            <option key={`end-${hour}`} value={hour}>
+                              {hour}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-zinc-400">
+                        Выберите начало и конец рабочего дня
+                      </p>
+                    </div>
 
                     <div className="space-y-2">
                       <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
