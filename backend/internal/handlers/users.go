@@ -109,10 +109,9 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	role, _ := c.Get("role")
 	currentUserID, _ := c.Get("user_id")
 
-	// Модератор не может создавать администраторов
-	if role == models.RoleModerator && req.Role == models.RoleAdmin {
+	if role != models.RoleAdmin {
 		c.JSON(http.StatusForbidden, gin.H{
-			"error": "Модератор не может создавать администраторов",
+			"error": "Только администраторы могут создавать пользователей",
 		})
 		return
 	}

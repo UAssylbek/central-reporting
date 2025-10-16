@@ -148,6 +148,10 @@ export function UserFormModal({
 
   const isViewOnlyMode = isUserEditingOthers;
 
+  const canUploadAvatar = currentUser?.role === "admin" || isSelfEditing;
+
+  const canEditAvatar = canUploadAvatar && !isModeratorEditingOthers;
+
   const [formData, setFormData] = useState<UserFormData>({
     full_name: "",
     username: "",
@@ -580,13 +584,33 @@ export function UserFormModal({
             </div>
           ) : (
             <>
-              {canEditBasicInfo && (
+              {canEditAvatar && (
                 <AvatarUpload
                   currentAvatar={formData.avatar_url}
                   fullName={formData.full_name}
                   onUpload={handleAvatarUpload}
                   onRemove={handleAvatarRemove}
+                  disabled={isViewOnlyMode}
                 />
+              )}
+
+              {/* Если модератор редактирует другого - показываем только текущий аватар без возможности изменения */}
+              {isModeratorEditingOthers && formData.avatar_url && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    Фото профиля
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={formData.avatar_url}
+                      alt={formData.full_name}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-zinc-700 shadow-lg"
+                    />
+                    <p className="text-sm text-gray-500 dark:text-zinc-400">
+                      Изменение аватара доступно только администратору
+                    </p>
+                  </div>
+                </div>
               )}
 
               <div className="space-y-4">

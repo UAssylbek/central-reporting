@@ -9,7 +9,6 @@ import { ConfirmModal } from "../../shared/ui/ConfirmModal/ConfirmModal";
 import { UserFormModal } from "../../features/user/UserFormModal/UserFormModal";
 import { useToast } from "../../shared/hooks/useToast";
 import { usersApi } from "../../shared/api/users.api";
-import { authApi } from "../../shared/api/auth.api";
 import type { User } from "../../shared/api/auth.api";
 import { getAvatarUrl } from "../../shared/utils/url";
 
@@ -27,7 +26,7 @@ type StatusFilter = "all" | "online" | "offline";
 
 export function UsersPage() {
   const { toasts, hideToast, success, error: showError } = useToast();
-  const currentUser = authApi.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const isAdmin = currentUser?.role === "admin";
   const isModerator = currentUser?.role === "moderator";
 
@@ -60,6 +59,13 @@ export function UsersPage() {
 
   // Массовые действия (только для админа)
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      setCurrentUser(JSON.parse(userStr));
+    }
+  }, []);
 
   useEffect(() => {
     loadUsers();
@@ -255,11 +261,6 @@ export function UsersPage() {
     );
   };
 
-  const handleCreateUser = () => {
-    setEditingUser(null);
-    setIsFormOpen(true);
-  };
-
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setIsFormOpen(true);
@@ -411,9 +412,27 @@ export function UsersPage() {
           >
             {refreshing ? "Обновление..." : "Обновить"}
           </Button>
-          {isAdmin && (
-            <Button onClick={handleCreateUser} className="cursor-pointer">
-              <span className="mr-2">➕</span>
+          {currentUser?.role === "admin" && (
+            <Button
+              onClick={() => {
+                setEditingUser(null);
+                setIsFormOpen(true);
+              }}
+              variant="primary"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
               Создать пользователя
             </Button>
           )}

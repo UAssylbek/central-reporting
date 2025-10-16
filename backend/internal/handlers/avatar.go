@@ -44,14 +44,14 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 	role, _ := c.Get("role")
 
 	// Проверка прав доступа
-	if role == models.RoleModerator {
-		canAccess, err := h.userRepo.CanModeratorAccessUser(currentUserID.(int), userID)
-		if err != nil || !canAccess {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
-			return
-		}
-	} else if role == models.RoleUser && currentUserID.(int) != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Можно загружать только свой аватар"})
+	if role == models.RoleAdmin {
+		// Админ может загружать аватар для любого пользователя
+		// Продолжаем выполнение
+	} else if currentUserID.(int) != userID {
+		// Не админ пытается загрузить аватар другому пользователю
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Вы можете загружать только свой аватар",
+		})
 		return
 	}
 
@@ -133,14 +133,14 @@ func (h *AvatarHandler) DeleteAvatar(c *gin.Context) {
 	role, _ := c.Get("role")
 
 	// Проверка прав доступа
-	if role == models.RoleModerator {
-		canAccess, err := h.userRepo.CanModeratorAccessUser(currentUserID.(int), userID)
-		if err != nil || !canAccess {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Нет доступа к этому пользователю"})
-			return
-		}
-	} else if role == models.RoleUser && currentUserID.(int) != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Можно удалять только свой аватар"})
+	if role == models.RoleAdmin {
+		// Админ может удалять аватар любого пользователя
+		// Продолжаем выполнение
+	} else if currentUserID.(int) != userID {
+		// Не админ пытается удалить аватар другого пользователя
+		c.JSON(http.StatusForbidden, gin.H{
+			"error": "Вы можете удалять только свой аватар",
+		})
 		return
 	}
 
