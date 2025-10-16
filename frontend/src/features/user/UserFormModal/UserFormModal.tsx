@@ -31,10 +31,10 @@ import {
 } from "../components/UserSelectModal";
 
 export interface UserFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  user?: User | null;
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly onSuccess: () => void;
+  readonly user?: User | null;
 }
 
 interface UserFormData {
@@ -100,10 +100,13 @@ function ViewModeField({
     if (type === "list" && Array.isArray(value)) {
       return value.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {value.map((item, idx) => (
-            <Badge key={idx} variant="info">
+          {value.map((item, index) => (
+            <span
+              key={`${item}-${index}`}
+              className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-sm"
+            >
               {item}
-            </Badge>
+            </span>
           ))}
         </div>
       ) : (
@@ -118,7 +121,7 @@ function ViewModeField({
 
   return (
     <div className="space-y-1">
-      <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+      <span className="block text-sm font-medium text-gray-500 dark:text-zinc-400">
         {label}
       </span>
       {renderValue()}
@@ -135,9 +138,6 @@ export function UserFormModal({
   const currentUser = authApi.getCurrentUser();
   const isEditing = !!user;
 
-  // 🔧 ИСПРАВЛЕНИЕ 1: Определяем режим просмотра/редактирования в зависимости от роли
-  // User может редактировать только себя и ограниченно
-  // Moderator может редактировать только available_organizations у своих пользователей
   const isSelfEditing = isEditing && currentUser?.id === user?.id;
   const isModeratorEditingOthers =
     isEditing &&
@@ -146,7 +146,6 @@ export function UserFormModal({
   const isUserEditingOthers =
     isEditing && currentUser?.role === "user" && currentUser.id !== user?.id;
 
-  // Пользователь не может редактировать других
   const isViewOnlyMode = isUserEditingOthers;
 
   const [formData, setFormData] = useState<UserFormData>({
@@ -217,7 +216,6 @@ export function UserFormModal({
         accessible_users: user.accessible_users || [],
       });
     } else if (!isEditing && isOpen) {
-      // Сброс для создания нового
       setFormData({
         full_name: "",
         username: "",
@@ -246,14 +244,21 @@ export function UserFormModal({
         accessible_users: [],
       });
     }
+
     setError(null);
   }, [user, isOpen, isEditing]);
 
   const loadOrganizations = async () => {
+    setLoadingOrganizations(true);
     try {
-      setLoadingOrganizations(true);
-      const orgs = await organizationsApi.getAll();
-      setOrganizations(orgs);
+      const data = await organizationsApi.getAll();
+      const formatted = data.map((org) => ({
+        id: org.id,
+        name: org.name,
+        code: org.code || "",
+        description: org.description,
+      }));
+      setOrganizations(formatted);
     } catch (err) {
       console.error("Failed to load organizations:", err);
     } finally {
@@ -262,19 +267,19 @@ export function UserFormModal({
   };
 
   const loadAccessibleUsers = async () => {
+    setLoadingUsers(true);
     try {
-      setLoadingUsers(true);
-      const users = await usersApi.getUsers();
-      const selectableUsers: SelectableUser[] = users
-        .filter((u) => u.id !== user?.id && u.role !== "admin")
+      const data = await usersApi.getAll();
+      const formatted = data
+        .filter((u) => u.role === "user")
         .map((u) => ({
           id: u.id,
           full_name: u.full_name,
           username: u.username,
+          email: u.emails?.[0],
           role: u.role,
-          emails: u.emails || [],
         }));
-      setAccessibleUsers(selectableUsers);
+      setAccessibleUsers(formatted);
     } catch (err) {
       console.error("Failed to load users:", err);
     } finally {
@@ -283,13 +288,16 @@ export function UserFormModal({
   };
 
   const handleAvatarUpload = async (file: File): Promise<void> => {
-    if (!user) return; // ничего не делаем, если user нет
+    if (!user) return;
 
     try {
       const { avatar_url } = await usersApi.uploadAvatar(user.id, file);
       setFormData({ ...formData, avatar_url });
     } catch (err: unknown) {
       console.error("Ошибка при загрузке аватара:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Не удалось загрузить аватар";
+      setError(errorMessage);
     }
   };
 
@@ -303,14 +311,14 @@ export function UserFormModal({
     setLoading(true);
 
     try {
-      // 🔧 ИСПРАВЛЕНИЕ 2: Модератор может менять только available_organizations
+      // Модератор редактирует пользователя - только организации
       if (isModeratorEditingOthers && user) {
         const updateData: UpdateUserRequest = {
           available_organizations: formData.available_organizations,
         };
         await usersApi.update(user.id, updateData);
       }
-      // User редактирует себя - ограниченные поля
+      // User/Moderator редактирует себя - базовые поля БЕЗ organizations
       else if (isSelfEditing && user) {
         const updateData: UpdateUserRequest = {
           full_name: formData.full_name,
@@ -332,7 +340,6 @@ export function UserFormModal({
           avatar_url: formData.avatar_url || undefined,
         };
 
-        // Аватарку обрабатываем отдельно если была изменена
         if (formData.avatar_url !== user.avatar_url) {
           updateData.avatar_url = formData.avatar_url || undefined;
         }
@@ -387,41 +394,40 @@ export function UserFormModal({
     }
   };
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "Администратор";
-      case "moderator":
-        return "Модератор";
-      default:
-        return "Пользователь";
-    }
+  const getRoleLabel = (role: string): string => {
+    const labels: Record<string, string> = {
+      admin: "Администратор",
+      moderator: "Модератор",
+      user: "Пользователь",
+    };
+    return labels[role] || "Пользователь";
   };
 
   const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case "admin":
-        return "danger" as const;
-      case "moderator":
-        return "warning" as const;
-      default:
-        return "info" as const;
-    }
+    const variants: Record<string, "danger" | "warning" | "info"> = {
+      admin: "danger",
+      moderator: "warning",
+      user: "info",
+    };
+    return variants[role] || "info";
   };
 
-  const getModalTitle = () => {
+  const getModalTitle = (): string => {
     if (isViewOnlyMode) return "Просмотр пользователя";
     if (isEditing) return "Редактирование пользователя";
     return "Создание пользователя";
   };
 
-  // 🔧 ИСПРАВЛЕНИЕ 3: Определяем какие поля показывать
   const canEditRole = currentUser?.role === "admin" && !isSelfEditing;
   const canEditSettings = currentUser?.role === "admin";
-  const canEditOrganizations =
-    currentUser?.role === "admin" || isModeratorEditingOthers;
   const canEditAccessibleUsers = currentUser?.role === "admin";
   const canEditBasicInfo = !isViewOnlyMode && !isModeratorEditingOthers;
+
+  const showUsernameField = currentUser?.role === "admin" || !isSelfEditing;
+  const showPasswordField = !isSelfEditing;
+  // Показываем организации только для админа (всегда) или модератора (только при редактировании других)
+  const showOrganizationsField =
+    currentUser?.role === "admin" || isModeratorEditingOthers;
 
   return (
     <>
@@ -438,10 +444,8 @@ export function UserFormModal({
             </div>
           )}
 
-          {/* Режим просмотра или режим модератора */}
-          {(isViewOnlyMode || isModeratorEditingOthers) && user ? (
+          {isModeratorEditingOthers && user ? (
             <div className="space-y-6">
-              {/* Базовая информация - только просмотр */}
               <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
                 <div className="flex items-center gap-4">
                   {user.avatar_url ? (
@@ -451,107 +455,137 @@ export function UserFormModal({
                       className="w-16 h-16 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-                      {user.full_name?.charAt(0) || user.username.charAt(0)}
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-2xl font-bold">
+                        {user.full_name?.[0] || user.username?.[0] || "?"}
+                      </span>
                     </div>
                   )}
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                       {user.full_name}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       @{user.username}
                     </p>
-                    <div className="mt-2">
-                      <Badge variant={getRoleBadgeVariant(user.role)}>
-                        {getRoleLabel(user.role)}
-                      </Badge>
-                    </div>
+                    <Badge
+                      variant={getRoleBadgeVariant(user.role)}
+                      className="mt-2"
+                    >
+                      {getRoleLabel(user.role)}
+                    </Badge>
                   </div>
                 </div>
               </div>
 
-              {/* Для модератора показываем только организации */}
-              {isModeratorEditingOthers && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                    Доступ к организациям
-                  </h3>
-                  <div className="space-y-2">
-                    <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                      Доступные организации
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        loadOrganizations();
-                        setShowOrganizationsModal(true);
-                      }}
-                      className="w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="text-gray-900 dark:text-white">
-                        {loadingOrganizations
-                          ? "Загрузка..."
-                          : `Выбрано организаций: ${formData.available_organizations.length}`}
-                      </span>
-                      <svg
-                        className="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                  Информация о пользователе
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <ViewModeField label="Полное имя" value={user.full_name} />
+                  <ViewModeField label="Логин" value={user.username} />
+                  <ViewModeField label="Должность" value={user.position} />
+                  <ViewModeField label="Отдел" value={user.department} />
+                  <ViewModeField
+                    label="Email адреса"
+                    value={user.emails}
+                    type="list"
+                  />
+                  <ViewModeField
+                    label="Телефоны"
+                    value={user.phones}
+                    type="list"
+                  />
+                  <ViewModeField label="Город" value={user.city} />
+                  <ViewModeField label="Страна" value={user.country} />
+                  <ViewModeField label="Адрес" value={user.address} />
+                  <ViewModeField
+                    label="Почтовый индекс"
+                    value={user.postal_code}
+                  />
+                  <ViewModeField
+                    label="Дата рождения"
+                    value={user.birth_date}
+                  />
+                  <ViewModeField label="Часовой пояс" value={user.timezone} />
+                  <ViewModeField label="Рабочие часы" value={user.work_hours} />
+                  <ViewModeField label="Теги" value={user.tags} type="list" />
                 </div>
-              )}
 
-              {/* Для просмотра показываем всю информацию */}
-              {isViewOnlyMode && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <ViewModeField
-                      label="Email"
-                      value={user.emails?.join(", ")}
-                    />
-                    <ViewModeField
-                      label="Телефон"
-                      value={user.phones?.join(", ")}
-                    />
-                    <ViewModeField label="Должность" value={user.position} />
-                    <ViewModeField label="Отдел" value={user.department} />
-                  </div>
+                {user.comment && (
+                  <ViewModeField label="Комментарий" value={user.comment} />
+                )}
+              </div>
 
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                      🏢 Доступные организации
-                    </h4>
-                    <ViewModeField
-                      label=""
-                      value={`Организаций: ${
-                        user.available_organizations?.length || 0
-                      }`}
-                    />
-                  </div>
-                </>
-              )}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
+                  Доступные организации
+                </h3>
+
+                <div className="space-y-2">
+                  <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                    Организации для доступа
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      loadOrganizations();
+                      setShowOrganizationsModal(true);
+                    }}
+                    disabled={loadingOrganizations}
+                    className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left transition-colors flex items-center justify-between ${
+                      loadingOrganizations
+                        ? "cursor-not-allowed opacity-60"
+                        : "hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer"
+                    }`}
+                  >
+                    <span className="text-gray-900 dark:text-white">
+                      {loadingOrganizations
+                        ? "Загрузка..."
+                        : `Выбрано организаций: ${formData.available_organizations.length}`}
+                    </span>
+                    <svg
+                      className="w-5 h-5 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onClose}
+                  fullWidth
+                  disabled={loading}
+                >
+                  Отмена
+                </Button>
+                <Button type="submit" fullWidth disabled={loading}>
+                  {loading ? "Сохранение..." : "Сохранить"}
+                </Button>
+              </div>
             </div>
           ) : (
-            /* Режим полного редактирования */
-            <div className="space-y-6">
-              {isEditing && user && canEditBasicInfo && (
+            <>
+              {canEditBasicInfo && (
                 <AvatarUpload
-                  currentAvatar={getAvatarUrl(formData.avatar_url)}
+                  currentAvatar={formData.avatar_url}
                   fullName={formData.full_name}
                   onUpload={handleAvatarUpload}
                   onRemove={handleAvatarRemove}
-                  disabled={loading}
                 />
               )}
 
@@ -572,36 +606,39 @@ export function UserFormModal({
                       required
                     />
 
-                    <Input
-                      label="Логин"
-                      value={formData.username}
-                      onChange={(e) =>
-                        setFormData({ ...formData, username: e.target.value })
-                      }
-                      placeholder="ivanov"
-                      required
-                      disabled={isSelfEditing} // User не может менять свой логин
-                    />
+                    {showUsernameField && (
+                      <Input
+                        label="Логин"
+                        value={formData.username}
+                        onChange={(e) =>
+                          setFormData({ ...formData, username: e.target.value })
+                        }
+                        placeholder="ivanov"
+                        required
+                        disabled={isSelfEditing}
+                      />
+                    )}
 
-                    <Input
-                      label={isEditing ? "Новый пароль" : "Пароль"}
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      placeholder={
-                        isEditing
-                          ? "Оставьте пустым, чтобы не менять"
-                          : "Оставьте пустым для входа без пароля"
-                      }
-                      helperText={
-                        isEditing
-                          ? "Оставьте поле пустым, если не хотите менять пароль"
-                          : "Если пароль не указан, пользователь сможет войти без пароля"
-                      }
-                      disabled={isSelfEditing} // User меняет пароль через отдельную форму
-                    />
+                    {showPasswordField && (
+                      <Input
+                        label={isEditing ? "Новый пароль" : "Пароль"}
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                        placeholder={
+                          isEditing
+                            ? "Оставьте пустым, чтобы не менять"
+                            : "Оставьте пустым для входа без пароля"
+                        }
+                        helperText={
+                          isEditing
+                            ? "Оставьте поле пустым, если не хотите менять пароль"
+                            : "Если пароль не указан, пользователь сможет войти без пароля"
+                        }
+                      />
+                    )}
                   </>
                 )}
 
@@ -806,15 +843,14 @@ export function UserFormModal({
                 </>
               )}
 
-              {/* 🔧 ИСПРАВЛЕНИЕ 4: Настройки показываем только админу */}
               {canEditSettings && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                    Настройки
+                    Настройки доступа
                   </h3>
 
                   <div className="space-y-3">
-                    <label className="flex items-center space-x-3 cursor-pointer">
+                    <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={formData.require_password_change}
@@ -824,14 +860,14 @@ export function UserFormModal({
                             require_password_change: e.target.checked,
                           })
                         }
-                        className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
+                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-zinc-300">
-                        Требовать смену пароля при входе
+                        Требовать смену пароля при первом входе
                       </span>
                     </label>
 
-                    <label className="flex items-center space-x-3 cursor-pointer">
+                    <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={formData.disable_password_change}
@@ -841,14 +877,14 @@ export function UserFormModal({
                             disable_password_change: e.target.checked,
                           })
                         }
-                        className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
+                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-zinc-300">
-                        Запретить смену пароля
+                        Запретить изменение пароля
                       </span>
                     </label>
 
-                    <label className="flex items-center space-x-3 cursor-pointer">
+                    <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={formData.show_in_selection}
@@ -858,39 +894,35 @@ export function UserFormModal({
                             show_in_selection: e.target.checked,
                           })
                         }
-                        className="w-4 h-4 text-blue-600 bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 rounded focus:ring-blue-500"
+                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-zinc-300">
-                        Показывать в выборе
+                        Показывать в списках выбора
                       </span>
                     </label>
                   </div>
                 </div>
               )}
 
-              {/* Организации - админ может всегда редактировать, модератор только для своих пользователей, user только просмотр */}
-              {(canEditOrganizations || isSelfEditing) && (
+              {showOrganizationsField && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
-                    Доступ к организациям
+                    Доступные организации
                   </h3>
 
                   <div className="space-y-2">
                     <span className="block text-sm font-medium text-gray-700 dark:text-zinc-300">
-                      Доступные организации{" "}
-                      {isSelfEditing && "(только просмотр)"}
+                      Организации для доступа
                     </span>
                     <button
                       type="button"
                       onClick={() => {
-                        if (canEditOrganizations) {
-                          loadOrganizations();
-                          setShowOrganizationsModal(true);
-                        }
+                        loadOrganizations();
+                        setShowOrganizationsModal(true);
                       }}
-                      disabled={isSelfEditing}
+                      disabled={loadingOrganizations}
                       className={`w-full px-4 py-2.5 bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg text-left transition-colors flex items-center justify-between ${
-                        isSelfEditing
+                        loadingOrganizations
                           ? "cursor-not-allowed opacity-60"
                           : "hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer"
                       }`}
@@ -918,7 +950,6 @@ export function UserFormModal({
                 </div>
               )}
 
-              {/* Доступные пользователи - только для админа при редактировании модератора */}
               {canEditAccessibleUsers && formData.role === "moderator" && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2">
@@ -959,34 +990,27 @@ export function UserFormModal({
                   </div>
                 </div>
               )}
-            </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onClose}
+                  fullWidth
+                  disabled={loading}
+                >
+                  Отмена
+                </Button>
+                <Button type="submit" fullWidth disabled={loading}>
+                  {loading
+                    ? "Сохранение..."
+                    : isEditing
+                    ? "Сохранить"
+                    : "Создать"}
+                </Button>
+              </div>
+            </>
           )}
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-zinc-700">
-            <Button
-              type="button"
-              variant="secondary"
-              className="cursor-pointer"
-              onClick={onClose}
-              disabled={loading}
-            >
-              {isViewOnlyMode ? "Закрыть" : "Отмена"}
-            </Button>
-
-            {!isViewOnlyMode && (
-              <Button
-                type="submit"
-                className="cursor-pointer"
-                disabled={loading}
-              >
-                {loading
-                  ? "Сохранение..."
-                  : isEditing
-                  ? "Сохранить"
-                  : "Создать"}
-              </Button>
-            )}
-          </div>
         </form>
       </Modal>
 

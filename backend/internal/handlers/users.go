@@ -231,35 +231,68 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	currentUserID := userID.(int)
 
-	// Если модератор - проверяем доступ
-	if role == models.RoleModerator {
-		canAccess, err := h.userRepo.CanModeratorAccessUser(currentUserID, id)
-		if err != nil || !canAccess {
+	// 🔧 ИСПРАВЛЕНИЕ 1: Администратор имеет полный доступ без ограничений
+	if role == models.RoleAdmin {
+		// Админ может редактировать любого, включая себя
+		// Никаких проверок не требуется
+	} else if role == models.RoleModerator {
+		// 🔧 ИСПРАВЛЕНИЕ 2: Модератор может редактировать себя или доступных ему пользователей
+		if currentUserID == id {
+			// Модератор редактирует себя - разрешаем базовые поля
+			// Но НЕ разрешаем менять роль, username, password, organizations
+			if req.Role != "" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Модераторы не могут изменять свою роль"})
+				return
+			}
+			if req.Username != "" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Модераторы не могут изменять свой логин"})
+				return
+			}
+			if req.Password != "" {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Используйте отдельную форму для смены пароля"})
+				return
+			}
+		} else {
+			// Модератор редактирует другого пользователя - проверяем доступ
+			canAccess, err := h.userRepo.CanModeratorAccessUser(currentUserID, id)
+			if err != nil || !canAccess {
+				c.JSON(http.StatusForbidden, gin.H{"error": errNoAccess})
+				return
+			}
+
+			// Модератор может менять ТОЛЬКО available_organizations у своих пользователей
+			// Очищаем все остальные поля из запроса
+			req = models.UpdateUserRequest{
+				AvailableOrganizations: req.AvailableOrganizations,
+			}
+		}
+	} else if role == models.RoleUser {
+		// 🔧 ИСПРАВЛЕНИЕ 3: Обычный пользователь может редактировать только себя
+		if currentUserID != id {
 			c.JSON(http.StatusForbidden, gin.H{"error": errNoAccess})
 			return
 		}
 
-		// 🔧 ИСПРАВЛЕНИЕ: Правильное сравнение типов
-		// Модератор не может изменять роль на admin
-		if req.Role != "" && models.UserRole(req.Role) == models.RoleAdmin {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Модератор не может назначать роль администратора"})
+		// User НЕ может менять: роль, username, password, доступные организации
+		if req.Role != "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Вы не можете изменять свою роль"})
+			return
+		}
+		if req.Username != "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Вы не можете изменять свой логин"})
+			return
+		}
+		if req.Password != "" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Используйте отдельную форму для смены пароля"})
+			return
+		}
+		if len(req.AvailableOrganizations) > 0 {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Вы не можете изменять доступные организации"})
 			return
 		}
 	}
 
-	// Обычный пользователь может редактировать только себя
-	if role == models.RoleUser && currentUserID != id {
-		c.JSON(http.StatusForbidden, gin.H{"error": errNoAccess})
-		return
-	}
-
-	// Обычный пользователь не может менять свою роль
-	if role == models.RoleUser && req.Role != "" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Вы не можете изменять свою роль"})
-		return
-	}
-
-	// Проверка на существование пользователя с таким username
+	// Проверка на существование пользователя с таким username (только если username меняется)
 	if req.Username != "" {
 		existingUser, _ := h.userRepo.GetByUsername(req.Username)
 		if existingUser != nil && existingUser.ID != id {

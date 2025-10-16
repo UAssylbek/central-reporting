@@ -82,7 +82,6 @@ export const usersApi = {
     return response.users || [];
   },
 
-  // Алиас для обратной совместимости
   async getAll(): Promise<User[]> {
     return this.getUsers();
   },
@@ -103,6 +102,7 @@ export const usersApi = {
     id: number,
     userData: UpdateUserRequest
   ): Promise<{ user: User }> {
+    console.log("🔄 Updating user", id, "with data:", userData);
     return await apiClient.put<{ user: User }, UpdateUserRequest>(
       `/users/${id}`,
       userData
@@ -120,10 +120,26 @@ export const usersApi = {
     const formData = new FormData();
     formData.append("avatar", file);
 
+    // КРИТИЧНО: Получаем токен
     const token = localStorage.getItem("token");
+
+    console.log("📤 Uploading avatar for user:", userId);
+    console.log("🔑 Token exists:", !!token);
+    console.log(
+      "🔑 Token value:",
+      token ? token.substring(0, 20) + "..." : "NO TOKEN"
+    );
+
+    if (!token) {
+      throw new Error("No authentication token found. Please log in again.");
+    }
+
+    // Определяем baseUrl
     const baseUrl = window.location.origin.includes("localhost")
       ? "http://localhost:8080/api"
       : "/api";
+
+    console.log("🌐 Upload URL:", `${baseUrl}/users/${userId}/avatar`);
 
     const response = await fetch(`${baseUrl}/users/${userId}/avatar`, {
       method: "POST",
@@ -133,12 +149,26 @@ export const usersApi = {
       body: formData,
     });
 
+    console.log("📥 Upload response status:", response.status);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to upload avatar");
+      const errorText = await response.text();
+      console.error("❌ Upload failed:", errorText);
+
+      let errorMessage = "Failed to upload avatar";
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorMessage = errorJson.error || errorMessage;
+      } catch {
+        errorMessage = errorText || errorMessage;
+      }
+
+      throw new Error(errorMessage);
     }
 
-    return response.json();
+    const result = await response.json();
+    console.log("✅ Upload successful:", result);
+    return result;
   },
 
   async getOrganizations(): Promise<Organization[]> {

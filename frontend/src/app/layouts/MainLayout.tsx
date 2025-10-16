@@ -484,58 +484,78 @@ export function MainLayout() {
         },
       ] as MixedSubItems,
     },
-    ...(isAdmin
+    ...(isAdmin || user?.role === "moderator"
       ? [
           {
-            to: "/administration",
+            to: user?.role === "moderator" ? "/users" : "/administration",
             label: "Администрирование",
             icon: (
               <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
             ),
-            description: "Административные настройки",
-            subItems: [
-              {
-                to: "/administration/maintenance",
-                label: "Обслуживание",
-                icon: <Settings className="w-5 h-5 text-blue-500" />,
-                description: "Техническое обслуживание системы",
-              },
-              {
-                to: "/administration/general-settings",
-                label: "Общие настройки",
-                icon: <Settings className="w-5 h-5 text-purple-500" />,
-                description: "Общие параметры и конфигурация системы",
-              },
-              {
-                to: "/users",
-                label: "Настройки пользователей и прав",
-                icon: <Users className="w-5 h-5 text-amber-500" />,
-                description: "Управление пользователями и правами доступа",
-              },
-              {
-                to: "/administration/scheduled-jobs",
-                label: "Регламентные и фоновые задания",
-                icon: <BarChart3 className="w-5 h-5 text-indigo-500" />,
-                description: "Управление автоматическими и фоновыми задачами",
-              },
-              {
-                category: "См. также",
-                items: [
-                  {
-                    to: "/administration/delete-marked",
-                    label: "Удаление помеченных объектов",
-                    icon: <Package className="w-5 h-5 text-red-500" />,
-                    description: "Удаление объектов, помеченных на удаление",
-                  },
-                  {
-                    to: "/administration/find-duplicates",
-                    label: "Поиск и удаление дублей",
-                    icon: <FileText className="w-5 h-5 text-orange-500" />,
-                    description: "Поиск и удаление дублирующихся записей",
-                  },
-                ],
-              },
-            ] as MixedSubItems,
+            description:
+              user?.role === "moderator"
+                ? "Управление пользователями"
+                : "Административные настройки",
+            subItems:
+              user?.role === "admin"
+                ? ([
+                    {
+                      to: "/administration/maintenance",
+                      label: "Обслуживание",
+                      icon: <Settings className="w-5 h-5 text-blue-500" />,
+                      description: "Техническое обслуживание системы",
+                    },
+                    {
+                      to: "/administration/general-settings",
+                      label: "Общие настройки",
+                      icon: <Settings className="w-5 h-5 text-purple-500" />,
+                      description: "Общие параметры и конфигурация системы",
+                    },
+                    {
+                      to: "/users",
+                      label: "Настройки пользователей и прав",
+                      icon: <Users className="w-5 h-5 text-amber-500" />,
+                      description:
+                        "Управление пользователями и правами доступа",
+                    },
+                    {
+                      to: "/administration/scheduled-jobs",
+                      label: "Регламентные и фоновые задания",
+                      icon: <BarChart3 className="w-5 h-5 text-indigo-500" />,
+                      description:
+                        "Управление автоматическими и фоновыми задачами",
+                    },
+                    {
+                      category: "См. также",
+                      items: [
+                        {
+                          to: "/administration/delete-marked",
+                          label: "Удаление помеченных объектов",
+                          icon: <Package className="w-5 h-5 text-red-500" />,
+                          description:
+                            "Удаление объектов, помеченных на удаление",
+                        },
+                        {
+                          to: "/administration/find-duplicates",
+                          label: "Поиск и удаление дублей",
+                          icon: (
+                            <FileText className="w-5 h-5 text-orange-500" />
+                          ),
+                          description: "Поиск и удаление дублирующихся записей",
+                        },
+                      ],
+                    },
+                  ] as MixedSubItems)
+                : [
+                    // Для модератора показываем только управление пользователями
+                    {
+                      to: "/users",
+                      label: "Управление пользователями",
+                      icon: <Users className="w-5 h-5 text-amber-500" />,
+                      description:
+                        "Просмотр и редактирование доступных пользователей",
+                    },
+                  ],
           },
         ]
       : []),

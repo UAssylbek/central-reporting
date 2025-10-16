@@ -1,3 +1,5 @@
+// frontend/src/shared/ui/MultiInput/MultiInput.tsx
+import { formatPhoneNumber } from "../../utils/formatPhone";
 
 interface MultiInputProps {
   label: string;
@@ -27,7 +29,14 @@ export function MultiInput({
 
   const handleChange = (index: number, value: string) => {
     const newValues = [...values];
-    newValues[index] = value;
+
+    // 🔧 ИСПРАВЛЕНИЕ: Автоматическое форматирование телефона при вводе
+    if (type === "tel") {
+      newValues[index] = formatPhoneNumber(value);
+    } else {
+      newValues[index] = value;
+    }
+
     onChange(newValues);
   };
 
@@ -41,7 +50,7 @@ export function MultiInput({
         {values.map((value, index) => (
           <div key={index} className="flex gap-2">
             <input
-              type={type}
+              type={type === "tel" ? "text" : type}
               value={value}
               onChange={(e) => handleChange(index, e.target.value)}
               placeholder={placeholder}
