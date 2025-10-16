@@ -65,7 +65,7 @@ func main() {
 	// Public routes
 	r.POST("/api/auth/login", authHandler.Login)
 
-	// Protected routes
+	// Protected routes (доступны всем авторизованным пользователям)
 	protected := r.Group("/api")
 	protected.Use(auth.JWTMiddleware(cfg.JWTSecret, userRepo))
 	protected.Use(auth.ActivityMiddleware(userRepo))
@@ -77,6 +77,11 @@ func main() {
 
 		// User routes
 		protected.GET("/users/organizations", userHandler.GetOrganizations)
+
+		// 🔧 КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Перенесли сюда из adminModeratorRoutes
+		// Теперь ВСЕ авторизованные пользователи могут обращаться к этому роуту
+		// Проверка прав происходит внутри хендлера UpdateUser
+		protected.PUT("/users/:id", userHandler.UpdateUser)
 
 		// Avatar routes (доступны всем авторизованным пользователям)
 		protected.POST("/users/:id/avatar", avatarHandler.UploadAvatar)
@@ -91,9 +96,7 @@ func main() {
 	{
 		adminModeratorRoutes.GET("/users", userHandler.GetUsers)
 		adminModeratorRoutes.GET("/users/:id", userHandler.GetUserByID)
-		// adminModeratorRoutes.POST("/users", userHandler.CreateUser)
-		adminModeratorRoutes.PUT("/users/:id", userHandler.UpdateUser)
-		// adminModeratorRoutes.DELETE("/users/:id", userHandler.DeleteUser)
+		// 🔧 УБРАЛИ ОТСЮДА: adminModeratorRoutes.PUT("/users/:id", userHandler.UpdateUser)
 	}
 
 	// Admin only routes
