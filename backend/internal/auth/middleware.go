@@ -39,6 +39,27 @@ func JWTMiddleware(secret string, userRepo *repositories.UserRepository) gin.Han
 			return
 		}
 
+		// ✅ ДОБАВИТЬ: Проверка активности пользователя
+		if !user.IsActive {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error":        "Your account has been blocked",
+				"force_logout": true,
+				"reason":       "Your account was blocked by administrator",
+			})
+			c.Abort()
+			return
+		}
+
+		if user.TokenVersion != claims.TokenVersion {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":        "Token has been invalidated",
+				"force_logout": true,
+				"reason":       "Your account settings have been changed by administrator",
+			})
+			c.Abort()
+			return
+		}
+
 		if user.TokenVersion != claims.TokenVersion {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":        "Token has been invalidated",

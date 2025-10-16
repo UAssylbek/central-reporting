@@ -33,8 +33,29 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	user, err := h.userRepo.GetByUsername(req.Username)
 	if err != nil {
+		log.Printf("Database error: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера"})
+		return
+	}
+	if user == nil {
 		log.Printf("User not found: %s", req.Username)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Неверные учетные данные"})
+		return
+	}
+
+	// ✅ ДОБАВИТЬ: Проверка на блокировку пользователя
+	if !user.IsActive {
+		log.Printf("User %s is blocked", user.Username)
+
+		reason := "Ваш аккаунт заблокирован"
+		if user.BlockedReason.Valid && user.BlockedReason.String != "" {
+			reason = user.BlockedReason.String
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":   reason,
+			"blocked": true,
+		})
 		return
 	}
 
@@ -143,6 +164,11 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
+	if len(req.NewPassword) < 6 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Пароль должен содержать минимум 6 символов"})
+		return
+	}
+
 	userID, _ := c.Get("user_id")
 	user, err := h.userRepo.GetByID(userID.(int))
 	if err != nil {
@@ -190,6 +216,11 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось изменить пароль"})
 		return
 	}
+
+	log.Printf("AUDIT: User %d (%s) changed their password",
+		userID.(int),
+		user.Username,
+	)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Пароль успешно изменен"})
 }

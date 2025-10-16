@@ -8,6 +8,7 @@ import (
 	"github.com/UAssylbek/central-reporting/internal/config"
 	"github.com/UAssylbek/central-reporting/internal/database"
 	"github.com/UAssylbek/central-reporting/internal/handlers"
+	"github.com/UAssylbek/central-reporting/internal/middleware"
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/UAssylbek/central-reporting/internal/repositories"
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,9 @@ import (
 func main() {
 	// Load configuration
 	cfg := config.Load()
+
+	loginLimiter := middleware.NewRateLimiter(5, time.Minute)       // 5 попыток в минуту
+	createUserLimiter := middleware.NewRateLimiter(10, time.Minute) // 10 создаий в минуту
 
 	// Connect to database
 	db, err := database.Connect(cfg.DatabaseURL)
@@ -39,12 +43,10 @@ func main() {
 	r.Use(func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		// Список разрешённых доменов
-		allowedOrigins := map[string]bool{
-			"http://localhost:3000":       true, // Локальная разработка
-			"http://192.168.110.113:3000": true, // Ваш IP в сети
-			"https://your-production.com": true, // Продакшен домен
-			// Добавьте другие нужные домены
+		// ✅ Используем конфиг вместо hardcoded
+		allowedOrigins := make(map[string]bool)
+		for _, o := range cfg.AllowedOrigins {
+			allowedOrigins[o] = true
 		}
 
 		if allowedOrigins[origin] {
@@ -63,7 +65,7 @@ func main() {
 	})
 
 	// Public routes
-	r.POST("/api/auth/login", authHandler.Login)
+	r.POST("/api/auth/login", loginLimiter.Middleware(), authHandler.Login)
 
 	// Protected routes (доступны всем авторизованным пользователям)
 	protected := r.Group("/api")
@@ -103,7 +105,7 @@ func main() {
 	adminOnly := protected.Group("/")
 	adminOnly.Use(auth.AdminMiddleware())
 	{
-		adminOnly.POST("/users", userHandler.CreateUser)
+		adminOnly.POST("/users", createUserLimiter.Middleware(), userHandler.CreateUser)
 		adminOnly.DELETE("/users/:id", userHandler.DeleteUser)
 	}
 
