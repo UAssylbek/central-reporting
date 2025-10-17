@@ -1,6 +1,12 @@
 // frontend/src/shared/api/users.api.ts
 import type { User, UserRole, SocialLinks } from "./auth.api";
 import { apiClient } from "./client";
+import type {
+  PaginationParams,
+  PaginatedResponse,
+  UserListItem,
+} from "./types";
+import { buildQueryParams } from "./types";
 
 export interface Organization {
   id: number;
@@ -77,13 +83,35 @@ export const usersApi = {
     await apiClient.delete<void>(`/users/${id}`);
   },
 
-  async getUsers(): Promise<User[]> {
-    const response = await apiClient.get<{ users: User[] }>("/users");
-    return response.users || [];
+  /**
+   * Получить пагинированный список пользователей (облегченный)
+   * @param params - параметры пагинации и сортировки
+   * @returns Пагинированный ответ с UserListItem
+   */
+  async getUsers(params?: PaginationParams): Promise<PaginatedResponse<UserListItem>> {
+    const queryString = params ? buildQueryParams(params) : '';
+    const response = await apiClient.get<PaginatedResponse<UserListItem>>(`/users${queryString}`);
+    return response;
   },
 
+  /**
+   * Получить все пользователи (устаревший метод для обратной совместимости)
+   * @deprecated Используйте getUsers() с параметрами пагинации
+   *
+   * Backend возвращает полные объекты User
+   */
   async getAll(): Promise<User[]> {
-    return this.getUsers();
+    // Запрашиваем endpoint без параметров
+    const response = await apiClient.get<any>('/users');
+
+    // Backend возвращает { users: User[], total?: number, ... }
+    if (response.users && Array.isArray(response.users)) {
+      return response.users as User[];
+    }
+
+    // Fallback - пустой массив
+    console.warn('Unexpected API response format:', response);
+    return [];
   },
 
   async getById(id: number): Promise<User> {

@@ -1,0 +1,446 @@
+basePath: /api
+definitions:
+  github_com_UAssylbek_central-reporting_internal_models.ChangePasswordRequest:
+    properties:
+      confirm_password:
+        type: string
+      new_password:
+        minLength: 6
+        type: string
+      old_password:
+        type: string
+    required:
+    - confirm_password
+    - new_password
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.CustomFields:
+    additionalProperties: true
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - username
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.LoginResponse:
+    properties:
+      require_password_change:
+        type: boolean
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.User'
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.NullInt:
+    properties:
+      int:
+        type: integer
+      valid:
+        type: boolean
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.NullString:
+    properties:
+      string:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.NullTime:
+    properties:
+      time:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.SocialLinks:
+    properties:
+      facebook:
+        type: string
+      instagram:
+        type: string
+      linkedin:
+        type: string
+      telegram:
+        type: string
+      twitter:
+        type: string
+      whatsapp:
+        type: string
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.User:
+    properties:
+      accessible_users:
+        items:
+          type: integer
+        type: array
+      address:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+        description: Адрес
+      available_organizations:
+        items:
+          type: integer
+        type: array
+      avatar_url:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+        description: Аватарка
+      birth_date:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullTime'
+      blocked_at:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullTime'
+      blocked_by:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullInt'
+      blocked_reason:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+      city:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+      comment:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+        description: Дополнительные поля
+      country:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+      created_at:
+        type: string
+      created_by:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullInt'
+        description: История изменений
+      custom_fields:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.CustomFields'
+      department:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+      disable_password_change:
+        type: boolean
+      emails:
+        description: Контактная информация
+        items:
+          type: string
+        type: array
+      full_name:
+        type: string
+      id:
+        type: integer
+      is_active:
+        description: Статус
+        type: boolean
+      is_first_login:
+        type: boolean
+      is_online:
+        type: boolean
+      last_seen:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullTime'
+      phones:
+        items:
+          type: string
+        type: array
+      position:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+        description: Личная информация
+      postal_code:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+      require_password_change:
+        description: Настройки доступа
+        type: boolean
+      role:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.UserRole'
+        description: Системные поля
+      show_in_selection:
+        type: boolean
+      social_links:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.SocialLinks'
+        description: Социальные сети
+      tags:
+        items:
+          type: string
+        type: array
+      timezone:
+        allOf:
+        - $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+        description: Рабочие настройки
+      updated_at:
+        type: string
+      updated_by:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullInt'
+      username:
+        type: string
+      work_hours:
+        $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString'
+    type: object
+  github_com_UAssylbek_central-reporting_internal_models.UserRole:
+    enum:
+    - admin
+    - moderator
+    - user
+    type: string
+    x-enum-varnames:
+    - RoleAdmin
+    - RoleModerator
+    - RoleUser
+  github_com_UAssylbek_central-reporting_internal_repositories.PaginatedListResult:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_repositories.UserListItem'
+        type: array
+    type: object
+  github_com_UAssylbek_central-reporting_internal_repositories.UserListItem:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      department:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_online:
+        type: boolean
+      last_seen:
+        type: string
+      position:
+        type: string
+      require_password_change:
+        type: boolean
+      role:
+        type: string
+      show_in_selection:
+        type: boolean
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@central-reporting.kz
+    name: API Support
+  description: API для системы централизованной отчетности с управлением пользователями
+    и ролями
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Central Reporting API
+  version: "1.0"
+paths:
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Изменение пароля пользователя
+      parameters:
+      - description: Старый и новый пароли
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пароль успешно изменен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Ошибка валидации
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Смена пароля запрещена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Смена пароля
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Аутентификация пользователя и получение JWT токена
+      parameters:
+      - description: Учетные данные
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная авторизация
+          schema:
+            $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.LoginResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неверные учетные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Пользователь заблокирован
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Вход в систему
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Завершение сеанса пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный выход
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Выход из системы
+      tags:
+      - auth
+  /auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает информацию о текущем авторизованном пользователе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Данные пользователя
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_models.User'
+            type: object
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить текущего пользователя
+      tags:
+      - auth
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает пагинированный список пользователей. Admins видят всех,
+        Moderators - только доступных им
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Размер страницы
+        in: query
+        maximum: 100
+        name: page_size
+        type: integer
+      - default: created_at
+        description: Поле для сортировки
+        in: query
+        name: sort_by
+        type: string
+      - default: true
+        description: Сортировка по убыванию
+        in: query
+        name: sort_desc
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список пользователей
+          schema:
+            $ref: '#/definitions/github_com_UAssylbek_central-reporting_internal_repositories.PaginatedListResult'
+        "401":
+          description: Не авторизован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить список пользователей
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'Введите токен в формате: Bearer {ваш_токен}'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

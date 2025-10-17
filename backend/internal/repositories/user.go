@@ -22,16 +22,61 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-// GetAll возвращает список пользователей
+// PaginationParams параметры пагинации
+type PaginationParams struct {
+	Page     int
+	PageSize int
+	SortBy   string
+	SortDesc bool
+}
+
+// PaginatedResult результат с пагинацией
+type PaginatedResult struct {
+	Users      []models.User `json:"users"`
+	Total      int           `json:"total"`
+	Page       int           `json:"page"`
+	PageSize   int           `json:"page_size"`
+	TotalPages int           `json:"total_pages"`
+}
+
+// UserListItem облегченная версия пользователя для списков (без тяжелых JSONB полей)
+type UserListItem struct {
+	ID                   int              `json:"id" db:"id"`
+	FullName             string           `json:"full_name" db:"full_name"`
+	Username             string           `json:"username" db:"username"`
+	AvatarURL            string           `json:"avatar_url" db:"avatar_url"`
+	Emails               models.Emails    `json:"emails" db:"emails"`
+	Phones               models.Phones    `json:"phones" db:"phones"`
+	Position             string           `json:"position" db:"position"`
+	Department           string           `json:"department" db:"department"`
+	Role                 string           `json:"role" db:"role"`
+	IsActive             bool             `json:"is_active" db:"is_active"`
+	IsOnline             bool             `json:"is_online" db:"is_online"`
+	LastSeen             time.Time        `json:"last_seen" db:"last_seen"`
+	CreatedAt            time.Time        `json:"created_at" db:"created_at"`
+	ShowInSelection      bool             `json:"show_in_selection" db:"show_in_selection"`
+	RequirePasswordChange bool            `json:"require_password_change" db:"require_password_change"`
+}
+
+// PaginatedListResult результат с пагинацией для облегченных списков
+type PaginatedListResult struct {
+	Users      []UserListItem `json:"users"`
+	Total      int            `json:"total"`
+	Page       int            `json:"page"`
+	PageSize   int            `json:"page_size"`
+	TotalPages int            `json:"total_pages"`
+}
+
+// GetAll возвращает список пользователей (legacy, без пагинации)
 func (r *UserRepository) GetAll() ([]models.User, error) {
 	var users []models.User
 	// ВАЖНО: не включаем password в SELECT для списка пользователей
-	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, accessible_users, emails, phones, 
-	          position, department, birth_date, address, city, country, postal_code, social_links, 
-	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
-	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by, 
-	          updated_by, created_at, updated_at, token_version 
+	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change,
+	          show_in_selection, available_organizations, accessible_users, emails, phones,
+	          position, department, birth_date, address, city, country, postal_code, social_links,
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason,
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by,
+	          updated_by, created_at, updated_at, token_version
 	          FROM users ORDER BY created_at DESC`
 
 	err := r.db.Select(&users, query)
@@ -39,6 +84,130 @@ func (r *UserRepository) GetAll() ([]models.User, error) {
 		log.Printf("Database error in GetAll: %v", err)
 	}
 	return users, err
+}
+
+// GetAllPaginatedLight возвращает облегченный список пользователей с пагинацией (БЕЗ JSONB полей)
+// Оптимизировано для списков - выбирает только необходимые поля
+func (r *UserRepository) GetAllPaginatedLight(params PaginationParams) (*PaginatedListResult, error) {
+	// Устанавливаем значения по умолчанию
+	if params.Page < 1 {
+		params.Page = 1
+	}
+	if params.PageSize < 1 || params.PageSize > 100 {
+		params.PageSize = 20
+	}
+	if params.SortBy == "" {
+		params.SortBy = "created_at"
+	}
+
+	// Определяем направление сортировки
+	sortOrder := "ASC"
+	if params.SortDesc {
+		sortOrder = "DESC"
+	}
+
+	// Вычисляем offset
+	offset := (params.Page - 1) * params.PageSize
+
+	// Получаем общее количество пользователей
+	var total int
+	countQuery := "SELECT COUNT(*) FROM users"
+	err := r.db.Get(&total, countQuery)
+	if err != nil {
+		log.Printf("Database error counting users: %v", err)
+		return nil, err
+	}
+
+	// ОПТИМИЗАЦИЯ: Выбираем основные поля + emails/phones, БЕЗ тяжелых JSONB полей (social_links, custom_fields)
+	var users []UserListItem
+	query := fmt.Sprintf(`
+		SELECT id, full_name, username,
+		       COALESCE(avatar_url, '') as avatar_url,
+		       COALESCE(emails, '[]'::jsonb) as emails,
+		       COALESCE(phones, '[]'::jsonb) as phones,
+		       COALESCE(position, '') as position,
+		       COALESCE(department, '') as department,
+		       role, is_active, is_online, last_seen, created_at,
+		       show_in_selection, require_password_change
+		FROM users
+		ORDER BY %s %s
+		LIMIT $1 OFFSET $2`, params.SortBy, sortOrder)
+
+	err = r.db.Select(&users, query, params.PageSize, offset)
+	if err != nil {
+		log.Printf("Database error in GetAllPaginatedLight: %v", err)
+		return nil, err
+	}
+
+	// Вычисляем общее количество страниц
+	totalPages := (total + params.PageSize - 1) / params.PageSize
+
+	return &PaginatedListResult{
+		Users:      users,
+		Total:      total,
+		Page:       params.Page,
+		PageSize:   params.PageSize,
+		TotalPages: totalPages,
+	}, nil
+}
+
+// GetAllPaginated возвращает список пользователей с пагинацией
+func (r *UserRepository) GetAllPaginated(params PaginationParams) (*PaginatedResult, error) {
+	// Устанавливаем значения по умолчанию
+	if params.Page < 1 {
+		params.Page = 1
+	}
+	if params.PageSize < 1 || params.PageSize > 100 {
+		params.PageSize = 20 // По умолчанию 20 элементов на страницу
+	}
+	if params.SortBy == "" {
+		params.SortBy = "created_at"
+	}
+
+	// Определяем направление сортировки
+	sortOrder := "ASC"
+	if params.SortDesc {
+		sortOrder = "DESC"
+	}
+
+	// Вычисляем offset
+	offset := (params.Page - 1) * params.PageSize
+
+	// Получаем общее количество пользователей
+	var total int
+	countQuery := "SELECT COUNT(*) FROM users"
+	err := r.db.Get(&total, countQuery)
+	if err != nil {
+		log.Printf("Database error counting users: %v", err)
+		return nil, err
+	}
+
+	// Получаем пользователей с пагинацией
+	var users []models.User
+	query := fmt.Sprintf(`SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change,
+	          show_in_selection, available_organizations, accessible_users, emails, phones,
+	          position, department, birth_date, address, city, country, postal_code, social_links,
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason,
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by,
+	          updated_by, created_at, updated_at, token_version
+	          FROM users ORDER BY %s %s LIMIT $1 OFFSET $2`, params.SortBy, sortOrder)
+
+	err = r.db.Select(&users, query, params.PageSize, offset)
+	if err != nil {
+		log.Printf("Database error in GetAllPaginated: %v", err)
+		return nil, err
+	}
+
+	// Вычисляем общее количество страниц
+	totalPages := (total + params.PageSize - 1) / params.PageSize
+
+	return &PaginatedResult{
+		Users:      users,
+		Total:      total,
+		Page:       params.Page,
+		PageSize:   params.PageSize,
+		TotalPages: totalPages,
+	}, nil
 }
 
 // GetAccessibleUsers возвращает список пользователей, доступных для модератора
@@ -54,13 +223,44 @@ func (r *UserRepository) GetAccessibleUsers(moderatorID int) ([]models.User, err
 
 	var users []models.User
 	// ВАЖНО: не включаем password в SELECT для списка
-	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change, 
-	          show_in_selection, available_organizations, accessible_users, emails, phones, 
-	          position, department, birth_date, address, city, country, postal_code, social_links, 
-	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason, 
-	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by, 
-	          updated_by, created_at, updated_at, token_version 
+	query := `SELECT id, full_name, username, avatar_url, require_password_change, disable_password_change,
+	          show_in_selection, available_organizations, accessible_users, emails, phones,
+	          position, department, birth_date, address, city, country, postal_code, social_links,
+	          timezone, work_hours, comment, custom_fields, tags, is_active, blocked_reason,
+	          blocked_at, blocked_by, role, is_first_login, is_online, last_seen, created_by,
+	          updated_by, created_at, updated_at, token_version
 	          FROM users WHERE id = ANY($1::int[]) ORDER BY created_at DESC`
+
+	err = r.db.Select(&users, query, pq.Array(moderator.AccessibleUsers))
+	return users, err
+}
+
+// GetAccessibleUsersLight возвращает облегченный список пользователей, доступных для модератора
+// ОПТИМИЗАЦИЯ: выбирает только основные поля для списка
+func (r *UserRepository) GetAccessibleUsersLight(moderatorID int) ([]UserListItem, error) {
+	moderator, err := r.GetByID(moderatorID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(moderator.AccessibleUsers) == 0 {
+		return []UserListItem{}, nil
+	}
+
+	var users []UserListItem
+	// ОПТИМИЗАЦИЯ: основные поля + emails/phones, без тяжелых JSONB (social_links, custom_fields)
+	query := `
+		SELECT id, full_name, username,
+		       COALESCE(avatar_url, '') as avatar_url,
+		       COALESCE(emails, '[]'::jsonb) as emails,
+		       COALESCE(phones, '[]'::jsonb) as phones,
+		       COALESCE(position, '') as position,
+		       COALESCE(department, '') as department,
+		       role, is_active, is_online, last_seen, created_at,
+		       show_in_selection, require_password_change
+		FROM users
+		WHERE id = ANY($1::int[])
+		ORDER BY created_at DESC`
 
 	err = r.db.Select(&users, query, pq.Array(moderator.AccessibleUsers))
 	return users, err
@@ -510,7 +710,6 @@ func (r *UserRepository) getByIDWithPassword(id int) (*models.User, error) {
 
 // CheckPassword проверяет пароль пользователя
 func (r *UserRepository) CheckPassword(userID int, password string) (bool, error) {
-	log.Printf("🟡 CheckPassword called for userID=%d, password length=%d", userID, len(password))
 
 	// ✅ ИСПРАВЛЕНИЕ: используем getByIDWithPassword вместо GetByID
 	user, err := r.getByIDWithPassword(userID)
@@ -519,7 +718,6 @@ func (r *UserRepository) CheckPassword(userID int, password string) (bool, error
 		return false, err
 	}
 
-	log.Printf("HEEELLOOO 1111")
 
 	if !user.Password.Valid || user.Password.String == "" {
 		// Пользователь без пароля
@@ -527,13 +725,8 @@ func (r *UserRepository) CheckPassword(userID int, password string) (bool, error
 		return password == "", nil
 	}
 
-	log.Printf("HEEELLOOO 22222")
-
 	// Убираем возможные кавычки или пробелы вокруг хэша
 	hash := strings.Trim(user.Password.String, "\" ")
-
-	log.Printf("DB hash length: %d", len(hash))
-	log.Printf("Password to check length: %d", len(password))
 
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {

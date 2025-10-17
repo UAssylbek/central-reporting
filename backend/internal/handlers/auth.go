@@ -7,6 +7,7 @@ import (
 	"github.com/UAssylbek/central-reporting/internal/auth"
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/UAssylbek/central-reporting/internal/repositories"
+	"github.com/UAssylbek/central-reporting/internal/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,6 +23,19 @@ func NewAuthHandler(userRepo *repositories.UserRepository, jwtSecret string) *Au
 	}
 }
 
+// Login godoc
+// @Summary Вход в систему
+// @Description Аутентификация пользователя и получение JWT токена
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.LoginRequest true "Учетные данные"
+// @Success 200 {object} models.LoginResponse "Успешная авторизация"
+// @Failure 400 {object} map[string]string "Неверный формат запроса"
+// @Failure 401 {object} map[string]string "Неверные учетные данные"
+// @Failure 403 {object} map[string]interface{} "Пользователь заблокирован"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -123,6 +137,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 }
 
+// Me godoc
+// @Summary Получить текущего пользователя
+// @Description Возвращает информацию о текущем авторизованном пользователе
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]models.User "Данные пользователя"
+// @Failure 401 {object} map[string]string "Не авторизован"
+// @Failure 404 {object} map[string]string "Пользователь не найден"
+// @Router /auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	user, err := h.userRepo.GetByID(userID.(int))
@@ -134,6 +159,15 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
+// Logout godoc
+// @Summary Выход из системы
+// @Description Завершение сеанса пользователя
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]string "Успешный выход"
+// @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if exists {
@@ -150,7 +184,20 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Выход выполнен успешно"})
 }
 
-// Новый метод для смены пароля при первом входе
+// ChangePassword godoc
+// @Summary Смена пароля
+// @Description Изменение пароля пользователя
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.ChangePasswordRequest true "Старый и новый пароли"
+// @Success 200 {object} map[string]string "Пароль успешно изменен"
+// @Failure 400 {object} map[string]interface{} "Ошибка валидации"
+// @Failure 401 {object} map[string]string "Не авторизован"
+// @Failure 403 {object} map[string]string "Смена пароля запрещена"
+// @Failure 404 {object} map[string]string "Пользователь не найден"
+// @Router /auth/change-password [post]
 func (h *AuthHandler) ChangePassword(c *gin.Context) {
 	var req models.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -164,8 +211,13 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	if len(req.NewPassword) < 6 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Пароль должен содержать минимум 6 символов"})
+	// Валидация пароля на соответствие требованиям безопасности
+	validation := utils.ValidatePassword(req.NewPassword)
+	if !validation.Valid {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  validation.Message,
+			"errors": validation.Errors,
+		})
 		return
 	}
 

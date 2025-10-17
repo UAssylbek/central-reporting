@@ -7,6 +7,7 @@ import { Spinner } from "../../shared/ui/Spinner/Spinner";
 import { Toast } from "../../shared/ui/Toast/Toast";
 import { ConfirmModal } from "../../shared/ui/ConfirmModal/ConfirmModal";
 import { UserFormModal } from "../../features/user/UserFormModal/UserFormModal";
+import { UserViewModal } from "../../features/user/UserViewModal/UserViewModal";
 import { useToast } from "../../shared/hooks/useToast";
 import { usersApi } from "../../shared/api/users.api";
 import type { User } from "../../shared/api/auth.api";
@@ -53,9 +54,12 @@ export function UsersPage() {
 
   // Модальные окна
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   // Массовые действия (только для админа)
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
@@ -79,7 +83,8 @@ export function UsersPage() {
       } else {
         setRefreshing(true);
       }
-      const data = await usersApi.getUsers();
+      // Используем getAll() для обратной совместимости (возвращает User[])
+      const data = await usersApi.getAll();
       setUsers(data);
     } catch (err: unknown) {
       const errorMessage =
@@ -261,15 +266,37 @@ export function UsersPage() {
     );
   };
 
+  // Просмотр пользователя (клик по строке)
+  const handleViewUser = (user: User) => {
+    setViewingUser(user);
+    setIsViewOpen(true);
+  };
+
+  // Редактирование из модального окна просмотра
+  const handleEditFromView = () => {
+    setEditingUser(viewingUser);
+    setIsViewOpen(false);
+    setIsFormOpen(true);
+  };
+
+  // Редактирование напрямую из таблицы (старая кнопка)
   const handleEditUser = (user: User) => {
     setEditingUser(user);
     setIsFormOpen(true);
   };
 
+  // Удаление из модального окна просмотра
+  const handleDeleteFromView = () => {
+    setDeletingUser(viewingUser);
+    setIsViewOpen(false);
+  };
+
+  // Удаление напрямую из таблицы (старая кнопка)
   const handleDeleteClick = (user: User) => {
     setDeletingUser(user);
   };
 
+  // Подтверждение удаления одного пользователя
   const handleDeleteConfirm = async () => {
     if (!deletingUser) return;
 
@@ -278,6 +305,8 @@ export function UsersPage() {
       await usersApi.deleteUser(deletingUser.id);
       success(`Пользователь "${deletingUser.full_name}" успешно удалён`);
       await loadUsers(false);
+      // Убираем из выделенных если был там
+      setSelectedUserIds(prev => prev.filter(id => id !== deletingUser.id));
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Не удалось удалить пользователя";
@@ -285,6 +314,32 @@ export function UsersPage() {
     } finally {
       setIsDeleting(false);
       setDeletingUser(null);
+    }
+  };
+
+  // Массовое удаление выделенных
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+
+    const confirmMessage = `Вы уверены, что хотите удалить ${selectedUserIds.length} пользователей? Это действие нельзя отменить.`;
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      setIsDeletingBulk(true);
+
+      // Удаляем всех по очереди
+      const deletePromises = selectedUserIds.map(id => usersApi.deleteUser(id));
+      await Promise.all(deletePromises);
+
+      success(`Успешно удалено пользователей: ${selectedUserIds.length}`);
+      setSelectedUserIds([]);
+      await loadUsers(false);
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Не удалось удалить пользователей";
+      showError(errorMessage);
+    } finally {
+      setIsDeletingBulk(false);
     }
   };
 

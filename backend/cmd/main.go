@@ -12,14 +12,39 @@ import (
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/UAssylbek/central-reporting/internal/repositories"
 	"github.com/gin-gonic/gin"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title Central Reporting API
+// @version 1.0
+// @description API для системы централизованной отчетности с управлением пользователями и ролями
+//
+// @contact.name API Support
+// @contact.email support@central-reporting.kz
+//
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+//
+// @host localhost:8080
+// @BasePath /api
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Введите токен в формате: Bearer {ваш_токен}
 func main() {
 	// Load configuration
 	cfg := config.Load()
 
-	loginLimiter := middleware.NewRateLimiter(5, time.Minute)       // 5 попыток в минуту
-	createUserLimiter := middleware.NewRateLimiter(10, time.Minute) // 10 создаий в минуту
+	// Rate limiters для различных операций
+	loginLimiter := middleware.NewRateLimiter(5, time.Minute)           // 5 попыток входа в минуту
+	createUserLimiter := middleware.NewRateLimiter(10, time.Minute)     // 10 создаий пользователей в минуту
+	changePasswordLimiter := middleware.NewRateLimiter(3, time.Minute)  // 3 смены пароля в минуту
+	updateUserLimiter := middleware.NewRateLimiter(20, time.Minute)     // 20 обновлений пользователя в минуту
+	avatarUploadLimiter := middleware.NewRateLimiter(10, time.Minute)   // 10 загрузок аватара в минуту
+	deleteUserLimiter := middleware.NewRateLimiter(5, time.Minute)      // 5 удалений пользователя в минуту
 
 	// Connect to database
 	db, err := database.Connect(cfg.DatabaseURL)
@@ -38,6 +63,9 @@ func main() {
 
 	// Setup router
 	r := gin.Default()
+
+	// Security headers middleware
+	r.Use(middleware.SecurityHeaders())
 
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
@@ -75,7 +103,7 @@ func main() {
 		// Auth routes
 		protected.GET("/auth/me", authHandler.Me)
 		protected.POST("/auth/logout", authHandler.Logout)
-		protected.POST("/auth/change-password", authHandler.ChangePassword)
+		protected.POST("/auth/change-password", changePasswordLimiter.Middleware(), authHandler.ChangePassword)
 
 		// User routes
 		protected.GET("/users/organizations", userHandler.GetOrganizations)
@@ -83,11 +111,11 @@ func main() {
 		// 🔧 КРИТИЧЕСКОЕ ИЗМЕНЕНИЕ: Перенесли сюда из adminModeratorRoutes
 		// Теперь ВСЕ авторизованные пользователи могут обращаться к этому роуту
 		// Проверка прав происходит внутри хендлера UpdateUser
-		protected.PUT("/users/:id", userHandler.UpdateUser)
+		protected.PUT("/users/:id", updateUserLimiter.Middleware(), userHandler.UpdateUser)
 
 		// Avatar routes (доступны всем авторизованным пользователям)
-		protected.POST("/users/:id/avatar", avatarHandler.UploadAvatar)
-		protected.DELETE("/users/:id/avatar", avatarHandler.DeleteAvatar)
+		protected.POST("/users/:id/avatar", avatarUploadLimiter.Middleware(), avatarHandler.UploadAvatar)
+		protected.DELETE("/users/:id/avatar", avatarUploadLimiter.Middleware(), avatarHandler.DeleteAvatar)
 	}
 
 	// Admin & Moderator routes
@@ -106,11 +134,14 @@ func main() {
 	adminOnly.Use(auth.AdminMiddleware())
 	{
 		adminOnly.POST("/users", createUserLimiter.Middleware(), userHandler.CreateUser)
-		adminOnly.DELETE("/users/:id", userHandler.DeleteUser)
+		adminOnly.DELETE("/users/:id", deleteUserLimiter.Middleware(), userHandler.DeleteUser)
 	}
 
 	// Serving uploaded files (avatars)
 	r.Static("/uploads", "./uploads")
+
+	// Swagger documentation
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Background task для обновления статусов офлайн
 	go func() {

@@ -1,6 +1,6 @@
 // frontend/src/shared/api/client.ts
+import { AppError, type ApiErrorResponse } from "./types";
 
-// frontend/src/shared/api/client.ts
 const getApiUrl = () => {
   // Если есть ENV переменная - используем её
   if (import.meta.env.VITE_API_URL) {
@@ -71,21 +71,30 @@ class ApiClient {
         window.location.href =
           "/login?reason=" +
           encodeURIComponent(data.reason || "Session expired");
-        throw new Error(data.error || "Unauthorized");
+        throw new AppError(
+          data.error || "Unauthorized",
+          401,
+          data
+        );
       }
 
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       window.location.href = "/login";
-      throw new Error("Unauthorized");
+      throw new AppError("Unauthorized", 401);
     }
 
     // Если не OK статус
     if (!response.ok) {
-      const error = await response
+      const errorData: ApiErrorResponse = await response
         .json()
         .catch(() => ({ error: "Unknown error" }));
-      throw new Error(error.error || `HTTP ${response.status}`);
+
+      throw new AppError(
+        errorData.error || `HTTP ${response.status}`,
+        response.status,
+        errorData.details
+      );
     }
 
     // Если 204 No Content

@@ -21,6 +21,23 @@ const (
 	AvatarDir     = "./uploads/avatars"
 )
 
+// Разрешенные MIME типы изображений
+var allowedMIMETypes = map[string]bool{
+	"image/jpeg": true,
+	"image/png":  true,
+	"image/gif":  true,
+	"image/webp": true,
+}
+
+// Разрешенные расширения файлов
+var allowedExtensions = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".gif":  true,
+	".webp": true,
+}
+
 type AvatarHandler struct {
 	userRepo *repositories.UserRepository
 }
@@ -69,22 +86,74 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	// Проверяем тип файла
-	contentType := header.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "image/") {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Файл должен быть изображением"})
+	// Проверяем размер на 0 (пустой файл)
+	if header.Size == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Файл пуст"})
 		return
 	}
 
-	// Получаем расширение файла
-	ext := filepath.Ext(header.Filename)
-	if ext == "" {
-		ext = ".jpg"
+	// Проверяем Content-Type из заголовка
+	contentType := header.Header.Get("Content-Type")
+	if !allowedMIMETypes[contentType] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Недопустимый тип файла. Разрешены только: JPEG, PNG, GIF, WebP",
+		})
+		return
 	}
 
-	// Генерируем уникальное имя файла
+	// Проверяем расширение файла
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	if !allowedExtensions[ext] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Недопустимое расширение файла. Разрешены только: .jpg, .jpeg, .png, .gif, .webp",
+		})
+		return
+	}
+
+	// Читаем первые 512 байт для определения реального MIME типа
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Не удалось прочитать файл"})
+		return
+	}
+
+	// Определяем MIME тип по содержимому
+	detectedType := http.DetectContentType(buffer[:n])
+	if !allowedMIMETypes[detectedType] {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Обнаружен недопустимый тип файла. Файл не является изображением.",
+		})
+		return
+	}
+
+	// Возвращаем указатель в начало файла
+	if _, err := file.Seek(0, 0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка обработки файла"})
+		return
+	}
+
+	// Генерируем уникальное имя файла (только имя, без пути)
 	filename := fmt.Sprintf("%d_%s%s", userID, uuid.New().String(), ext)
-	filePath := filepath.Join(AvatarDir, filename)
+
+	// Защита от directory traversal - очищаем имя файла
+	filename = filepath.Base(filename)
+
+	// Создаем абсолютный путь к файлу
+	absAvatarDir, err := filepath.Abs(AvatarDir)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка конфигурации сервера"})
+		return
+	}
+
+	filePath := filepath.Join(absAvatarDir, filename)
+
+	// Проверяем что итоговый путь находится внутри AvatarDir (защита от directory traversal)
+	if !strings.HasPrefix(filePath, absAvatarDir) {
+		log.Printf("Security: Directory traversal attempt detected. Path: %s", filePath)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Недопустимое имя файла"})
+		return
+	}
 
 	// Удаляем старый аватар если есть
 	user, err := h.userRepo.GetByID(userID)
@@ -93,16 +162,28 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 		os.Remove(filepath.Join(AvatarDir, oldPath))
 	}
 
-	// Сохраняем новый файл
-	dst, err := os.Create(filePath)
+	// Сохраняем новый файл с безопасными правами доступа (0644 = rw-r--r--)
+	dst, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
+		log.Printf("Failed to create avatar file: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось сохранить файл"})
 		return
 	}
 	defer dst.Close()
 
-	if _, err := io.Copy(dst, file); err != nil {
+	// Копируем данные с ограничением размера (дополнительная защита)
+	written, err := io.CopyN(dst, file, MaxAvatarSize+1)
+	if err != nil && err != io.EOF {
+		log.Printf("Failed to save avatar: %v", err)
+		os.Remove(filePath) // Удаляем частично созданный файл
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось сохранить файл"})
+		return
+	}
+
+	// Проверяем что не превышен лимит
+	if written > MaxAvatarSize {
+		os.Remove(filePath)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Размер файла превышает допустимый лимит"})
 		return
 	}
 

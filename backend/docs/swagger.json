@@ -1,0 +1,689 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API для системы централизованной отчетности с управлением пользователями и ролями",
+        "title": "Central Reporting API",
+        "contact": {
+            "name": "API Support",
+            "email": "support@central-reporting.kz"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api",
+    "paths": {
+        "/auth/change-password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Изменение пароля пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Смена пароля",
+                "parameters": [
+                    {
+                        "description": "Старый и новый пароли",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Пароль успешно изменен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка валидации",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Смена пароля запрещена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Аутентификация пользователя и получение JWT токена",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Вход в систему",
+                "parameters": [
+                    {
+                        "description": "Учетные данные",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная авторизация",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Неверные учетные данные",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Пользователь заблокирован",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Завершение сеанса пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Выход из системы",
+                "responses": {
+                    "200": {
+                        "description": "Успешный выход",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о текущем авторизованном пользователе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Получить текущего пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Данные пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.User"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает пагинированный список пользователей. Admins видят всех, Moderators - только доступных им",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Получить список пользователей",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Размер страницы",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "created_at",
+                        "description": "Поле для сортировки",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Сортировка по убыванию",
+                        "name": "sort_desc",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список пользователей",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_repositories.PaginatedListResult"
+                        }
+                    },
+                    "401": {
+                        "description": "Не авторизован",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_UAssylbek_central-reporting_internal_models.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "confirm_password",
+                "new_password"
+            ],
+            "properties": {
+                "confirm_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string",
+                    "minLength": 6
+                },
+                "old_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.CustomFields": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.LoginRequest": {
+            "type": "object",
+            "required": [
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "require_password_change": {
+                    "type": "boolean"
+                },
+                "token": {
+                    "type": "string"
+                },
+                "user": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.User"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.NullInt": {
+            "type": "object",
+            "properties": {
+                "int": {
+                    "type": "integer"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.NullString": {
+            "type": "object",
+            "properties": {
+                "string": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.NullTime": {
+            "type": "object",
+            "properties": {
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.SocialLinks": {
+            "type": "object",
+            "properties": {
+                "facebook": {
+                    "type": "string"
+                },
+                "instagram": {
+                    "type": "string"
+                },
+                "linkedin": {
+                    "type": "string"
+                },
+                "telegram": {
+                    "type": "string"
+                },
+                "twitter": {
+                    "type": "string"
+                },
+                "whatsapp": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.User": {
+            "type": "object",
+            "properties": {
+                "accessible_users": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "address": {
+                    "description": "Адрес",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                        }
+                    ]
+                },
+                "available_organizations": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "avatar_url": {
+                    "description": "Аватарка",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                        }
+                    ]
+                },
+                "birth_date": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullTime"
+                },
+                "blocked_at": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullTime"
+                },
+                "blocked_by": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullInt"
+                },
+                "blocked_reason": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                },
+                "city": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                },
+                "comment": {
+                    "description": "Дополнительные поля",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                        }
+                    ]
+                },
+                "country": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "description": "История изменений",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullInt"
+                        }
+                    ]
+                },
+                "custom_fields": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.CustomFields"
+                },
+                "department": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                },
+                "disable_password_change": {
+                    "type": "boolean"
+                },
+                "emails": {
+                    "description": "Контактная информация",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "description": "Статус",
+                    "type": "boolean"
+                },
+                "is_first_login": {
+                    "type": "boolean"
+                },
+                "is_online": {
+                    "type": "boolean"
+                },
+                "last_seen": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullTime"
+                },
+                "phones": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "position": {
+                    "description": "Личная информация",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                        }
+                    ]
+                },
+                "postal_code": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                },
+                "require_password_change": {
+                    "description": "Настройки доступа",
+                    "type": "boolean"
+                },
+                "role": {
+                    "description": "Системные поля",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.UserRole"
+                        }
+                    ]
+                },
+                "show_in_selection": {
+                    "type": "boolean"
+                },
+                "social_links": {
+                    "description": "Социальные сети",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.SocialLinks"
+                        }
+                    ]
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "timezone": {
+                    "description": "Рабочие настройки",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                        }
+                    ]
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullInt"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "work_hours": {
+                    "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_models.NullString"
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_models.UserRole": {
+            "type": "string",
+            "enum": [
+                "admin",
+                "moderator",
+                "user"
+            ],
+            "x-enum-varnames": [
+                "RoleAdmin",
+                "RoleModerator",
+                "RoleUser"
+            ]
+        },
+        "github_com_UAssylbek_central-reporting_internal_repositories.PaginatedListResult": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_UAssylbek_central-reporting_internal_repositories.UserListItem"
+                    }
+                }
+            }
+        },
+        "github_com_UAssylbek_central-reporting_internal_repositories.UserListItem": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "department": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_online": {
+                    "type": "boolean"
+                },
+                "last_seen": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "string"
+                },
+                "require_password_change": {
+                    "type": "boolean"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "show_in_selection": {
+                    "type": "boolean"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Введите токен в формате: Bearer {ваш_токен}",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

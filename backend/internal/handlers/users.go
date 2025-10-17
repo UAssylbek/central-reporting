@@ -37,32 +37,87 @@ func NewUserHandler(userRepo *repositories.UserRepository) *UserHandler {
 	return &UserHandler{userRepo: userRepo}
 }
 
+// GetUsers godoc
+// @Summary Получить список пользователей
+// @Description Возвращает пагинированный список пользователей. Admins видят всех, Moderators - только доступных им
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Номер страницы" default(1)
+// @Param page_size query int false "Размер страницы" default(20) maximum(100)
+// @Param sort_by query string false "Поле для сортировки" default(created_at)
+// @Param sort_desc query boolean false "Сортировка по убыванию" default(true)
+// @Success 200 {object} repositories.PaginatedListResult "Список пользователей"
+// @Failure 401 {object} map[string]string "Не авторизован"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /users [get]
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	log.Println("GetUsers handler called")
 
 	role, _ := c.Get("role")
 	userID, _ := c.Get("user_id")
 
-	var users []models.User
-	var err error
+	// Получаем параметры пагинации из query string
+	page := 1
+	pageSize := 20
+	sortBy := "created_at"
+	sortDesc := true
+
+	if pageStr := c.Query("page"); pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+
+	if pageSizeStr := c.Query("page_size"); pageSizeStr != "" {
+		if ps, err := strconv.Atoi(pageSizeStr); err == nil && ps > 0 && ps <= 100 {
+			pageSize = ps
+		}
+	}
+
+	if sort := c.Query("sort_by"); sort != "" {
+		sortBy = sort
+	}
+
+	if sortDescStr := c.Query("sort_desc"); sortDescStr != "" {
+		sortDesc = sortDescStr == "true" || sortDescStr == "1"
+	}
 
 	// Если модератор - показываем только доступных ему пользователей
 	if role == models.RoleModerator {
 		log.Printf("Moderator %d requesting accessible users", userID.(int))
-		users, err = h.userRepo.GetAccessibleUsers(userID.(int))
-	} else {
-		// Для админа - показываем всех пользователей
-		users, err = h.userRepo.GetAll()
-	}
-
-	if err != nil {
-		log.Printf("Error in GetUsers handler: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось получить список пользователей"})
+		users, err := h.userRepo.GetAccessibleUsers(userID.(int))
+		if err != nil {
+			log.Printf("Error in GetUsers handler: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": errFailedToGetUsers})
+			return
+		}
+		// Возвращаем в формате совместимом с фронтендом
+		c.JSON(http.StatusOK, gin.H{
+			"users": users,
+			"total": len(users),
+		})
 		return
 	}
 
-	log.Printf("Found %d users", len(users))
-	c.JSON(http.StatusOK, gin.H{"users": users})
+	// Для админа - показываем всех пользователей с пагинацией
+	params := repositories.PaginationParams{
+		Page:     page,
+		PageSize: pageSize,
+		SortBy:   sortBy,
+		SortDesc: sortDesc,
+	}
+
+	result, err := h.userRepo.GetAllPaginated(params)
+	if err != nil {
+		log.Printf("Error in GetUsers handler: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errFailedToGetUsers})
+		return
+	}
+
+	log.Printf("Found %d users (page %d of %d)", len(result.Users), result.Page, result.TotalPages)
+	c.JSON(http.StatusOK, result)
 }
 
 func (h *UserHandler) GetUser(c *gin.Context) {
@@ -115,13 +170,42 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 	req.Country = utils.SanitizeString(req.Country)
 	req.Comment = utils.SanitizeString(req.Comment)
 
-	for i := range req.Emails {
-		req.Emails[i] = utils.SanitizeEmail(req.Emails[i])
+	// Валидация и санитизация emails
+	validEmails := []string{}
+	for _, email := range req.Emails {
+		cleanEmail := utils.SanitizeEmail(email)
+		if cleanEmail != "" {
+			if !utils.ValidateEmail(cleanEmail) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": fmt.Sprintf("Некорректный email адрес: %s", email),
+				})
+				return
+			}
+			validEmails = append(validEmails, cleanEmail)
+		}
 	}
+	req.Emails = validEmails
 
-	if len(req.Username) < 3 {
+	// Валидация телефонов
+	validPhones := []string{}
+	for _, phone := range req.Phones {
+		if phone != "" {
+			if !utils.ValidatePhone(phone) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error": fmt.Sprintf("Некорректный номер телефона: %s. Используйте формат +[код][номер]", phone),
+				})
+				return
+			}
+			validPhones = append(validPhones, phone)
+		}
+	}
+	req.Phones = validPhones
+
+	// Валидация username
+	valid, errMsg := utils.ValidateUsername(req.Username)
+	if !valid {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Логин должен содержать минимум 3 символа",
+			"error": errMsg,
 		})
 		return
 	}
@@ -136,12 +220,16 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	// ✅ ДОБАВИТЬ: Валидация пароля при создании
-	if req.Password != "" && len(req.Password) < 6 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Пароль должен содержать минимум 6 символов",
-		})
-		return
+	// ✅ Валидация пароля при создании
+	if req.Password != "" {
+		validation := utils.ValidatePassword(req.Password)
+		if !validation.Valid {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":  validation.Message,
+				"errors": validation.Errors,
+			})
+			return
+		}
 	}
 
 	// Проверка на существующего пользователя

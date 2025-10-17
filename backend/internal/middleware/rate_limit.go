@@ -74,7 +74,9 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 		if v.count >= rl.rate {
 			rl.mu.Unlock()
 			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error": "Too many requests. Please try again later.",
+				"error":      "Слишком много запросов. Пожалуйста, попробуйте позже.",
+				"error_en":   "Too many requests. Please try again later.",
+				"retry_after": int(rl.window.Seconds()),
 			})
 			c.Abort()
 			return
