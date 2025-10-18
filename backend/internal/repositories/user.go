@@ -22,6 +22,21 @@ func NewUserRepository(db *sqlx.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
+// Whitelist допустимых полей для сортировки (защита от SQL Injection)
+var allowedSortFields = map[string]bool{
+	"id":         true,
+	"full_name":  true,
+	"username":   true,
+	"role":       true,
+	"position":   true,
+	"department": true,
+	"is_active":  true,
+	"is_online":  true,
+	"last_seen":  true,
+	"created_at": true,
+	"updated_at": true,
+}
+
 // PaginationParams параметры пагинации
 type PaginationParams struct {
 	Page     int
@@ -100,6 +115,12 @@ func (r *UserRepository) GetAllPaginatedLight(params PaginationParams) (*Paginat
 		params.SortBy = "created_at"
 	}
 
+	// ✅ ЗАЩИТА ОТ SQL INJECTION: проверяем поле сортировки
+	if !allowedSortFields[params.SortBy] {
+		log.Printf("WARNING: Attempted to sort by invalid field: %s", params.SortBy)
+		params.SortBy = "created_at" // Fallback на безопасное поле
+	}
+
 	// Определяем направление сортировки
 	sortOrder := "ASC"
 	if params.SortDesc {
@@ -162,6 +183,12 @@ func (r *UserRepository) GetAllPaginated(params PaginationParams) (*PaginatedRes
 	}
 	if params.SortBy == "" {
 		params.SortBy = "created_at"
+	}
+
+	// ✅ ЗАЩИТА ОТ SQL INJECTION: проверяем поле сортировки
+	if !allowedSortFields[params.SortBy] {
+		log.Printf("WARNING: Attempted to sort by invalid field: %s", params.SortBy)
+		params.SortBy = "created_at" // Fallback на безопасное поле
 	}
 
 	// Определяем направление сортировки

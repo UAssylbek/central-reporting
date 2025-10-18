@@ -102,11 +102,11 @@ export const usersApi = {
    */
   async getAll(): Promise<User[]> {
     // Запрашиваем endpoint без параметров
-    const response = await apiClient.get<any>('/users');
+    const response = await apiClient.get<{ users: User[]; total?: number }>('/users');
 
     // Backend возвращает { users: User[], total?: number, ... }
     if (response.users && Array.isArray(response.users)) {
-      return response.users as User[];
+      return response.users;
     }
 
     // Fallback - пустой массив

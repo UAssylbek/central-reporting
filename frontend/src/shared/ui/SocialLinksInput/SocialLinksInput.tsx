@@ -50,6 +50,8 @@ const SOCIAL_PLATFORMS = [
 export function SocialLinksInput({ value, onChange }: SocialLinksInputProps) {
   // Состояние для ошибок валидации
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Состояние для валидных полей
+  const [validFields, setValidFields] = useState<Record<string, boolean>>({});
 
   const handleChange = (key: keyof SocialLinks, inputValue: string) => {
     let processedValue = inputValue;
@@ -66,12 +68,21 @@ export function SocialLinksInput({ value, onChange }: SocialLinksInputProps) {
 
     // Валидация при изменении (но не показываем ошибку пока пользователь печатает)
     if (inputValue.trim()) {
-      validateField(key, processedValue, false);
+      const isValid = validateField(key, processedValue, false);
+      // Обновляем состояние валидных полей
+      setValidFields({
+        ...validFields,
+        [key]: isValid,
+      });
     } else {
-      // Если поле пустое - убираем ошибку
+      // Если поле пустое - убираем ошибку и валидность
       const newErrors = { ...errors };
       delete newErrors[key];
       setErrors(newErrors);
+
+      const newValidFields = { ...validFields };
+      delete newValidFields[key];
+      setValidFields(newValidFields);
     }
   };
 
@@ -80,12 +91,12 @@ export function SocialLinksInput({ value, onChange }: SocialLinksInputProps) {
     key: keyof SocialLinks,
     inputValue: string,
     showError: boolean = true
-  ) => {
+  ): boolean => {
     if (!inputValue || !inputValue.trim()) {
       const newErrors = { ...errors };
       delete newErrors[key];
       setErrors(newErrors);
-      return;
+      return false; // Пустое поле = не валидно
     }
 
     let isValid = true;
@@ -133,11 +144,18 @@ export function SocialLinksInput({ value, onChange }: SocialLinksInputProps) {
       delete newErrors[key];
       setErrors(newErrors);
     }
+
+    return isValid; // ← ВАЖНО: возвращаем результат валидации
   };
 
   // Проверка при потере фокуса
   const handleBlur = (key: keyof SocialLinks) => {
-    validateField(key, value[key] || "", true);
+    const isValid = validateField(key, value[key] || "", true);
+    // Обновляем состояние валидных полей
+    setValidFields({
+      ...validFields,
+      [key]: isValid,
+    });
   };
 
   return (
@@ -180,8 +198,8 @@ export function SocialLinksInput({ value, onChange }: SocialLinksInputProps) {
                       {errors[platform.key]}
                     </p>
                   )}
-                  {/* Показываем галочку если валидно */}
-                  {!errors[platform.key] && value[platform.key]?.trim() && (
+                  {/* Показываем галочку ТОЛЬКО если явно валидно */}
+                  {validFields[platform.key] === true && !errors[platform.key] && (
                     <p className="text-xs text-green-600 dark:text-green-400">
                       ✓ Корректно
                     </p>
