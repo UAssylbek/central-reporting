@@ -30,6 +30,8 @@ import {
   type SelectableUser,
 } from "../components/UserSelectModal";
 import { TIMEZONES, generateHoursList } from "../../../shared/utils/validation";
+import { isValidEmail, isValidPhoneNumber } from "../../../shared/utils/formatPhone";
+import { areAllSocialLinksValid } from "../../../shared/utils/validateSocialLinks";
 
 export interface UserFormModalProps {
   readonly isOpen: boolean;
@@ -321,6 +323,41 @@ export function UserFormModal({
     setLoading(true);
 
     try {
+      // Валидация данных перед отправкой
+      const validationErrors: string[] = [];
+
+      // Проверка emails - все заполненные должны быть валидными
+      const filledEmails = formData.emails.filter((e) => e.trim());
+      const invalidEmails = filledEmails.filter((e) => !isValidEmail(e));
+      if (invalidEmails.length > 0) {
+        validationErrors.push(
+          `Некорректный формат email: ${invalidEmails.join(", ")}`
+        );
+      }
+
+      // Проверка телефонов - все заполненные должны быть валидными
+      const filledPhones = formData.phones.filter((p) => p.trim());
+      const invalidPhones = filledPhones.filter((p) => !isValidPhoneNumber(p));
+      if (invalidPhones.length > 0) {
+        validationErrors.push(
+          `Некорректный формат телефона: ${invalidPhones.join(", ")}`
+        );
+      }
+
+      // Проверка социальных сетей
+      if (!areAllSocialLinksValid(formData.social_links)) {
+        validationErrors.push(
+          "Некорректный формат одной или нескольких социальных сетей. Проверьте заполненные поля."
+        );
+      }
+
+      // Если есть ошибки - останавливаем сохранение
+      if (validationErrors.length > 0) {
+        setError(validationErrors.join("\n"));
+        setLoading(false);
+        return;
+      }
+
       // Модератор редактирует пользователя - только организации
       if (isModeratorEditingOthers && user) {
         const updateData: UpdateUserRequest = {

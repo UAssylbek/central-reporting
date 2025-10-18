@@ -1,7 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/UAssylbek/central-reporting/internal/auth"
@@ -11,6 +16,7 @@ import (
 	"github.com/UAssylbek/central-reporting/internal/middleware"
 	"github.com/UAssylbek/central-reporting/internal/models"
 	"github.com/UAssylbek/central-reporting/internal/repositories"
+	"github.com/UAssylbek/central-reporting/internal/services"
 	"github.com/gin-gonic/gin"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -45,6 +51,8 @@ func main() {
 	updateUserLimiter := middleware.NewRateLimiter(20, time.Minute)     // 20 обновлений пользователя в минуту
 	avatarUploadLimiter := middleware.NewRateLimiter(10, time.Minute)   // 10 загрузок аватара в минуту
 	deleteUserLimiter := middleware.NewRateLimiter(5, time.Minute)      // 5 удалений пользователя в минуту
+	passwordResetLimiter := middleware.NewRateLimiter(3, time.Minute)   // 3 запроса на сброс пароля в минуту
+	generalLimiter := middleware.NewRateLimiter(100, time.Minute)       // 100 запросов в минуту для остальных endpoints
 
 	// Connect to database
 	db, err := database.Connect(cfg.DatabaseURL)
@@ -55,11 +63,18 @@ func main() {
 
 	// Initialize repositories
 	userRepo := repositories.NewUserRepository(db)
+	passwordResetRepo := repositories.NewPasswordResetRepository(db)
+	organizationRepo := repositories.NewOrganizationRepository(db)
+	auditLogRepo := repositories.NewAuditLogRepository(db)
+
+	// Initialize services
+	emailService := services.NewEmailService()
 
 	// Initialize handlers
-	authHandler := handlers.NewAuthHandler(userRepo, cfg.JWTSecret)
-	userHandler := handlers.NewUserHandler(userRepo)
+	authHandler := handlers.NewAuthHandler(userRepo, cfg.JWTSecret, auditLogRepo)
+	userHandler := handlers.NewUserHandler(userRepo, organizationRepo, auditLogRepo)
 	avatarHandler := handlers.NewAvatarHandler(userRepo)
+	passwordResetHandler := handlers.NewPasswordResetHandler(userRepo, passwordResetRepo, emailService)
 
 	// Setup router
 	r := gin.Default()
@@ -94,11 +109,14 @@ func main() {
 
 	// Public routes
 	r.POST("/api/auth/login", loginLimiter.Middleware(), authHandler.Login)
+	r.POST("/api/auth/forgot-password", passwordResetLimiter.Middleware(), passwordResetHandler.ForgotPassword)
+	r.POST("/api/auth/reset-password", passwordResetLimiter.Middleware(), passwordResetHandler.ResetPassword)
 
 	// Protected routes (доступны всем авторизованным пользователям)
 	protected := r.Group("/api")
 	protected.Use(auth.JWTMiddleware(cfg.JWTSecret, userRepo))
 	protected.Use(auth.ActivityMiddleware(userRepo))
+	protected.Use(generalLimiter.Middleware()) // ✅ Общий rate limit для всех защищенных endpoints
 	{
 		// Auth routes
 		protected.GET("/auth/me", authHandler.Me)
@@ -158,8 +176,34 @@ func main() {
 		}
 	}()
 
-	log.Printf("Server starting on port %s", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatal("Failed to start server:", err)
+	// ✅ GRACEFUL SHUTDOWN: создаем HTTP сервер вместо r.Run()
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: r,
 	}
+
+	// Запускаем сервер в отдельной горутине
+	go func() {
+		log.Printf("Server starting on port %s", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	// Ожидаем сигнал завершения (Ctrl+C или SIGTERM)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	// Даем 5 секунд на завершение активных запросов
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server exited gracefully")
 }

@@ -30,8 +30,11 @@ export function HomePage() {
     setSelectedReportType(null);
   };
 
-  const handleReportSubmit = async (formData: Record<string, unknown>) => {
-    console.log("Report data:", formData);
+  const handleReportSubmit = async (
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _formData: Record<string, unknown>
+  ) => {
+    // TODO: Отправить данные отчета на бэкенд
     await new Promise((resolve) => setTimeout(resolve, 1000));
     success("Запрос на формирование отчёта создан!");
   };
@@ -100,31 +103,37 @@ export function HomePage() {
               {category}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categoryReports.map((report) => (
-                <Card key={report.id}>
-                  <div className="flex items-start gap-4">
+              {categoryReports.map((report, index) => (
+                <Card
+                  key={report.id}
+                  className="flex flex-col h-full animate-fade-in-up hover-lift"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <div className="flex items-start gap-4 flex-1">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                       <span className="text-2xl">{report.icon}</span>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 flex flex-col">
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                         {report.title}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4">
+                      <p className="text-sm text-gray-600 dark:text-zinc-400 mb-4 flex-1">
                         {report.description}
                       </p>
-                      <Button
-                        size="sm"
-                        className="cursor-pointer"
-                        onClick={() =>
-                          handleReportClick(
-                            report.id as ReportType,
-                            report.title
-                          )
-                        }
-                      >
-                        Открыть →
-                      </Button>
+                      <div className="mt-auto">
+                        <Button
+                          size="sm"
+                          className="cursor-pointer"
+                          onClick={() =>
+                            handleReportClick(
+                              report.id as ReportType,
+                              report.title
+                            )
+                          }
+                        >
+                          Открыть →
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </Card>

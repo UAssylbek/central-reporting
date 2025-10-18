@@ -5,6 +5,7 @@ import { Button } from "../../shared/ui/Button/Button";
 import { Input } from "../../shared/ui/Input/Input";
 import { authApi } from "../../shared/api/auth.api";
 import { ChangePasswordModal } from "../../features/auth/components/ChangePasswordModal/ChangePasswordModal";
+import { logger } from "../../shared/utils/logger";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -19,19 +20,23 @@ export function LoginPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault(); // ✅ Предотвращаем перезагрузку страницы
-    setError(""); // Очищаем предыдущие ошибки
+    e.preventDefault();
+    logger.debug("🔐 Login form submitted");
+    setError("");
 
     // Валидация перед отправкой
     if (!formData.username.trim()) {
       setError("Введите логин");
-      return; // ✅ Останавливаем выполнение БЕЗ перезагрузки
+      logger.debug("❌ Validation failed: empty username");
+      return;
     }
 
     setIsLoading(true);
+    logger.info("📤 Sending login request...");
 
     try {
       const response = await authApi.login(formData);
+      logger.info("✅ Login successful", response);
 
       // Проверяем require_password_change из ответа
       if (response.require_password_change) {
@@ -42,7 +47,7 @@ export function LoginPage() {
         navigate("/home", { replace: true });
       }
     } catch (err: unknown) {
-      // ✅ ИСПРАВЛЕНИЕ: Правильная обработка ошибок БЕЗ перезагрузки страницы
+      logger.error("❌ Login failed", err);
       let errorMessage = "Неверный логин или пароль";
 
       // Безопасное извлечение сообщения об ошибке
@@ -61,9 +66,11 @@ export function LoginPage() {
         errorMessage = err.response.data.error;
       }
 
-      setError(errorMessage); // ✅ Устанавливаем ошибку БЕЗ reload
+      logger.debug("📝 Setting error message:", errorMessage);
+      setError(errorMessage);
     } finally {
-      setIsLoading(false); // ✅ Всегда снимаем loading состояние
+      logger.debug("🏁 Login process finished");
+      setIsLoading(false);
     }
   };
 
@@ -149,9 +156,16 @@ export function LoginPage() {
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-zinc-700 text-center">
               <p className="text-sm text-gray-600 dark:text-zinc-400">
                 Забыли пароль?{" "}
-                <span className="text-gray-400 dark:text-zinc-500">
-                  Обратитесь к администратору
-                </span>
+                <a
+                  href="/forgot-password"
+                  className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/forgot-password");
+                  }}
+                >
+                  Восстановить пароль
+                </a>
               </p>
             </div>
           </div>

@@ -7,8 +7,7 @@ import { Spinner } from "../../shared/ui/Spinner/Spinner";
 import { Toast } from "../../shared/ui/Toast/Toast";
 import { ConfirmModal } from "../../shared/ui/ConfirmModal/ConfirmModal";
 import { UserFormModal } from "../../features/user/UserFormModal/UserFormModal";
-// UserViewModal временно не используется (для будущей функциональности)
-// import { UserViewModal } from "../../features/user/UserViewModal/UserViewModal";
+import { UserViewModal } from "../../features/user/UserViewModal/UserViewModal";
 import { useToast } from "../../shared/hooks/useToast";
 import { usersApi } from "../../shared/api/users.api";
 import type { User } from "../../shared/api/auth.api";
@@ -55,12 +54,12 @@ export function UsersPage() {
 
   // Модальные окна
   const [isFormOpen, setIsFormOpen] = useState(false);
-  // const [isViewOpen, setIsViewOpen] = useState(false); // TODO: для будущей функциональности
-  // const [viewingUser, setViewingUser] = useState<User | null>(null); // TODO: для будущей функциональности
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewingUser, setViewingUser] = useState<User | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  // const [isDeletingBulk, setIsDeletingBulk] = useState(false); // TODO: для будущей функциональности
+  const [isDeletingBulk, setIsDeletingBulk] = useState(false);
 
   // Массовые действия (только для админа)
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
@@ -267,34 +266,23 @@ export function UsersPage() {
     );
   };
 
-  // TODO: Функциональность просмотра пользователя (будет добавлена позже)
-  // const handleViewUser = (user: User) => {
-  //   setViewingUser(user);
-  //   setIsViewOpen(true);
-  // };
+  // Просмотр пользователя
+  const handleViewUser = (user: User) => {
+    setViewingUser(user);
+    setIsViewOpen(true);
+  };
 
-  // TODO: Редактирование из модального окна просмотра (будет добавлена позже)
-  // const handleEditFromView = () => {
-  //   setEditingUser(viewingUser);
-  //   setIsViewOpen(false);
-  //   setIsFormOpen(true);
-  // };
-
-  // Редактирование напрямую из таблицы (старая кнопка)
-  const handleEditUser = (user: User) => {
-    setEditingUser(user);
+  // Редактирование из модального окна просмотра
+  const handleEditFromView = () => {
+    setEditingUser(viewingUser);
+    setIsViewOpen(false);
     setIsFormOpen(true);
   };
 
-  // TODO: Удаление из модального окна просмотра (будет добавлена позже)
-  // const handleDeleteFromView = () => {
-  //   setDeletingUser(viewingUser);
-  //   setIsViewOpen(false);
-  // };
-
-  // Удаление напрямую из таблицы (старая кнопка)
-  const handleDeleteClick = (user: User) => {
-    setDeletingUser(user);
+  // Удаление из модального окна просмотра
+  const handleDeleteFromView = () => {
+    setDeletingUser(viewingUser);
+    setIsViewOpen(false);
   };
 
   // Подтверждение удаления одного пользователя
@@ -318,31 +306,42 @@ export function UsersPage() {
     }
   };
 
-  // TODO: Массовое удаление выделенных (будет добавлена позже)
-  // const handleBulkDelete = async () => {
-  //   if (selectedUserIds.length === 0) return;
+  // Массовое удаление выделенных
+  const handleBulkDelete = async () => {
+    if (selectedUserIds.length === 0) return;
 
-  //   const confirmMessage = `Вы уверены, что хотите удалить ${selectedUserIds.length} пользователей? Это действие нельзя отменить.`;
-  //   if (!window.confirm(confirmMessage)) return;
+    // Проверяем нет ли текущего пользователя в выбранных
+    if (currentUser && selectedUserIds.includes(currentUser.id)) {
+      showError("Вы не можете удалить самого себя!");
+      return;
+    }
 
-  //   try {
-  //     setIsDeletingBulk(true);
+    const confirmMessage = `Вы уверены, что хотите удалить ${selectedUserIds.length} пользователей? Это действие нельзя отменить.`;
+    if (!window.confirm(confirmMessage)) return;
 
-  //     // Удаляем всех по очереди
-  //     const deletePromises = selectedUserIds.map(id => usersApi.deleteUser(id));
-  //     await Promise.all(deletePromises);
+    try {
+      setIsDeletingBulk(true);
 
-  //     success(`Успешно удалено пользователей: ${selectedUserIds.length}`);
-  //     setSelectedUserIds([]);
-  //     await loadUsers(false);
-  //   } catch (err: unknown) {
-  //     const errorMessage =
-  //       err instanceof Error ? err.message : "Не удалось удалить пользователей";
-  //     showError(errorMessage);
-  //   } finally {
-  //     setIsDeletingBulk(false);
-  //   }
-  // };
+      // Удаляем всех по очереди
+      for (const id of selectedUserIds) {
+        try {
+          await usersApi.deleteUser(id);
+        } catch (err) {
+          console.error(`Failed to delete user ${id}:`, err);
+        }
+      }
+
+      success(`Успешно удалено пользователей: ${selectedUserIds.length}`);
+      setSelectedUserIds([]);
+      await loadUsers(false);
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Не удалось удалить пользователей";
+      showError(errorMessage);
+    } finally {
+      setIsDeletingBulk(false);
+    }
+  };
 
   const handleFormSuccess = async () => {
     success(editingUser ? "Пользователь обновлён" : "Пользователь создан");
@@ -377,6 +376,12 @@ export function UsersPage() {
   };
 
   const toggleSelectUser = (userId: number) => {
+    // Запрещаем выбор самого себя
+    if (currentUser && userId === currentUser.id) {
+      showError("Вы не можете выбрать самого себя для удаления");
+      return;
+    }
+
     setSelectedUserIds((prev) =>
       prev.includes(userId)
         ? prev.filter((id) => id !== userId)
@@ -687,6 +692,32 @@ export function UsersPage() {
               >
                 Снять выделение
               </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={isDeletingBulk || selectedUserIds.length === 0}
+                className="cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  <span>
+                    {isDeletingBulk ? "Удаление..." : `Удалить выделенных (${selectedUserIds.length})`}
+                  </span>
+                </div>
+              </Button>
             </div>
           </div>
         </Card>
@@ -774,16 +805,13 @@ export function UsersPage() {
                         {getSortIcon("last_seen")}
                       </div>
                     </th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-900 dark:text-white">
-                      Действия
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedUsers.map((user) => (
                     <tr
                       key={user.id}
-                      className={`border-b border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-800 transition-colors ${
+                      className={`border-b border-gray-200 dark:border-zinc-700 hover:bg-gray-100 dark:hover:bg-zinc-700 transition-smooth ${
                         isAdmin && selectedUserIds.includes(user.id)
                           ? "bg-blue-50 dark:bg-blue-900/10"
                           : ""
@@ -800,7 +828,10 @@ export function UsersPage() {
                           />
                         </td>
                       )}
-                      <td className="px-4 py-4">
+                      <td
+                        className="px-4 py-4 cursor-pointer"
+                        onClick={() => handleViewUser(user)}
+                      >
                         <div className="flex items-center gap-3">
                           {user.avatar_url ? (
                             <img
@@ -854,50 +885,6 @@ export function UsersPage() {
                       <td className="px-4 py-4">
                         <div className="text-sm text-gray-600 dark:text-zinc-400">
                           {formatDate(user.last_seen)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleEditUser(user)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 rounded-lg transition-colors cursor-pointer"
-                            title={isModerator ? "Просмотр" : "Редактировать"}
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                          {isAdmin && user.id !== currentUser?.id && (
-                            <button
-                              onClick={() => handleDeleteClick(user)}
-                              className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer"
-                              title="Удалить"
-                            >
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -1015,6 +1002,19 @@ export function UsersPage() {
         }}
         user={editingUser}
         onSuccess={handleFormSuccess}
+      />
+
+      <UserViewModal
+        isOpen={isViewOpen}
+        onClose={() => {
+          setIsViewOpen(false);
+          setViewingUser(null);
+        }}
+        user={viewingUser}
+        onEdit={handleEditFromView}
+        onDelete={handleDeleteFromView}
+        currentUserRole={currentUser?.role || "user"}
+        currentUserId={currentUser?.id || 0}
       />
 
       <ConfirmModal

@@ -1,5 +1,6 @@
 // frontend/src/shared/api/client.ts
 import { AppError, type ApiErrorResponse } from "./types";
+import { logger } from "../utils/logger";
 
 const getApiUrl = () => {
   // Если есть ENV переменная - используем её
@@ -24,7 +25,7 @@ class ApiClient {
 
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
-    console.log("🔍 ApiClient initialized with baseUrl:", this.baseUrl); // ← И эту
+    logger.debug("🔍 ApiClient initialized with baseUrl:", this.baseUrl);
   }
 
   public getBaseUrl(): string {

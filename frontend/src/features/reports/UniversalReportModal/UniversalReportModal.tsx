@@ -13,6 +13,7 @@ import { ConfirmationStep } from "../steps/ConfirmationStep";
 import { ReportSelectionStep } from "../steps/ReportSelectionStep";
 import type { ReportType } from "../../../shared/types/reports";
 import type { ReportModalConfig } from "../../../shared/types/reportConfig";
+import { logger } from "../../../shared/utils/logger";
 
 export interface UniversalReportModalProps {
   readonly isOpen: boolean;
@@ -210,7 +211,7 @@ export function UniversalReportModal({
       if (onSubmit) {
         await onSubmit(formData);
       } else {
-        console.log("Submitting report:", formData);
+        logger.debug("Submitting report:", formData);
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 

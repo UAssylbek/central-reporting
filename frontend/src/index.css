@@ -3,6 +3,9 @@
 /* Импорт Tailwind CSS v4 */
 @import "tailwindcss";
 
+/* Импорт кастомных анимаций */
+@import "./shared/styles/animations.css";
+
 /* КРИТИЧНО: Настройка dark mode */
 @variant dark (&:where(.dark, .dark *));
 

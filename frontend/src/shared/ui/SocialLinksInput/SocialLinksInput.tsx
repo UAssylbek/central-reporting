@@ -1,7 +1,8 @@
 // frontend/src/shared/ui/SocialLinksInput/SocialLinksInput.tsx
 import { useState } from "react";
 import type { SocialLinks } from "../../api/auth.api";
-import { formatPhoneNumber, isValidPhoneNumber } from "../../utils/formatPhone";
+import { formatPhoneNumber } from "../../utils/formatPhone";
+import { validateSocialLink } from "../../utils/validateSocialLinks";
 
 interface SocialLinksInputProps {
   value: SocialLinks;
@@ -92,45 +93,15 @@ export function SocialLinksInput({ value, onChange }: SocialLinksInputProps) {
     inputValue: string,
     showError: boolean = true
   ): boolean => {
+    // Используем централизованную функцию валидации
+    const isValid = validateSocialLink(key, inputValue);
+
+    // Пустое поле - убираем ошибку и не показываем как валидное
     if (!inputValue || !inputValue.trim()) {
       const newErrors = { ...errors };
       delete newErrors[key];
       setErrors(newErrors);
-      return false; // Пустое поле = не валидно
-    }
-
-    let isValid = true;
-
-    // Валидация в зависимости от платформы
-    if (key === "whatsapp") {
-      // ✅ Используем isValidPhoneNumber из formatPhone.ts
-      isValid = isValidPhoneNumber(inputValue);
-    } else if (key === "telegram") {
-      // Telegram: https://t.me/username или @username
-      isValid =
-        /^(https?:\/\/)?(t\.me|telegram\.me)\/[\w\d_]+\/?$/.test(inputValue) ||
-        /^@[\w\d_]+$/.test(inputValue);
-    } else if (key === "linkedin") {
-      // LinkedIn: https://linkedin.com/in/username
-      isValid =
-        /^(https?:\/\/)?(www\.)?linkedin\.com\/(in|company)\/[\w-]+\/?$/.test(
-          inputValue
-        );
-    } else if (key === "facebook") {
-      // Facebook: https://facebook.com/username
-      isValid = /^(https?:\/\/)?(www\.)?facebook\.com\/[\w.-]+\/?$/.test(
-        inputValue
-      );
-    } else if (key === "instagram") {
-      // Instagram: https://instagram.com/username или @username
-      isValid =
-        /^(https?:\/\/)?(www\.)?instagram\.com\/[\w.]+\/?$/.test(inputValue) ||
-        /^@[\w.]+$/.test(inputValue);
-    } else if (key === "twitter") {
-      // Twitter/X: https://twitter.com/username или @username
-      isValid =
-        /^(https?:\/\/)?(www\.)?(twitter|x)\.com\/[\w]+\/?$/.test(inputValue) ||
-        /^@[\w]+$/.test(inputValue);
+      return false; // Пустое поле = не показываем галочку
     }
 
     // Показываем ошибку только при потере фокуса
@@ -145,7 +116,7 @@ export function SocialLinksInput({ value, onChange }: SocialLinksInputProps) {
       setErrors(newErrors);
     }
 
-    return isValid; // ← ВАЖНО: возвращаем результат валидации
+    return isValid;
   };
 
   // Проверка при потере фокуса

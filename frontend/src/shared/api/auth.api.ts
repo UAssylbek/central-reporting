@@ -1,5 +1,6 @@
 // frontend/src/shared/api/auth.api.ts
 import { apiClient } from "./client";
+import { logger } from "../utils/logger";
 
 // Обновите только типы User в файле auth.api.ts
 
@@ -157,7 +158,7 @@ export const authApi = {
     try {
       await apiClient.post("/auth/logout");
     } catch (error) {
-      console.error("Logout error:", error);
+      logger.error("Logout error:", error);
     } finally {
       // Всегда очищаем локальное хранилище
       localStorage.removeItem("token");

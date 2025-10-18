@@ -39,10 +39,14 @@ var allowedSortFields = map[string]bool{
 
 // PaginationParams параметры пагинации
 type PaginationParams struct {
-	Page     int
-	PageSize int
-	SortBy   string
-	SortDesc bool
+	Page       int
+	PageSize   int
+	SortBy     string
+	SortDesc   bool
+	Search     string   // Поиск по имени, username, email, телефону
+	Role       string   // Фильтр по роли
+	IsActive   *bool    // Фильтр по активности (nil = все)
+	Department string   // Фильтр по отделу
 }
 
 // PaginatedResult результат с пагинацией
@@ -130,10 +134,55 @@ func (r *UserRepository) GetAllPaginatedLight(params PaginationParams) (*Paginat
 	// Вычисляем offset
 	offset := (params.Page - 1) * params.PageSize
 
-	// Получаем общее количество пользователей
+	// Строим WHERE условия для фильтрации
+	whereConditions := []string{}
+	args := []interface{}{}
+	argCounter := 1
+
+	// Поиск по имени, username, email, телефону
+	if params.Search != "" {
+		searchPattern := "%" + strings.ToLower(params.Search) + "%"
+		whereConditions = append(whereConditions, fmt.Sprintf(`(
+			LOWER(full_name) LIKE $%d OR
+			LOWER(username) LIKE $%d OR
+			LOWER(emails::text) LIKE $%d OR
+			LOWER(phones::text) LIKE $%d
+		)`, argCounter, argCounter, argCounter, argCounter))
+		args = append(args, searchPattern)
+		argCounter++
+	}
+
+	// Фильтр по роли
+	if params.Role != "" {
+		whereConditions = append(whereConditions, fmt.Sprintf("role = $%d", argCounter))
+		args = append(args, params.Role)
+		argCounter++
+	}
+
+	// Фильтр по активности
+	if params.IsActive != nil {
+		whereConditions = append(whereConditions, fmt.Sprintf("is_active = $%d", argCounter))
+		args = append(args, *params.IsActive)
+		argCounter++
+	}
+
+	// Фильтр по отделу
+	if params.Department != "" {
+		whereConditions = append(whereConditions, fmt.Sprintf("LOWER(department) LIKE $%d", argCounter))
+		args = append(args, "%"+strings.ToLower(params.Department)+"%")
+		argCounter++
+	}
+
+	// Собираем WHERE clause
+	whereClause := ""
+	if len(whereConditions) > 0 {
+		whereClause = "WHERE " + strings.Join(whereConditions, " AND ")
+	}
+
+	// Получаем общее количество пользователей с учетом фильтров
 	var total int
-	countQuery := "SELECT COUNT(*) FROM users"
-	err := r.db.Get(&total, countQuery)
+	countQuery := "SELECT COUNT(*) FROM users " + whereClause
+	err := r.db.Get(&total, countQuery, args...)
 	if err != nil {
 		log.Printf("Database error counting users: %v", err)
 		return nil, err
@@ -141,6 +190,10 @@ func (r *UserRepository) GetAllPaginatedLight(params PaginationParams) (*Paginat
 
 	// ОПТИМИЗАЦИЯ: Выбираем основные поля + emails/phones, БЕЗ тяжелых JSONB полей (social_links, custom_fields)
 	var users []UserListItem
+
+	// Добавляем параметры для LIMIT и OFFSET
+	limitOffsetArgs := append(args, params.PageSize, offset)
+
 	query := fmt.Sprintf(`
 		SELECT id, full_name, username,
 		       COALESCE(avatar_url, '') as avatar_url,
@@ -151,10 +204,11 @@ func (r *UserRepository) GetAllPaginatedLight(params PaginationParams) (*Paginat
 		       role, is_active, is_online, last_seen, created_at,
 		       show_in_selection, require_password_change
 		FROM users
+		%s
 		ORDER BY %s %s
-		LIMIT $1 OFFSET $2`, params.SortBy, sortOrder)
+		LIMIT $%d OFFSET $%d`, whereClause, params.SortBy, sortOrder, argCounter, argCounter+1)
 
-	err = r.db.Select(&users, query, params.PageSize, offset)
+	err = r.db.Select(&users, query, limitOffsetArgs...)
 	if err != nil {
 		log.Printf("Database error in GetAllPaginatedLight: %v", err)
 		return nil, err

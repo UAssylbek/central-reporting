@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { UniversalReportModal } from "../../features/reports/UniversalReportModal/UniversalReportModal";
 import { getReportConfig } from "../../features/reports/configs";
+import { logger } from "../../shared/utils/logger";
 import type { ReportType } from "../../shared/types/reports";
 import { getAvatarUrl } from "../../shared/utils/url";
 
@@ -85,7 +86,7 @@ export function MainLayout() {
   };
 
   const handleReportSubmit = async (formData: Record<string, unknown>) => {
-    console.log("Report data:", formData);
+    logger.debug("Report data:", formData);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     // Здесь можно добавить toast уведомление
   };

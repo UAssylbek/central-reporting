@@ -1,4 +1,31 @@
-// frontend/src/shared/api/users.api.ts
+/**
+ * API клиент для работы с пользователями
+ *
+ * Описание:
+ * - Предоставляет методы для CRUD операций с пользователями
+ * - Поддерживает пагинацию, фильтрацию и поиск
+ * - Управление аватарами (загрузка/удаление)
+ * - Получение списка организаций
+ *
+ * Основные эндпоинты:
+ * - GET /users - список пользователей с пагинацией
+ * - GET /users/:id - получить пользователя по ID
+ * - POST /users - создать нового пользователя
+ * - PUT /users/:id - обновить данные пользователя
+ * - DELETE /users/:id - удалить пользователя
+ * - POST /users/:id/avatar - загрузить аватар
+ * - DELETE /users/:id/avatar - удалить аватар
+ * - GET /users/organizations - список организаций
+ *
+ * Используется в:
+ * - UsersPage - отображение и управление пользователями
+ * - UserFormModal - создание/редактирование пользователя
+ * - ProfilePage - просмотр/редактирование профиля
+ * - useUsers hooks - React Query интеграция
+ *
+ * @module shared/api/users.api
+ */
+
 import type { User, UserRole, SocialLinks } from "./auth.api";
 import { apiClient } from "./client";
 import type {
@@ -7,6 +34,7 @@ import type {
   UserListItem,
 } from "./types";
 import { buildQueryParams } from "./types";
+import { logger } from "../utils/logger";
 
 export interface Organization {
   id: number;
@@ -110,7 +138,7 @@ export const usersApi = {
     }
 
     // Fallback - пустой массив
-    console.warn('Unexpected API response format:', response);
+    logger.warn('Unexpected API response format:', response);
     return [];
   },
 
@@ -130,7 +158,7 @@ export const usersApi = {
     id: number,
     userData: UpdateUserRequest
   ): Promise<{ user: User }> {
-    console.log("🔄 Updating user", id, "with data:", userData);
+    logger.debug("🔄 Updating user", id, "with data:", userData);
     return await apiClient.put<{ user: User }, UpdateUserRequest>(
       `/users/${id}`,
       userData
@@ -151,12 +179,8 @@ export const usersApi = {
     // КРИТИЧНО: Получаем токен
     const token = localStorage.getItem("token");
 
-    console.log("📤 Uploading avatar for user:", userId);
-    console.log("🔑 Token exists:", !!token);
-    console.log(
-      "🔑 Token value:",
-      token ? token.substring(0, 20) + "..." : "NO TOKEN"
-    );
+    logger.debug("📤 Uploading avatar for user:", userId);
+    logger.debug("🔑 Token exists:", !!token);
 
     if (!token) {
       throw new Error("No authentication token found. Please log in again.");
@@ -167,7 +191,7 @@ export const usersApi = {
       ? "http://localhost:8080/api"
       : "/api";
 
-    console.log("🌐 Upload URL:", `${baseUrl}/users/${userId}/avatar`);
+    logger.debug("🌐 Upload URL:", `${baseUrl}/users/${userId}/avatar`);
 
     const response = await fetch(`${baseUrl}/users/${userId}/avatar`, {
       method: "POST",
@@ -177,11 +201,11 @@ export const usersApi = {
       body: formData,
     });
 
-    console.log("📥 Upload response status:", response.status);
+    logger.debug("📥 Upload response status:", response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ Upload failed:", errorText);
+      logger.error("❌ Upload failed:", errorText);
 
       let errorMessage = "Failed to upload avatar";
       try {
@@ -195,7 +219,7 @@ export const usersApi = {
     }
 
     const result = await response.json();
-    console.log("✅ Upload successful:", result);
+    logger.info("✅ Upload successful:", result);
     return result;
   },
 

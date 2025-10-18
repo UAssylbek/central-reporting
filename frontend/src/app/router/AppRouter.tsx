@@ -10,6 +10,8 @@ import { AuthLayout } from "../layouts/AuthLayout";
 // Pages
 import { WelcomePage } from "../../pages/WelcomePage/WelcomePage";
 import { LoginPage } from "../../pages/LoginPage/LoginPage";
+import { ForgotPasswordPage } from "../../pages/ForgotPasswordPage/ForgotPasswordPage";
+import { ResetPasswordPage } from "../../pages/ResetPasswordPage/ResetPasswordPage";
 import { HomePage } from "../../pages/HomePage/HomePage";
 import { DashboardPage } from "../../pages/DashboardPage/DashboardPage";
 import { UsersPage } from "../../pages/UsersPage/UsersPage";
@@ -35,6 +37,8 @@ export function AppRouter() {
       <Route element={<AuthLayout />}>
         <Route path="/" element={<WelcomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       {/* Защищенные роуты с MainLayout */}

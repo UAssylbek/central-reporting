@@ -12,14 +12,16 @@ import (
 )
 
 type AuthHandler struct {
-	userRepo  *repositories.UserRepository
-	jwtSecret string
+	userRepo     *repositories.UserRepository
+	jwtSecret    string
+	auditLogRepo *repositories.AuditLogRepository
 }
 
-func NewAuthHandler(userRepo *repositories.UserRepository, jwtSecret string) *AuthHandler {
+func NewAuthHandler(userRepo *repositories.UserRepository, jwtSecret string, auditLogRepo *repositories.AuditLogRepository) *AuthHandler {
 	return &AuthHandler{
-		userRepo:  userRepo,
-		jwtSecret: jwtSecret,
+		userRepo:     userRepo,
+		jwtSecret:    jwtSecret,
+		auditLogRepo: auditLogRepo,
 	}
 }
 
@@ -127,6 +129,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		log.Printf("Failed to generate JWT: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось создать токен"})
 		return
+	}
+
+	// Audit log: успешный вход
+	if err := h.auditLogRepo.Log(user.ID, "login", nil, nil, c.ClientIP(), c.Request.UserAgent()); err != nil {
+		log.Printf("Failed to write audit log: %v", err)
 	}
 
 	log.Printf("Login successful for user: %s (ID: %d)", user.Username, user.ID)
@@ -269,10 +276,12 @@ func (h *AuthHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	log.Printf("AUDIT: User %d (%s) changed their password",
-		userID.(int),
-		user.Username,
-	)
+	// Audit log: смена пароля
+	if err := h.auditLogRepo.Log(userID.(int), "change_password", nil, nil, c.ClientIP(), c.Request.UserAgent()); err != nil {
+		log.Printf("Failed to write audit log: %v", err)
+	}
+
+	log.Printf("AUDIT: User %d (%s) changed their password", userID.(int), user.Username)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Пароль успешно изменен"})
 }

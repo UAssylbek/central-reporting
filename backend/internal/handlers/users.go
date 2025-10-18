@@ -30,16 +30,22 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 }
 
 type UserHandler struct {
-	userRepo *repositories.UserRepository
+	userRepo         *repositories.UserRepository
+	organizationRepo *repositories.OrganizationRepository
+	auditLogRepo     *repositories.AuditLogRepository
 }
 
-func NewUserHandler(userRepo *repositories.UserRepository) *UserHandler {
-	return &UserHandler{userRepo: userRepo}
+func NewUserHandler(userRepo *repositories.UserRepository, organizationRepo *repositories.OrganizationRepository, auditLogRepo *repositories.AuditLogRepository) *UserHandler {
+	return &UserHandler{
+		userRepo:         userRepo,
+		organizationRepo: organizationRepo,
+		auditLogRepo:     auditLogRepo,
+	}
 }
 
 // GetUsers godoc
 // @Summary Получить список пользователей
-// @Description Возвращает пагинированный список пользователей. Admins видят всех, Moderators - только доступных им
+// @Description Возвращает пагинированный список пользователей с фильтрацией и поиском. Admins видят всех, Moderators - только доступных им
 // @Tags users
 // @Accept json
 // @Produce json
@@ -48,6 +54,10 @@ func NewUserHandler(userRepo *repositories.UserRepository) *UserHandler {
 // @Param page_size query int false "Размер страницы" default(20) maximum(100)
 // @Param sort_by query string false "Поле для сортировки" default(created_at)
 // @Param sort_desc query boolean false "Сортировка по убыванию" default(true)
+// @Param search query string false "Поиск по имени, username, email, телефону"
+// @Param role query string false "Фильтр по роли (admin, moderator, employee)"
+// @Param is_active query boolean false "Фильтр по активности"
+// @Param department query string false "Фильтр по отделу"
 // @Success 200 {object} repositories.PaginatedListResult "Список пользователей"
 // @Failure 401 {object} map[string]string "Не авторизован"
 // @Failure 500 {object} map[string]string "Ошибка сервера"
@@ -58,11 +68,14 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 	role, _ := c.Get("role")
 	userID, _ := c.Get("user_id")
 
-	// Получаем параметры пагинации из query string
+	// Получаем параметры пагинации и фильтрации из query string
 	page := 1
 	pageSize := 20
 	sortBy := "created_at"
 	sortDesc := true
+	search := c.Query("search")
+	roleFilter := c.Query("role")
+	department := c.Query("department")
 
 	if pageStr := c.Query("page"); pageStr != "" {
 		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
@@ -84,6 +97,13 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		sortDesc = sortDescStr == "true" || sortDescStr == "1"
 	}
 
+	// Обработка фильтра is_active
+	var isActive *bool
+	if isActiveStr := c.Query("is_active"); isActiveStr != "" {
+		val := isActiveStr == "true" || isActiveStr == "1"
+		isActive = &val
+	}
+
 	// Если модератор - показываем только доступных ему пользователей
 	if role == models.RoleModerator {
 		log.Printf("Moderator %d requesting accessible users", userID.(int))
@@ -101,15 +121,19 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		return
 	}
 
-	// Для админа - показываем всех пользователей с пагинацией
+	// Для админа - показываем всех пользователей с пагинацией и фильтрацией
 	params := repositories.PaginationParams{
-		Page:     page,
-		PageSize: pageSize,
-		SortBy:   sortBy,
-		SortDesc: sortDesc,
+		Page:       page,
+		PageSize:   pageSize,
+		SortBy:     sortBy,
+		SortDesc:   sortDesc,
+		Search:     search,
+		Role:       roleFilter,
+		IsActive:   isActive,
+		Department: department,
 	}
 
-	result, err := h.userRepo.GetAllPaginated(params)
+	result, err := h.userRepo.GetAllPaginatedLight(params)
 	if err != nil {
 		log.Printf("Error in GetUsers handler: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": errFailedToGetUsers})
@@ -316,7 +340,15 @@ func (h *UserHandler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	// ✅ ДОБАВИТЬ: Лог успешного создания
+	// Audit log: создание пользователя
+	targetUserIDPtr := &user.ID
+	if err := h.auditLogRepo.Log(currentUserID.(int), "create_user", targetUserIDPtr, map[string]interface{}{
+		"username": user.Username,
+		"role":     user.Role,
+	}, c.ClientIP(), c.Request.UserAgent()); err != nil {
+		log.Printf("Failed to write audit log: %v", err)
+	}
+
 	log.Printf("AUDIT: User %d (%s) created user %d (%s) with role %s",
 		currentUserID.(int),
 		c.GetString("username"),
@@ -488,24 +520,34 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	// ✅ ДОБАВИТЬ: Лог успешного удаления
-	log.Printf("AUDIT: User %d (%s) deleted user %d",
-		userID.(int),
-		c.GetString("username"),
-		id,
-	)
+	// Audit log: удаление пользователя
+	targetUserIDPtr := &id
+	if err := h.auditLogRepo.Log(userID.(int), "delete_user", targetUserIDPtr, nil, c.ClientIP(), c.Request.UserAgent()); err != nil {
+		log.Printf("Failed to write audit log: %v", err)
+	}
+
+	log.Printf("AUDIT: User %d (%s) deleted user %d", userID.(int), c.GetString("username"), id)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Пользователь удален успешно"})
 }
 
+// GetOrganizations godoc
+// @Summary Получить список организаций
+// @Description Возвращает список всех активных организаций
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Список организаций"
+// @Failure 401 {object} map[string]string "Не авторизован"
+// @Failure 500 {object} map[string]string "Ошибка сервера"
+// @Router /users/organizations [get]
 func (h *UserHandler) GetOrganizations(c *gin.Context) {
-	// NOTE: Функционал получения организаций из БД будет реализован позже
-	organizations := []gin.H{
-		{"id": 1, "name": "Министерство образования"},
-		{"id": 2, "name": "Министерство здравоохранения"},
-		{"id": 3, "name": "Министерство финансов"},
-		{"id": 4, "name": "Акимат Алматы"},
-		{"id": 5, "name": "Акимат Астаны"},
+	organizations, err := h.organizationRepo.GetAll()
+	if err != nil {
+		log.Printf("Error getting organizations: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось получить список организаций"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"organizations": organizations})

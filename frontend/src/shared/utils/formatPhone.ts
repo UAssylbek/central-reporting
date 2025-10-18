@@ -126,18 +126,38 @@ export const cleanPhoneNumber = (formattedPhone: string): string => {
  * Проверяет валидность телефонного номера
  *
  * @param phone - Номер телефона
- * @returns true если номер валидный (10 цифр после кода страны)
+ * @returns true если номер валидный (полностью заполнен)
  */
 export const isValidPhoneNumber = (phone: string): boolean => {
-  const cleaned = cleanPhoneNumber(phone);
-
-  // Проверяем российские номера: должно быть 11 цифр (с 7/8) или +7 и 10 цифр
-  if (cleaned.startsWith("+7")) {
-    return cleaned.length === 12; // +7 и 10 цифр
-  } else if (cleaned.startsWith("7") || cleaned.startsWith("8")) {
-    return cleaned.length === 11; // 7/8 и 10 цифр
+  if (!phone || !phone.trim()) {
+    return false; // Пустой номер не валидный
   }
 
-  // Для других номеров минимум 10 цифр
-  return cleaned.length >= 10;
+  const cleaned = cleanPhoneNumber(phone);
+
+  // Проверяем российские номера: должно быть ТОЧНО 11 цифр (с 7/8) или +7 и 10 цифр
+  if (cleaned.startsWith("+7")) {
+    return cleaned.length === 12; // +7 и РОВНО 10 цифр
+  } else if (cleaned.startsWith("7") || cleaned.startsWith("8")) {
+    return cleaned.length === 11; // 7/8 и РОВНО 10 цифр
+  }
+
+  // Для международных номеров требуем точно 10-15 цифр (стандарт E.164)
+  return cleaned.length >= 10 && cleaned.length <= 15;
+};
+
+/**
+ * Проверяет валидность email адреса
+ *
+ * @param email - Email адрес
+ * @returns true если email валидный
+ */
+export const isValidEmail = (email: string): boolean => {
+  if (!email || !email.trim()) {
+    return false;
+  }
+
+  // RFC 5322 упрощенная regex для email
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+  return emailRegex.test(email.trim());
 };

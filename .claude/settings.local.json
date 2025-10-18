@@ -10,7 +10,15 @@
       "Bash(~/go/bin/swag init:*)",
       "Bash(npm run type-check:*)",
       "Bash(npm install:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(dir /s /b)",
+      "Read(//c/**)",
+      "Bash(dir \"c:\\Users\\USER\\central-reporting\" /s /b /ad)",
+      "Bash(find \"c:\\Users\\USER\\central-reporting\" -maxdepth 2 -type f ( -name \".env*\" -o -name \"*.md\" -o -name \"*.yml\" -o -name \"*.yaml\" -o -name \"Dockerfile\" -o -name \"docker-compose*\" ))",
+      "Bash(if exist \"go.mod\" type go.mod)",
+      "Bash(git add backend/.env.example backend/.gitignore backend/internal/repositories/user.go frontend/src/pages/UsersPage/UsersPage.tsx frontend/src/shared/api/users.api.ts frontend/src/shared/ui/SocialLinksInput/SocialLinksInput.tsx IMPROVEMENTS_PLAN.md)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: Critical security and code quality improvements\n\n## Fixed Issues\n- SQL Injection vulnerability in user repository sort_by parameter\n- WhatsApp validation showing false positive for incomplete numbers\n- 8 ESLint errors (unused variables and functions)\n- Hardcoded password in .env.example\n- Missing .gitignore for backend\n\n## Security Improvements\n- Added whitelist for SQL sort fields (prevents SQL injection)\n- Improved password in .env.example (32+ chars)\n- Created backend/.gitignore to prevent committing secrets\n\n## Code Quality\n- Fixed TypeScript ''any'' type in users.api.ts\n- Commented out unused code with TODO markers for future implementation\n- Fixed WhatsApp validation logic in SocialLinksInput component\n\n## Documentation\n- Created IMPROVEMENTS_PLAN.md with detailed roadmap for remaining tasks\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(npm test -- --run)"
     ],
     "deny": [],
     "ask": []

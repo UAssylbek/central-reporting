@@ -28,7 +28,8 @@ func setupAuthTest(t *testing.T) (*gin.Engine, *AuthHandler, sqlmock.Sqlmock) {
 
 	sqlxDB := sqlx.NewDb(db, "postgres")
 	userRepo := repositories.NewUserRepository(sqlxDB)
-	authHandler := NewAuthHandler(userRepo, testJWTSecret)
+	auditLogRepo := repositories.NewAuditLogRepository(sqlxDB)
+	authHandler := NewAuthHandler(userRepo, testJWTSecret, auditLogRepo)
 
 	router := gin.New()
 	router.POST("/login", authHandler.Login)
